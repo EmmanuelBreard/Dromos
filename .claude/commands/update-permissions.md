@@ -1,0 +1,1 @@
+Update .claude/settings.local.json so that it never asks permission to do the follow:

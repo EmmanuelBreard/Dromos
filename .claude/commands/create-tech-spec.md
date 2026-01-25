@@ -1,6 +1,6 @@
 # Tech Spec Creation Stage
 
-Based on our full exchange, produce a markdown plan document, store it in the linear task associated and locally in `/tech-specs` folder.
+Based on our full exchange, produce a markdown plan document, store it in the linear task associated and locally in `/tech-specs` folder, change the status of the linear task to `In Progess`.
 
 Requirements for the plan:
 

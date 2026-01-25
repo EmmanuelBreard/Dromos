@@ -29,6 +29,7 @@ fastlane/test_output
 !Config.example
 Secrets.swift
 !Secrets.example.swift
+.mcp.json
 
 # Environment files
 .env

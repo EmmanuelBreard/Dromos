@@ -33,3 +33,6 @@ Perform comprehensive code review. Be thorough but concise.
 - **HIGH** - Bugs, performance issues, bad UX
 - **MEDIUM** - Code quality, maintainability
 - **LOW** - Style, minor improvements
+
+## End of Review 
+Once there are no more issues you can change the linear task status to `Done`. 
