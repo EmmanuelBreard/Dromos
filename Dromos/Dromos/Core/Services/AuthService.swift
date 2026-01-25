@@ -25,6 +25,10 @@ final class AuthService: ObservableObject {
     /// Last error message from an auth operation.
     @Published var errorMessage: String?
 
+    /// Whether the current user has completed onboarding.
+    /// Updated automatically when auth state changes.
+    @Published private(set) var onboardingCompleted: Bool = false
+
     // MARK: - Computed Properties
 
     /// Whether the user is currently authenticated.
@@ -122,10 +126,52 @@ final class AuthService: ObservableObject {
         do {
             try await client.auth.signOut()
             session = nil
+            onboardingCompleted = false
         } catch {
             errorMessage = mapAuthError(error)
             throw error
         }
+    }
+
+    /// Check the current user's onboarding completion status.
+    /// Updates the `onboardingCompleted` published property.
+    /// - Throws: Error if fetch fails
+    func checkOnboardingStatus() async throws {
+        guard let userId = currentUserId else {
+            onboardingCompleted = false
+            return
+        }
+
+        do {
+            // Minimal struct for fetching only onboarding status
+            struct OnboardingStatus: Codable {
+                let onboardingCompleted: Bool
+
+                enum CodingKeys: String, CodingKey {
+                    case onboardingCompleted = "onboarding_completed"
+                }
+            }
+
+            // Fetch only the onboarding_completed field
+            let response: [OnboardingStatus] = try await client
+                .from("users")
+                .select("onboarding_completed")
+                .eq("id", value: userId.uuidString)
+                .execute()
+                .value
+
+            onboardingCompleted = response.first?.onboardingCompleted ?? false
+        } catch {
+            // On error, default to false to be safe
+            onboardingCompleted = false
+            throw error
+        }
+    }
+
+    /// Manually mark onboarding as complete.
+    /// Use this as a fallback when database update succeeded but status check failed.
+    func markOnboardingCompleteLocally() {
+        onboardingCompleted = true
     }
 
     // MARK: - Private Methods
@@ -137,12 +183,16 @@ final class AuthService: ObservableObject {
             // Only use the session if it's not expired
             if !existingSession.isExpired {
                 session = existingSession
+                // Check onboarding status for existing session
+                try? await checkOnboardingStatus()
             } else {
                 session = nil
+                onboardingCompleted = false
             }
         } catch {
             // No existing session, user needs to sign in
             session = nil
+            onboardingCompleted = false
         }
     }
 
@@ -155,17 +205,26 @@ final class AuthService: ObservableObject {
                     // Only use initial session if not expired
                     if let session, !session.isExpired {
                         self.session = session
+                        // Check onboarding status when session is restored
+                        try? await checkOnboardingStatus()
                     } else {
                         self.session = nil
+                        self.onboardingCompleted = false
                     }
                 case .signedIn:
                     self.session = session
+                    // Check onboarding status when user signs in
+                    try? await checkOnboardingStatus()
                 case .signedOut:
                     self.session = nil
+                    self.onboardingCompleted = false
                 case .tokenRefreshed:
                     self.session = session
+                    // Token refresh doesn't require onboarding status check
                 case .userUpdated:
                     self.session = session
+                    // User update might include onboarding changes, so re-check
+                    try? await checkOnboardingStatus()
                 default:
                     break
                 }

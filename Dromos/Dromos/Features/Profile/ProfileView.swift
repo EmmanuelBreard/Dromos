@@ -7,194 +7,610 @@
 
 import SwiftUI
 
-/// User profile view.
-/// Displays user info with edit capability and sign out option.
+/// User profile view displaying and editing user information in 3 organized sections.
+///
+/// Sections:
+/// 1. Goals - Race objectives and targets
+/// 2. Metrics - Performance metrics (VMA, CSS, FTP, experience)
+/// 3. Settings - Personal information (demographics, name, email)
 struct ProfileView: View {
     @ObservedObject var authService: AuthService
     @StateObject private var profileService = ProfileService()
 
+    /// Local copy of user for immediate UI updates during editing.
+    /// Separate from profileService.user to avoid race conditions during save.
+    @State private var user: User?
+    @State private var isLoading = false
     @State private var isEditing = false
-    @State private var editableName = ""
-    @State private var isSaving = false
-    @State private var errorMessage: String?
-    @State private var loadProfileTask: Task<Void, Never>?
+    @State private var showError = false
+    @State private var errorMessage = ""
+    @State private var showValidationError = false
+    @State private var validationMessage = ""
+
+    // MARK: - Edit State
+
+    @State private var editName: String = ""
+    @State private var editSex: String = ""
+    @State private var editBirthDate: Date = Date()
+    @State private var editWeightKg: String = ""
+    @State private var editRaceObjective: RaceObjective = .sprint
+    @State private var editRaceDate: Date = Date()
+    @State private var editTimeHours: String = ""
+    @State private var editTimeMinutes: String = ""
+    @State private var editVma: String = ""
+    @State private var editCssMinutes: String = ""
+    @State private var editCssSeconds: String = ""
+    @State private var editFtp: String = ""
+    @State private var editExperienceYears: String = ""
+
+    // MARK: - Static Properties
+
+    /// Reusable date formatter to avoid recreation on each call
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+
+    // MARK: - Computed Properties
+
+    /// Date range for birth date picker (100 years ago to 13 years ago)
+    /// Ensures age between 13-99 years, matching onboarding validation
+    private var birthDateRange: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let now = Date()
+        guard let minDate = calendar.date(byAdding: .year, value: -100, to: now),
+              let maxDate = calendar.date(byAdding: .year, value: -13, to: now) else {
+            // Fallback to reasonable defaults if calendar operations fail
+            return Date(timeIntervalSince1970: -1388534400)...Date(timeIntervalSince1970: 1356998400)
+        }
+        return minDate...maxDate
+    }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
-            List {
-                // Profile section
-                Section {
-                    if profileService.isLoading {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
+            Group {
+                if isLoading {
+                    ProgressView()
+                } else if let user = user {
+                    Form {
+                        // SECTION 1: GOALS
+                        Section("Goals") {
+                            if isEditing {
+                                goalsEditingView
+                            } else {
+                                goalsDisplayView(user: user)
+                            }
                         }
-                    } else if isEditing {
-                        editingView
-                    } else {
-                        profileInfoView
-                    }
-                } header: {
-                    Text("Profile")
-                }
 
-                // Actions section
-                Section {
-                    Button(role: .destructive) {
-                        Task {
-                            await signOut()
+                        // SECTION 2: METRICS
+                        Section("Metrics") {
+                            if isEditing {
+                                metricsEditingView
+                            } else {
+                                metricsDisplayView(user: user)
+                            }
                         }
-                    } label: {
-                        HStack {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                            Text("Sign Out")
-                        }
-                    }
-                }
 
-                // Error display
-                if let error = errorMessage ?? profileService.errorMessage {
-                    Section {
-                        Text(error)
-                            .foregroundStyle(.red)
-                            .font(.caption)
+                        // SECTION 3: SETTINGS
+                        Section("Settings") {
+                            if isEditing {
+                                settingsEditingView
+                            } else {
+                                settingsDisplayView(user: user)
+                            }
+                        }
+
+                        // Sign Out section
+                        Section {
+                            Button("Sign Out", role: .destructive) {
+                                Task {
+                                    try? await authService.signOut()
+                                    profileService.clearProfile()
+                                }
+                            }
+                        }
                     }
+                } else {
+                    Text("Unable to load profile")
+                        .foregroundColor(.secondary)
                 }
             }
             .navigationTitle("Profile")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     if isEditing {
-                        Button("Cancel") {
-                            cancelEditing()
+                        HStack {
+                            Button("Cancel") {
+                                isEditing = false
+                                loadEditState()
+                            }
+                            Button("Save") {
+                                saveProfile()
+                            }
                         }
                     } else {
                         Button("Edit") {
-                            startEditing()
+                            isEditing = true
                         }
-                        .disabled(profileService.isLoading)
                     }
                 }
             }
-            .task {
-                loadProfileTask = Task {
-                    await loadProfile()
+        }
+        .task {
+            await fetchProfile()
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
+        .alert("Validation Error", isPresented: $showValidationError) {
+            Button("OK") { }
+        } message: {
+            Text(validationMessage)
+        }
+    }
+
+    // MARK: - Goals Section Views
+
+    /// Display mode for Goals section
+    private func goalsDisplayView(user: User) -> some View {
+        Group {
+            HStack {
+                Text("Race Type")
+                Spacer()
+                Text(user.raceObjective?.rawValue ?? "Not set")
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Race Date")
+                Spacer()
+                Text(formatDate(user.raceDate))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Time Objective")
+                Spacer()
+                Text(formatTimeObjective(hours: user.timeObjectiveHours, minutes: user.timeObjectiveMinutes))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    /// Edit mode for Goals section
+    private var goalsEditingView: some View {
+        Group {
+            Picker("Race Type", selection: $editRaceObjective) {
+                ForEach(RaceObjective.allCases, id: \.self) { objective in
+                    Text(objective.rawValue).tag(objective)
                 }
             }
-            .onDisappear {
-                loadProfileTask?.cancel()
+
+            DatePicker(
+                "Race Date",
+                selection: $editRaceDate,
+                in: Date()...,
+                displayedComponents: .date
+            )
+
+            HStack {
+                Text("Time Objective")
+                Spacer()
+                TextField("H", text: $editTimeHours)
+                    .keyboardType(.numberPad)
+                    .frame(width: 40)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.center)
+                Text(":")
+                TextField("M", text: $editTimeMinutes)
+                    .keyboardType(.numberPad)
+                    .frame(width: 40)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.center)
             }
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Metrics Section Views
 
-    /// View for displaying profile info (non-editing state).
-    private var profileInfoView: some View {
+    /// Display mode for Metrics section
+    private func metricsDisplayView(user: User) -> some View {
         Group {
             HStack {
-                Text("Email")
+                Text("VMA")
                 Spacer()
-                Text(authService.currentUserEmail ?? "Unknown")
-                    .foregroundStyle(.secondary)
+                Text(formatVma(user.vma))
+                    .foregroundColor(.secondary)
             }
 
             HStack {
-                Text("Name")
+                Text("CSS")
                 Spacer()
-                Text(profileService.user?.name ?? "No name set")
-                    .foregroundStyle(profileService.user?.name == nil ? .secondary : .primary)
+                Text(formatCss(minutes: user.cssMinutes, seconds: user.cssSeconds))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("FTP")
+                Spacer()
+                Text(formatFtp(user.ftp))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Experience")
+                Spacer()
+                Text(formatExperience(user.experienceYears))
+                    .foregroundColor(.secondary)
             }
         }
     }
 
-    /// View for editing profile.
-    private var editingView: some View {
+    /// Edit mode for Metrics section
+    private var metricsEditingView: some View {
         Group {
             HStack {
-                Text("Email")
+                Text("VMA (km/h)")
                 Spacer()
-                Text(authService.currentUserEmail ?? "Unknown")
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                Text("Name")
-                Spacer()
-                TextField("Enter your name", text: $editableName)
+                TextField("e.g., 18.5", text: $editVma)
+                    .keyboardType(.decimalPad)
+                    .frame(width: 80)
+                    .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
             }
 
-            Button {
-                Task {
-                    await saveProfile()
+            HStack {
+                Text("CSS (per 100m)")
+                Spacer()
+                TextField("M", text: $editCssMinutes)
+                    .keyboardType(.numberPad)
+                    .frame(width: 40)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.center)
+                Text(":")
+                TextField("S", text: $editCssSeconds)
+                    .keyboardType(.numberPad)
+                    .frame(width: 40)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack {
+                Text("FTP (W)")
+                Spacer()
+                TextField("e.g., 250", text: $editFtp)
+                    .keyboardType(.numberPad)
+                    .frame(width: 80)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            HStack {
+                Text("Experience (years)")
+                Spacer()
+                TextField("e.g., 2", text: $editExperienceYears)
+                    .keyboardType(.numberPad)
+                    .frame(width: 60)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+    }
+
+    // MARK: - Settings Section Views
+
+    /// Display mode for Settings section
+    private func settingsDisplayView(user: User) -> some View {
+        Group {
+            HStack {
+                Text("Sex")
+                Spacer()
+                Text(user.sex ?? "Not set")
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Age")
+                Spacer()
+                Text(formatAge(user.age))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Weight")
+                Spacer()
+                Text(formatWeight(user.weightKg))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Name")
+                Spacer()
+                Text(user.name ?? "Not set")
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Email")
+                Spacer()
+                Text(authService.currentUserEmail ?? "")
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    /// Edit mode for Settings section
+    private var settingsEditingView: some View {
+        Group {
+            HStack {
+                Text("Sex")
+                Spacer()
+                Button(editSex == "Male" ? "Male ✓" : "Male") {
+                    editSex = "Male"
                 }
-            } label: {
-                if isSaving {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    }
-                } else {
-                    Text("Save Changes")
-                        .frame(maxWidth: .infinity)
+                .foregroundColor(editSex == "Male" ? .blue : .primary)
+
+                Button(editSex == "Female" ? "Female ✓" : "Female") {
+                    editSex = "Female"
+                }
+                .foregroundColor(editSex == "Female" ? .blue : .primary)
+            }
+
+            DatePicker(
+                "Birth Date",
+                selection: $editBirthDate,
+                in: birthDateRange,
+                displayedComponents: .date
+            )
+
+            HStack {
+                Text("Weight (kg)")
+                Spacer()
+                TextField("Weight", text: $editWeightKg)
+                    .keyboardType(.decimalPad)
+                    .frame(width: 80)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            HStack {
+                Text("Name")
+                Spacer()
+                TextField("Name", text: $editName)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 200)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            HStack {
+                Text("Email")
+                Spacer()
+                Text(authService.currentUserEmail ?? "")
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Validation
+
+    /// Validates all edit fields before save.
+    /// Returns nil if valid, or an error message if invalid.
+    private func validateEditFields() -> String? {
+        // Weight validation (30-300 kg)
+        if !editWeightKg.isEmpty {
+            guard let weight = Double(editWeightKg), weight >= 30, weight <= 300 else {
+                return "Weight must be between 30 and 300 kg"
+            }
+        }
+
+        // VMA validation (10-25 km/h)
+        if !editVma.isEmpty {
+            guard let vma = Double(editVma), vma >= 10, vma <= 25 else {
+                return "VMA must be between 10 and 25 km/h"
+            }
+        }
+
+        // FTP validation (50-500 watts)
+        if !editFtp.isEmpty {
+            guard let ftp = Int(editFtp), ftp >= 50, ftp <= 500 else {
+                return "FTP must be between 50 and 500 watts"
+            }
+        }
+
+        // CSS validation (25-300 total seconds, seconds 0-59)
+        if !editCssMinutes.isEmpty || !editCssSeconds.isEmpty {
+            let minutes = Int(editCssMinutes) ?? 0
+            let seconds = Int(editCssSeconds) ?? 0
+            let totalSeconds = minutes * 60 + seconds
+
+            if seconds < 0 || seconds > 59 {
+                return "CSS seconds must be between 0 and 59"
+            }
+
+            if totalSeconds < 25 || totalSeconds > 300 {
+                return "CSS must be between 0:25 and 5:00 per 100m"
+            }
+        }
+
+        // Experience years validation (>= 0)
+        if !editExperienceYears.isEmpty {
+            guard let years = Int(editExperienceYears), years >= 0 else {
+                return "Experience must be 0 or more years"
+            }
+        }
+
+        // Age validation (13-99 years)
+        let age = Calendar.current.dateComponents([.year], from: editBirthDate, to: Date()).year ?? 0
+        if age < 13 || age > 99 {
+            return "Age must be between 13 and 99 years"
+        }
+
+        // Race date validation (not in the past)
+        if editRaceDate < Calendar.current.startOfDay(for: Date()) {
+            return "Race date cannot be in the past"
+        }
+
+        return nil
+    }
+
+    // MARK: - Data Methods
+
+    /// Fetch the current user's profile from the database
+    private func fetchProfile() async {
+        guard let userId = authService.currentUserId else { return }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            user = try await profileService.fetchProfile(userId: userId)
+            loadEditState()
+        } catch {
+            errorMessage = mapSaveError(error)
+            showError = true
+        }
+    }
+
+    /// Load current user data into edit state variables
+    private func loadEditState() {
+        guard let user = user else { return }
+        editName = user.name ?? ""
+        editSex = user.sex ?? ""
+        editBirthDate = user.birthDate ?? Date()
+        editWeightKg = user.weightKg.map { String(format: "%.1f", $0) } ?? ""
+        editRaceObjective = user.raceObjective ?? .sprint
+        editRaceDate = user.raceDate ?? Date()
+        editTimeHours = user.timeObjectiveHours.map(String.init) ?? ""
+        editTimeMinutes = user.timeObjectiveMinutes.map(String.init) ?? ""
+        editVma = user.vma.map { String(format: "%.1f", $0) } ?? ""
+        editCssMinutes = user.cssMinutes.map(String.init) ?? ""
+        editCssSeconds = user.cssSeconds.map(String.init) ?? ""
+        editFtp = user.ftp.map(String.init) ?? ""
+        editExperienceYears = user.experienceYears.map(String.init) ?? ""
+    }
+
+    /// Save profile changes to the database
+    private func saveProfile() {
+        guard let userId = authService.currentUserId else { return }
+
+        // Validate all fields before attempting save
+        if let validationError = validateEditFields() {
+            validationMessage = validationError
+            showValidationError = true
+            return
+        }
+
+        isLoading = true
+
+        Task {
+            do {
+                try await profileService.updateProfile(
+                    userId: userId,
+                    name: editName.isEmpty ? nil : editName,
+                    sex: editSex.isEmpty ? nil : editSex,
+                    birthDate: editBirthDate,
+                    weightKg: Double(editWeightKg),
+                    raceObjective: editRaceObjective,
+                    raceDate: editRaceDate,
+                    timeObjectiveHours: Int(editTimeHours),
+                    timeObjectiveMinutes: Int(editTimeMinutes),
+                    vma: Double(editVma),
+                    cssMinutes: Int(editCssMinutes),
+                    cssSeconds: Int(editCssSeconds),
+                    ftp: Int(editFtp),
+                    experienceYears: Int(editExperienceYears)
+                )
+
+                await MainActor.run {
+                    user = profileService.user
+                    isEditing = false
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = mapSaveError(error)
+                    showError = true
                 }
             }
-            .disabled(isSaving)
         }
     }
 
-    // MARK: - Actions
+    // MARK: - Error Handling
 
-    private func loadProfile() async {
-        guard let userId = authService.currentUserId else { return }
+    /// Maps database and network errors to user-friendly messages.
+    private func mapSaveError(_ error: Error) -> String {
+        let errorString = error.localizedDescription.lowercased()
 
-        do {
-            try await profileService.fetchProfile(userId: userId)
-            editableName = profileService.user?.name ?? ""
-        } catch {
-            errorMessage = "Failed to load profile"
-        }
-    }
-
-    private func startEditing() {
-        editableName = profileService.user?.name ?? ""
-        isEditing = true
-    }
-
-    private func cancelEditing() {
-        isEditing = false
-        editableName = profileService.user?.name ?? ""
-    }
-
-    private func saveProfile() async {
-        guard let userId = authService.currentUserId else { return }
-
-        isSaving = true
-        errorMessage = nil
-
-        do {
-            try await profileService.updateProfile(
-                userId: userId,
-                name: editableName.isEmpty ? nil : editableName
-            )
-            isEditing = false
-        } catch {
-            errorMessage = "Failed to save profile"
+        // Database constraint violations
+        if errorString.contains("check") || errorString.contains("constraint") {
+            return "Some values are outside the valid range. Please check your entries and try again."
         }
 
-        isSaving = false
+        // Network errors
+        if errorString.contains("network") || errorString.contains("connection") {
+            return "Unable to connect. Please check your internet connection and try again."
+        }
+
+        // Generic fallback
+        return "Unable to save your profile. Please try again."
     }
 
-    private func signOut() async {
-        do {
-            try await authService.signOut()
-            profileService.clearProfile()
-        } catch {
-            errorMessage = "Failed to sign out"
-        }
+    // MARK: - Formatters
+
+    /// Format date for display
+    private func formatDate(_ date: Date?) -> String {
+        guard let date = date else { return "Not set" }
+        return Self.dateFormatter.string(from: date)
+    }
+
+    /// Format time objective (hours:minutes)
+    private func formatTimeObjective(hours: Int?, minutes: Int?) -> String {
+        guard let hours = hours else { return "Not set" }
+        let mins = minutes ?? 0
+        return "\(hours)h \(mins)m"
+    }
+
+    /// Format VMA (Vitesse Maximale Aérobie)
+    private func formatVma(_ vma: Double?) -> String {
+        guard let vma = vma else { return "Not set" }
+        return String(format: "%.1f km/h", vma)
+    }
+
+    /// Format CSS (Critical Swim Speed)
+    private func formatCss(minutes: Int?, seconds: Int?) -> String {
+        guard let minutes = minutes else { return "Not set" }
+        let secs = seconds ?? 0
+        return String(format: "%d:%02d / 100m", minutes, secs)
+    }
+
+    /// Format FTP (Functional Threshold Power)
+    private func formatFtp(_ ftp: Int?) -> String {
+        guard let ftp = ftp else { return "Not set" }
+        return "\(ftp) W"
+    }
+
+    /// Format experience years
+    private func formatExperience(_ years: Int?) -> String {
+        guard let years = years else { return "Not set" }
+        return "\(years) year\(years == 1 ? "" : "s")"
+    }
+
+    /// Format age calculated from birth date
+    private func formatAge(_ age: Int?) -> String {
+        guard let age = age else { return "Not set" }
+        return "\(age) years"
+    }
+
+    /// Format weight in kilograms
+    private func formatWeight(_ weight: Double?) -> String {
+        guard let weight = weight else { return "Not set" }
+        return String(format: "%.1f kg", weight)
     }
 }
 
