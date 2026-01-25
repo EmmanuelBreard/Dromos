@@ -1,0 +1,12 @@
+// Config.example
+// Dromos
+//
+// Template for xcconfig files. Copy to Debug.xcconfig and Release.xcconfig
+// and fill in your real values.
+//
+// IMPORTANT: Never commit Debug.xcconfig or Release.xcconfig to git!
+
+// Supabase Configuration
+// Get these from your Supabase project settings > API
+SUPABASE_URL = https://YOUR_PROJECT_ID.supabase.co
+SUPABASE_ANON_KEY = your_anon_key_here

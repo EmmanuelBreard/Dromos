@@ -1,0 +1,36 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods (if used later)
+Pods/
+
+# Fastlane (if used later)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# OS files
+.DS_Store
+*.swp
+*~
+
+# Secrets - NEVER commit these
+*.xcconfig
+!Config.example
+Secrets.swift
+!Secrets.example.swift
+
+# Environment files
+.env
+.env.*
+!.env.example
