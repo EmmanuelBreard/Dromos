@@ -82,6 +82,28 @@ struct MetricsData: Codable {
     }
 }
 
+// MARK: - Screens 4, 5, 6: Weekly Availability
+
+/// Data collected on availability screens (4, 5, 6).
+/// Contains the days of the week the user can train for each sport.
+/// Day names are capitalized: ["Monday", "Wednesday", "Friday"]
+struct AvailabilityData: Codable {
+    /// Days of the week user can train swimming
+    var swimDays: [String] = []
+
+    /// Days of the week user can train cycling
+    var bikeDays: [String] = []
+
+    /// Days of the week user can train running
+    var runDays: [String] = []
+
+    enum CodingKeys: String, CodingKey {
+        case swimDays = "swim_days"
+        case bikeDays = "bike_days"
+        case runDays = "run_days"
+    }
+}
+
 // MARK: - Complete Onboarding Payload
 
 /// Aggregated onboarding data from all screens.
@@ -105,12 +127,18 @@ struct CompleteOnboardingData: Codable {
     var ftp: Int?
     var experienceYears: Int?
 
+    // Weekly Availability (Screens 4, 5, 6)
+    var swimDays: [String]?
+    var bikeDays: [String]?
+    var runDays: [String]?
+
     /// Initializes from individual screen data objects.
     /// - Parameters:
     ///   - basicInfo: Data from Screen 1 (demographics)
     ///   - raceGoals: Data from Screen 2 (race objectives)
     ///   - metrics: Data from Screen 3 (performance metrics)
-    init(basicInfo: BasicInfoData, raceGoals: RaceGoalsData, metrics: MetricsData) {
+    ///   - availability: Data from Screens 4, 5, 6 (weekly training availability)
+    init(basicInfo: BasicInfoData, raceGoals: RaceGoalsData, metrics: MetricsData, availability: AvailabilityData? = nil) {
         self.sex = basicInfo.sex
         self.birthDate = basicInfo.birthDate
         self.weightKg = basicInfo.weightKg
@@ -123,6 +151,9 @@ struct CompleteOnboardingData: Codable {
         self.cssSeconds = metrics.cssSeconds
         self.ftp = metrics.ftp
         self.experienceYears = metrics.experienceYears
+        self.swimDays = availability?.swimDays.isEmpty == false ? availability?.swimDays : nil
+        self.bikeDays = availability?.bikeDays.isEmpty == false ? availability?.bikeDays : nil
+        self.runDays = availability?.runDays.isEmpty == false ? availability?.runDays : nil
     }
 
     enum CodingKeys: String, CodingKey {
@@ -138,5 +169,8 @@ struct CompleteOnboardingData: Codable {
         case cssSeconds = "css_seconds"
         case ftp
         case experienceYears = "experience_years"
+        case swimDays = "swim_days"
+        case bikeDays = "bike_days"
+        case runDays = "run_days"
     }
 }

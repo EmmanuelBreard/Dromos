@@ -71,6 +71,17 @@ struct User: Codable, Identifiable, Equatable {
     /// Years of triathlon/endurance sport experience
     var experienceYears: Int?
 
+    // MARK: - Onboarding: Weekly Availability (Screens 4, 5, 6)
+
+    /// Days of the week user can train swimming (e.g., ["Monday", "Wednesday", "Friday"])
+    var swimDays: [String]?
+
+    /// Days of the week user can train cycling (e.g., ["Tuesday", "Thursday"])
+    var bikeDays: [String]?
+
+    /// Days of the week user can train running (e.g., ["Saturday", "Sunday"])
+    var runDays: [String]?
+
     // MARK: - Onboarding Status
 
     /// Indicates whether the user has completed the onboarding flow
@@ -127,6 +138,9 @@ extension User {
         case cssSeconds = "css_seconds"
         case ftp
         case experienceYears = "experience_years"
+        case swimDays = "swim_days"
+        case bikeDays = "bike_days"
+        case runDays = "run_days"
         case onboardingCompleted = "onboarding_completed"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -153,6 +167,9 @@ struct UserUpdate: Codable {
     var cssSeconds: Int?
     var ftp: Int?
     var experienceYears: Int?
+    var swimDays: [String]?
+    var bikeDays: [String]?
+    var runDays: [String]?
     var onboardingCompleted: Bool?
 
     enum CodingKeys: String, CodingKey {
@@ -169,6 +186,9 @@ struct UserUpdate: Codable {
         case cssSeconds = "css_seconds"
         case ftp
         case experienceYears = "experience_years"
+        case swimDays = "swim_days"
+        case bikeDays = "bike_days"
+        case runDays = "run_days"
         case onboardingCompleted = "onboarding_completed"
     }
 }
