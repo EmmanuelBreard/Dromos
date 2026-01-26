@@ -145,7 +145,7 @@ struct OnboardingAvailabilityView: View {
                         onNext()
                     }
                 }) {
-                    Text("Next")
+                    Text(screenNumber == totalScreens ? "Complete" : "Next")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()

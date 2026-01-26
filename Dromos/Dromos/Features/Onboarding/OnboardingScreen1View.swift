@@ -62,7 +62,7 @@ struct OnboardingScreen1View: View {
     var body: some View {
         VStack(spacing: 24) {
             // Progress indicator
-            Text("1 of 3")
+            Text("1 of 6")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 

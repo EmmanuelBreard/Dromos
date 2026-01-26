@@ -12,7 +12,7 @@ import SwiftUI
 struct OnboardingScreen3View: View {
     @Binding var data: MetricsData
     var onBack: () -> Void
-    var onComplete: () -> Void
+    var onNext: () -> Void
 
     @State private var showErrors = false
 
@@ -63,7 +63,7 @@ struct OnboardingScreen3View: View {
     var body: some View {
         VStack(spacing: 24) {
             // Progress indicator
-            Text("3 of 3")
+            Text("3 of 6")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -253,10 +253,10 @@ struct OnboardingScreen3View: View {
                 Button(action: {
                     showErrors = true
                     if isFormValid {
-                        onComplete()
+                        onNext()
                     }
                 }) {
-                    Text("Complete")
+                    Text("Next")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -274,6 +274,6 @@ struct OnboardingScreen3View: View {
     OnboardingScreen3View(
         data: .constant(MetricsData()),
         onBack: { print("Back tapped") },
-        onComplete: { print("Complete tapped") }
+        onNext: { print("Next tapped") }
     )
 }

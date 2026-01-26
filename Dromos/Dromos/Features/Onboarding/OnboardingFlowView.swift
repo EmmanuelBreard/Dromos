@@ -7,8 +7,10 @@
 
 import SwiftUI
 
-/// Container view orchestrating the 3-screen onboarding flow.
+/// Container view orchestrating the 6-screen onboarding flow.
 /// Manages navigation between screens and handles data persistence to Supabase.
+/// Screens 1-3: Basic info, race goals, performance metrics
+/// Screens 4-6: Weekly training availability (swim, bike, run)
 struct OnboardingFlowView: View {
     @ObservedObject var authService: AuthService
     @StateObject private var profileService = ProfileService()
@@ -18,6 +20,7 @@ struct OnboardingFlowView: View {
     @State private var basicInfo = BasicInfoData()
     @State private var raceGoals = RaceGoalsData()
     @State private var metrics = MetricsData()
+    @State private var availability = AvailabilityData()
 
     @State private var isSaving = false
     @State private var showError = false
@@ -83,7 +86,58 @@ struct OnboardingFlowView: View {
                                 transitionDirection = .backward
                                 currentScreen = 2
                             },
-                            onComplete: { saveOnboardingData() }
+                            onNext: {
+                                transitionDirection = .forward
+                                currentScreen = 4
+                            }
+                        )
+                        .transition(transitionDirection.transition)
+
+                    case 4:
+                        OnboardingAvailabilityView(
+                            sport: .swim,
+                            screenNumber: 4,
+                            totalScreens: 6,
+                            selectedDays: $availability.swimDays,
+                            onNext: {
+                                transitionDirection = .forward
+                                currentScreen = 5
+                            },
+                            onBack: {
+                                transitionDirection = .backward
+                                currentScreen = 3
+                            }
+                        )
+                        .transition(transitionDirection.transition)
+
+                    case 5:
+                        OnboardingAvailabilityView(
+                            sport: .bike,
+                            screenNumber: 5,
+                            totalScreens: 6,
+                            selectedDays: $availability.bikeDays,
+                            onNext: {
+                                transitionDirection = .forward
+                                currentScreen = 6
+                            },
+                            onBack: {
+                                transitionDirection = .backward
+                                currentScreen = 4
+                            }
+                        )
+                        .transition(transitionDirection.transition)
+
+                    case 6:
+                        OnboardingAvailabilityView(
+                            sport: .run,
+                            screenNumber: 6,
+                            totalScreens: 6,
+                            selectedDays: $availability.runDays,
+                            onNext: { saveOnboardingData() },
+                            onBack: {
+                                transitionDirection = .backward
+                                currentScreen = 5
+                            }
                         )
                         .transition(transitionDirection.transition)
 
@@ -151,11 +205,12 @@ struct OnboardingFlowView: View {
 
         Task {
             do {
-                // Combine all data from 3 screens
+                // Combine all data from 6 screens (basic info, race goals, metrics, availability)
                 let completeData = CompleteOnboardingData(
                     basicInfo: basicInfo,
                     raceGoals: raceGoals,
-                    metrics: metrics
+                    metrics: metrics,
+                    availability: availability
                 )
 
                 // Save to database

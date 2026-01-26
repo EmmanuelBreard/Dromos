@@ -1,6 +1,6 @@
 # Feature Implementation Plan: Weekly Training Availability
 
-**Overall Progress:** `67%` (Steps 1-3, 5 complete - Database Migration, Data Models, UI Component, and Service Layer)
+**Overall Progress:** `83%` (Steps 1-3, 4, 5 complete - Database Migration, Data Models, UI Component, Onboarding Flow Integration, and Service Layer)
 
 **Linear Issue:** [DRO-25](https://linear.app/dromosapp/issue/DRO-25/add-weekly-availability-collection-to-onboarding-flow)
 
@@ -38,14 +38,14 @@ Add 3 new onboarding screens (4, 5, 6) to collect athlete's weekly training avai
   - [x] 🟩 Show error message on Next tap if no days selected
   - [x] 🟩 Implement Back/Next navigation callbacks
 
-- [ ] 🟥 **Step 4: Update Onboarding Flow**
-  - [ ] 🟥 Modify `OnboardingFlowView.swift` to extend from 3 to 6 screens
-  - [ ] 🟥 Add `@State` for availability data (swim, bike, run)
-  - [ ] 🟥 Add cases 4, 5, 6 to screen navigation switch statement
-  - [ ] 🟥 Wire up Screen 4 (swim), Screen 5 (bike), Screen 6 (run)
-  - [ ] 🟥 Move `onComplete` callback from Screen 3 to Screen 6
-  - [ ] 🟥 Update progress indicators: Screen 1-3 stay "X of 6", new screens show "4 of 6", "5 of 6", "6 of 6"
-  - [ ] 🟥 Update `CompleteOnboardingData` initialization to include availability
+- [x] 🟩 **Step 4: Update Onboarding Flow**
+  - [x] 🟩 Modify `OnboardingFlowView.swift` to extend from 3 to 6 screens
+  - [x] 🟩 Add `@State` for availability data (swim, bike, run)
+  - [x] 🟩 Add cases 4, 5, 6 to screen navigation switch statement
+  - [x] 🟩 Wire up Screen 4 (swim), Screen 5 (bike), Screen 6 (run)
+  - [x] 🟩 Move `onComplete` callback from Screen 3 to Screen 6
+  - [x] 🟩 Update progress indicators: Screen 1-3 show "X of 6", new screens show "4 of 6", "5 of 6", "6 of 6"
+  - [x] 🟩 Update `CompleteOnboardingData` initialization to include availability
 
 - [x] 🟩 **Step 5: Update ProfileService**
   - [x] 🟩 Modify `saveOnboardingData()` to handle swim/bike/run days
