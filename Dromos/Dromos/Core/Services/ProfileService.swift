@@ -147,6 +147,7 @@ final class ProfileService: ObservableObject {
         do {
             // Create encodable update payload
             // Note: We convert RaceObjective enum to its raw string value
+            // Availability arrays (swimDays, bikeDays, runDays) are encoded as JSONB arrays
             struct OnboardingUpdate: Encodable {
                 let sex: String?
                 let birthDate: Date?
@@ -160,6 +161,9 @@ final class ProfileService: ObservableObject {
                 let cssSeconds: Int?
                 let ftp: Int?
                 let experienceYears: Int?
+                let swimDays: [String]?
+                let bikeDays: [String]?
+                let runDays: [String]?
 
                 enum CodingKeys: String, CodingKey {
                     case sex
@@ -174,6 +178,9 @@ final class ProfileService: ObservableObject {
                     case cssSeconds = "css_seconds"
                     case ftp
                     case experienceYears = "experience_years"
+                    case swimDays = "swim_days"
+                    case bikeDays = "bike_days"
+                    case runDays = "run_days"
                 }
             }
 
@@ -189,7 +196,10 @@ final class ProfileService: ObservableObject {
                 cssMinutes: data.cssMinutes,
                 cssSeconds: data.cssSeconds,
                 ftp: data.ftp,
-                experienceYears: data.experienceYears
+                experienceYears: data.experienceYears,
+                swimDays: data.swimDays,
+                bikeDays: data.bikeDays,
+                runDays: data.runDays
             )
 
             try await client
