@@ -1,6 +1,6 @@
 # Feature Implementation Plan: Weekly Training Availability
 
-**Overall Progress:** `50%` (Steps 1-3 complete)
+**Overall Progress:** `67%` (Steps 1-3, 5 complete - Database Migration, Data Models, UI Component, and Service Layer)
 
 **Linear Issue:** [DRO-25](https://linear.app/dromosapp/issue/DRO-25/add-weekly-availability-collection-to-onboarding-flow)
 
@@ -47,10 +47,10 @@ Add 3 new onboarding screens (4, 5, 6) to collect athlete's weekly training avai
   - [ ] 🟥 Update progress indicators: Screen 1-3 stay "X of 6", new screens show "4 of 6", "5 of 6", "6 of 6"
   - [ ] 🟥 Update `CompleteOnboardingData` initialization to include availability
 
-- [ ] 🟥 **Step 5: Update ProfileService**
-  - [ ] 🟥 Modify `saveOnboardingData()` to handle swim/bike/run days
-  - [ ] 🟥 Update `OnboardingUpdate` struct to include 3 JSONB fields
-  - [ ] 🟥 Ensure proper encoding of string arrays to JSONB
+- [x] 🟩 **Step 5: Update ProfileService**
+  - [x] 🟩 Modify `saveOnboardingData()` to handle swim/bike/run days
+  - [x] 🟩 Update `OnboardingUpdate` struct to include 3 JSONB fields
+  - [x] 🟩 Ensure proper encoding of string arrays to JSONB
 
 - [ ] 🟥 **Step 6: Manual Testing**
   - [ ] 🟥 Test Screen 1-3 still work correctly

@@ -96,6 +96,8 @@ struct OnboardingAvailabilityView: View {
                     ) {
                         toggleDay(day)
                     }
+                    .accessibilityLabel("\(day), \(selectedDays.contains(day) ? "selected" : "not selected")")
+                    .accessibilityHint("Double tap to \(selectedDays.contains(day) ? "deselect" : "select") this day")
                 }
             }
             .padding(.vertical)
@@ -114,6 +116,8 @@ struct OnboardingAvailabilityView: View {
                 .cornerRadius(10)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Any day, \(isAnyDaySelected ? "all days selected" : "not all days selected")")
+            .accessibilityHint("Double tap to \(isAnyDaySelected ? "deselect all days" : "select all days")")
             
             if showErrors && !isFormValid {
                 Text("Please select at least one day")
@@ -201,8 +205,11 @@ struct DayButton: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected ? color.opacity(0.1) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
                     .stroke(isSelected ? color : Color.secondary.opacity(0.3), lineWidth: 2)
-                    .background(isSelected ? color.opacity(0.1) : Color.clear)
             )
             .contentShape(Rectangle())
         }
