@@ -1,6 +1,6 @@
 # Feature Implementation Plan: Weekly Training Availability
 
-**Overall Progress:** `33%` (Steps 1-2 complete - Database Migration and Data Models)
+**Overall Progress:** `50%` (Steps 1-3 complete)
 
 **Linear Issue:** [DRO-25](https://linear.app/dromosapp/issue/DRO-25/add-weekly-availability-collection-to-onboarding-flow)
 
@@ -28,15 +28,15 @@ Add 3 new onboarding screens (4, 5, 6) to collect athlete's weekly training avai
   - [x] 🟩 Add `AvailabilityData` struct to `OnboardingData.swift`
   - [x] 🟩 Update `CompleteOnboardingData` to include swim/bike/run days
 
-- [ ] 🟥 **Step 3: Create Reusable UI Component**
-  - [ ] 🟥 Create `OnboardingAvailabilityView.swift` in `Features/Onboarding/`
-  - [ ] 🟥 Implement sport enum (swim, bike, run) with display properties
-  - [ ] 🟥 Build grid layout for 7 day buttons (Mon-Sun, 2 columns)
-  - [ ] 🟥 Implement selection state (checkmark + highlighted border)
-  - [ ] 🟥 Add "Any day" toggle at bottom (selects/deselects all)
-  - [ ] 🟥 Add validation: minimum 1 day required
-  - [ ] 🟥 Show error message on Next tap if no days selected
-  - [ ] 🟥 Implement Back/Next navigation callbacks
+- [x] 🟩 **Step 3: Create Reusable UI Component**
+  - [x] 🟩 Create `OnboardingAvailabilityView.swift` in `Features/Onboarding/`
+  - [x] 🟩 Implement sport enum (swim, bike, run) with display properties
+  - [x] 🟩 Build grid layout for 7 day buttons (Mon-Sun, 2 columns)
+  - [x] 🟩 Implement selection state (checkmark + highlighted border)
+  - [x] 🟩 Add "Any day" toggle at bottom (selects/deselects all)
+  - [x] 🟩 Add validation: minimum 1 day required
+  - [x] 🟩 Show error message on Next tap if no days selected
+  - [x] 🟩 Implement Back/Next navigation callbacks
 
 - [ ] 🟥 **Step 4: Update Onboarding Flow**
   - [ ] 🟥 Modify `OnboardingFlowView.swift` to extend from 3 to 6 screens
