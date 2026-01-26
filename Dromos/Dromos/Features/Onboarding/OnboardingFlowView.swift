@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import OSLog
 
 /// Container view orchestrating the 6-screen onboarding flow.
 /// Manages navigation between screens and handles data persistence to Supabase.
@@ -25,6 +26,9 @@ struct OnboardingFlowView: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
+    
+    /// Logger for onboarding flow operations
+    private let logger = Logger(subsystem: "com.dromos.app", category: "OnboardingFlow")
 
     /// Navigation direction for transitions
     enum TransitionDirection {
@@ -196,11 +200,13 @@ struct OnboardingFlowView: View {
     /// Updates AuthService state on success to trigger navigation to MainTabView.
     private func saveOnboardingData() {
         guard let userId = authService.currentUserId else {
+            logger.error("Save failed: No user ID available")
             errorMessage = "Unable to identify user. Please sign in again."
             showError = true
             return
         }
 
+        logger.info("Starting onboarding data save for user \(userId.uuidString, privacy: .public)")
         isSaving = true
 
         Task {
@@ -213,19 +219,25 @@ struct OnboardingFlowView: View {
                     availability: availability
                 )
 
+                logger.debug("Saving onboarding data: raceObjective=\(String(describing: completeData.raceObjective?.rawValue ?? "nil"), privacy: .public), hasAvailability=\(completeData.swimDays != nil || completeData.bikeDays != nil || completeData.runDays != nil, privacy: .public)")
+
                 // Save to database
                 try await profileService.saveOnboardingData(userId: userId, data: completeData)
+                logger.info("Successfully saved onboarding data for user \(userId.uuidString, privacy: .public)")
 
                 // Mark onboarding as complete
                 try await profileService.markOnboardingComplete(userId: userId)
+                logger.info("Successfully marked onboarding as complete for user \(userId.uuidString, privacy: .public)")
 
                 // Update auth service state (triggers navigation to MainTabView)
                 // If this fails, use fallback - we know save/markComplete succeeded
                 do {
                     try await authService.checkOnboardingStatus()
+                    logger.debug("Successfully updated auth service state")
                 } catch {
                     // Fallback: Manually mark complete locally since database update succeeded
                     // This prevents user from being stuck on onboarding screen
+                    logger.warning("Failed to check onboarding status, using local fallback: \(error.localizedDescription, privacy: .public)")
                     await MainActor.run {
                         authService.markOnboardingCompleteLocally()
                     }
@@ -234,8 +246,10 @@ struct OnboardingFlowView: View {
                 await MainActor.run {
                     isSaving = false
                 }
+                logger.info("Onboarding save completed successfully for user \(userId.uuidString, privacy: .public)")
 
             } catch {
+                logger.error("Failed to save onboarding data: \(error.localizedDescription, privacy: .public)")
                 await MainActor.run {
                     isSaving = false
                     errorMessage = mapSaveError(error)
