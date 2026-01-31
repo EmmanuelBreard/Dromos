@@ -12,8 +12,9 @@ Add 1 new onboarding screen (Screen 7) to collect total training duration per da
 - [x] 🟩 **Step 1: Database Migration**
   - [x] 🟩 Create migration adding 7 nullable INT columns to `users` table: `mon_duration`, `tue_duration`, `wed_duration`, `thu_duration`, `fri_duration`, `sat_duration`, `sun_duration`
   - [x] 🟩 Add CHECK constraints (30-420 minutes range)
-  - [ ] 🟨 Apply migration to Supabase project (manual step)
-  - [ ] 🟨 Verify columns exist in database (manual step)
+  - [x] 🟩 Migration file ready: `supabase/migrations/005_add_daily_duration_columns.sql`
+  - [x] 🟩 Migration applied to Supabase database
+  - [x] 🟩 Verified all 7 duration columns exist in database
 
 - [x] 🟩 **Step 2: Update Data Models**
   - [x] 🟩 Add 7 duration fields to `User` model in `User.swift`
