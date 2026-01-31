@@ -104,6 +104,44 @@ struct AvailabilityData: Codable {
     }
 }
 
+// MARK: - Screen 7: Daily Training Duration
+
+/// Data collected on the seventh onboarding screen.
+/// Contains total training duration per day of the week (in minutes).
+/// Only days marked as available (union of swim/bike/run days) are included.
+struct DailyDurationData: Codable {
+    /// Total training duration for Monday in minutes (30-420, nullable if day not available)
+    var monDuration: Int?
+
+    /// Total training duration for Tuesday in minutes (30-420, nullable if day not available)
+    var tueDuration: Int?
+
+    /// Total training duration for Wednesday in minutes (30-420, nullable if day not available)
+    var wedDuration: Int?
+
+    /// Total training duration for Thursday in minutes (30-420, nullable if day not available)
+    var thuDuration: Int?
+
+    /// Total training duration for Friday in minutes (30-420, nullable if day not available)
+    var friDuration: Int?
+
+    /// Total training duration for Saturday in minutes (30-420, nullable if day not available)
+    var satDuration: Int?
+
+    /// Total training duration for Sunday in minutes (30-420, nullable if day not available)
+    var sunDuration: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case monDuration = "mon_duration"
+        case tueDuration = "tue_duration"
+        case wedDuration = "wed_duration"
+        case thuDuration = "thu_duration"
+        case friDuration = "fri_duration"
+        case satDuration = "sat_duration"
+        case sunDuration = "sun_duration"
+    }
+}
+
 // MARK: - Complete Onboarding Payload
 
 /// Aggregated onboarding data from all screens.
@@ -132,13 +170,23 @@ struct CompleteOnboardingData: Codable {
     var bikeDays: [String]?
     var runDays: [String]?
 
+    // Daily Training Duration (Screen 7)
+    var monDuration: Int?
+    var tueDuration: Int?
+    var wedDuration: Int?
+    var thuDuration: Int?
+    var friDuration: Int?
+    var satDuration: Int?
+    var sunDuration: Int?
+
     /// Initializes from individual screen data objects.
     /// - Parameters:
     ///   - basicInfo: Data from Screen 1 (demographics)
     ///   - raceGoals: Data from Screen 2 (race objectives)
     ///   - metrics: Data from Screen 3 (performance metrics)
     ///   - availability: Data from Screens 4, 5, 6 (weekly training availability)
-    init(basicInfo: BasicInfoData, raceGoals: RaceGoalsData, metrics: MetricsData, availability: AvailabilityData? = nil) {
+    ///   - duration: Data from Screen 7 (daily training duration)
+    init(basicInfo: BasicInfoData, raceGoals: RaceGoalsData, metrics: MetricsData, availability: AvailabilityData? = nil, duration: DailyDurationData? = nil) {
         self.sex = basicInfo.sex
         self.birthDate = basicInfo.birthDate
         self.weightKg = basicInfo.weightKg
@@ -154,6 +202,13 @@ struct CompleteOnboardingData: Codable {
         self.swimDays = availability?.swimDays.isEmpty == false ? availability?.swimDays : nil
         self.bikeDays = availability?.bikeDays.isEmpty == false ? availability?.bikeDays : nil
         self.runDays = availability?.runDays.isEmpty == false ? availability?.runDays : nil
+        self.monDuration = duration?.monDuration
+        self.tueDuration = duration?.tueDuration
+        self.wedDuration = duration?.wedDuration
+        self.thuDuration = duration?.thuDuration
+        self.friDuration = duration?.friDuration
+        self.satDuration = duration?.satDuration
+        self.sunDuration = duration?.sunDuration
     }
 
     enum CodingKeys: String, CodingKey {
@@ -172,5 +227,12 @@ struct CompleteOnboardingData: Codable {
         case swimDays = "swim_days"
         case bikeDays = "bike_days"
         case runDays = "run_days"
+        case monDuration = "mon_duration"
+        case tueDuration = "tue_duration"
+        case wedDuration = "wed_duration"
+        case thuDuration = "thu_duration"
+        case friDuration = "fri_duration"
+        case satDuration = "sat_duration"
+        case sunDuration = "sun_duration"
     }
 }

@@ -8,10 +8,11 @@
 import SwiftUI
 import OSLog
 
-/// Container view orchestrating the 6-screen onboarding flow.
+/// Container view orchestrating the 7-screen onboarding flow.
 /// Manages navigation between screens and handles data persistence to Supabase.
 /// Screens 1-3: Basic info, race goals, performance metrics
 /// Screens 4-6: Weekly training availability (swim, bike, run)
+/// Screen 7: Daily training duration
 struct OnboardingFlowView: View {
     @ObservedObject var authService: AuthService
     @StateObject private var profileService = ProfileService()
@@ -22,6 +23,7 @@ struct OnboardingFlowView: View {
     @State private var raceGoals = RaceGoalsData()
     @State private var metrics = MetricsData()
     @State private var availability = AvailabilityData()
+    @State private var duration = DailyDurationData()
 
     @State private var isSaving = false
     @State private var showError = false
@@ -101,7 +103,7 @@ struct OnboardingFlowView: View {
                         OnboardingAvailabilityView(
                             sport: .swim,
                             screenNumber: 4,
-                            totalScreens: 6,
+                            totalScreens: 7,
                             selectedDays: $availability.swimDays,
                             onNext: {
                                 transitionDirection = .forward
@@ -118,7 +120,7 @@ struct OnboardingFlowView: View {
                         OnboardingAvailabilityView(
                             sport: .bike,
                             screenNumber: 5,
-                            totalScreens: 6,
+                            totalScreens: 7,
                             selectedDays: $availability.bikeDays,
                             onNext: {
                                 transitionDirection = .forward
@@ -135,12 +137,29 @@ struct OnboardingFlowView: View {
                         OnboardingAvailabilityView(
                             sport: .run,
                             screenNumber: 6,
-                            totalScreens: 6,
+                            totalScreens: 7,
                             selectedDays: $availability.runDays,
-                            onNext: { saveOnboardingData() },
+                            onNext: {
+                                transitionDirection = .forward
+                                currentScreen = 7
+                            },
                             onBack: {
                                 transitionDirection = .backward
                                 currentScreen = 5
+                            }
+                        )
+                        .transition(transitionDirection.transition)
+
+                    case 7:
+                        OnboardingDailyDurationView(
+                            screenNumber: 7,
+                            totalScreens: 7,
+                            availableDays: getAvailableDaysUnion(),
+                            durationData: $duration,
+                            onNext: { saveOnboardingData() },
+                            onBack: {
+                                transitionDirection = .backward
+                                currentScreen = 6
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -211,12 +230,13 @@ struct OnboardingFlowView: View {
 
         Task {
             do {
-                // Combine all data from 6 screens (basic info, race goals, metrics, availability)
+                // Combine all data from 7 screens (basic info, race goals, metrics, availability, duration)
                 let completeData = CompleteOnboardingData(
                     basicInfo: basicInfo,
                     raceGoals: raceGoals,
                     metrics: metrics,
-                    availability: availability
+                    availability: availability,
+                    duration: duration
                 )
 
                 logger.debug("Saving onboarding data: raceObjective=\(String(describing: completeData.raceObjective?.rawValue ?? "nil"), privacy: .public), hasAvailability=\(completeData.swimDays != nil || completeData.bikeDays != nil || completeData.runDays != nil, privacy: .public)")
@@ -277,6 +297,23 @@ struct OnboardingFlowView: View {
 
         // Generic fallback
         return "Unable to save your profile. Please try again."
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Calculates the union of all available days from swim/bike/run availability.
+    /// Returns a sorted list of unique days that appear in any sport's availability.
+    private func getAvailableDaysUnion() -> [String] {
+        let allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        var unionSet = Set<String>()
+        
+        // Add all days from each sport (availability arrays are non-optional)
+        unionSet.formUnion(availability.swimDays)
+        unionSet.formUnion(availability.bikeDays)
+        unionSet.formUnion(availability.runDays)
+        
+        // Return sorted by day order
+        return allDays.filter { unionSet.contains($0) }
     }
 }
 

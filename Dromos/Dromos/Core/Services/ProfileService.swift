@@ -148,6 +148,7 @@ final class ProfileService: ObservableObject {
             // Create encodable update payload
             // Note: We convert RaceObjective enum to its raw string value
             // Availability arrays (swimDays, bikeDays, runDays) are encoded as JSONB arrays
+            // Duration fields are nullable INT values (30-420 minutes)
             struct OnboardingUpdate: Encodable {
                 let sex: String?
                 let birthDate: Date?
@@ -164,6 +165,13 @@ final class ProfileService: ObservableObject {
                 let swimDays: [String]?
                 let bikeDays: [String]?
                 let runDays: [String]?
+                let monDuration: Int?
+                let tueDuration: Int?
+                let wedDuration: Int?
+                let thuDuration: Int?
+                let friDuration: Int?
+                let satDuration: Int?
+                let sunDuration: Int?
 
                 enum CodingKeys: String, CodingKey {
                     case sex
@@ -181,6 +189,13 @@ final class ProfileService: ObservableObject {
                     case swimDays = "swim_days"
                     case bikeDays = "bike_days"
                     case runDays = "run_days"
+                    case monDuration = "mon_duration"
+                    case tueDuration = "tue_duration"
+                    case wedDuration = "wed_duration"
+                    case thuDuration = "thu_duration"
+                    case friDuration = "fri_duration"
+                    case satDuration = "sat_duration"
+                    case sunDuration = "sun_duration"
                 }
             }
 
@@ -199,7 +214,14 @@ final class ProfileService: ObservableObject {
                 experienceYears: data.experienceYears,
                 swimDays: data.swimDays,
                 bikeDays: data.bikeDays,
-                runDays: data.runDays
+                runDays: data.runDays,
+                monDuration: data.monDuration,
+                tueDuration: data.tueDuration,
+                wedDuration: data.wedDuration,
+                thuDuration: data.thuDuration,
+                friDuration: data.friDuration,
+                satDuration: data.satDuration,
+                sunDuration: data.sunDuration
             )
 
             try await client

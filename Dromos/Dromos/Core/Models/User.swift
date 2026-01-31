@@ -82,6 +82,29 @@ struct User: Codable, Identifiable, Equatable {
     /// Days of the week user can train running (e.g., ["Saturday", "Sunday"])
     var runDays: [String]?
 
+    // MARK: - Onboarding: Daily Training Duration (Screen 7)
+
+    /// Total training duration for Monday in minutes (30-420, nullable if day not available)
+    var monDuration: Int?
+
+    /// Total training duration for Tuesday in minutes (30-420, nullable if day not available)
+    var tueDuration: Int?
+
+    /// Total training duration for Wednesday in minutes (30-420, nullable if day not available)
+    var wedDuration: Int?
+
+    /// Total training duration for Thursday in minutes (30-420, nullable if day not available)
+    var thuDuration: Int?
+
+    /// Total training duration for Friday in minutes (30-420, nullable if day not available)
+    var friDuration: Int?
+
+    /// Total training duration for Saturday in minutes (30-420, nullable if day not available)
+    var satDuration: Int?
+
+    /// Total training duration for Sunday in minutes (30-420, nullable if day not available)
+    var sunDuration: Int?
+
     // MARK: - Onboarding Status
 
     /// Indicates whether the user has completed the onboarding flow
@@ -141,6 +164,13 @@ extension User {
         case swimDays = "swim_days"
         case bikeDays = "bike_days"
         case runDays = "run_days"
+        case monDuration = "mon_duration"
+        case tueDuration = "tue_duration"
+        case wedDuration = "wed_duration"
+        case thuDuration = "thu_duration"
+        case friDuration = "fri_duration"
+        case satDuration = "sat_duration"
+        case sunDuration = "sun_duration"
         case onboardingCompleted = "onboarding_completed"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -170,6 +200,13 @@ struct UserUpdate: Codable {
     var swimDays: [String]?
     var bikeDays: [String]?
     var runDays: [String]?
+    var monDuration: Int?
+    var tueDuration: Int?
+    var wedDuration: Int?
+    var thuDuration: Int?
+    var friDuration: Int?
+    var satDuration: Int?
+    var sunDuration: Int?
     var onboardingCompleted: Bool?
 
     enum CodingKeys: String, CodingKey {
@@ -189,6 +226,13 @@ struct UserUpdate: Codable {
         case swimDays = "swim_days"
         case bikeDays = "bike_days"
         case runDays = "run_days"
+        case monDuration = "mon_duration"
+        case tueDuration = "tue_duration"
+        case wedDuration = "wed_duration"
+        case thuDuration = "thu_duration"
+        case friDuration = "fri_duration"
+        case satDuration = "sat_duration"
+        case sunDuration = "sun_duration"
         case onboardingCompleted = "onboarding_completed"
     }
 }
