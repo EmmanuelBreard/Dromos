@@ -204,7 +204,6 @@ struct CompleteOnboardingData: Codable {
         self.runDays = availability?.runDays.isEmpty == false ? availability?.runDays : nil
         
         // Calculate union of available days to determine which duration values to keep
-        let allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         var availableDaysSet = Set<String>()
         if let swimDays = availability?.swimDays {
             availableDaysSet.formUnion(swimDays)
