@@ -223,7 +223,7 @@ struct DayButton: View {
     OnboardingAvailabilityView(
         sport: .swim,
         screenNumber: 4,
-        totalScreens: 6,
+        totalScreens: 7,
         selectedDays: .constant(["Monday", "Wednesday"]),
         onNext: {},
         onBack: {}
@@ -234,7 +234,7 @@ struct DayButton: View {
     OnboardingAvailabilityView(
         sport: .bike,
         screenNumber: 5,
-        totalScreens: 6,
+        totalScreens: 7,
         selectedDays: .constant([]),
         onNext: {},
         onBack: {}

@@ -1,0 +1,454 @@
+{
+  "workouts": [
+    {
+      "template_id": "SWIM_Tempo_01",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 10,
+          "segments": [
+            { "label": "work", "distance_meters": 100, "pace": "medium" }
+          ],
+          "rest_seconds": 20
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_02",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            {
+              "label": "repeat",
+              "repeats": 4,
+              "segments": [
+                { "label": "work", "distance_meters": 100, "pace": "medium" }
+              ],
+              "rest_seconds": 15
+            }
+          ],
+          "recovery": { "label": "recovery", "distance_meters": 100, "pace": "slow" }
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_03",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            { "label": "work", "distance_meters": 400, "pace": "medium" }
+          ],
+          "rest_seconds": 45
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_04",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            { "label": "work", "distance_meters": 200, "pace": "medium" }
+          ],
+          "rest_seconds": 30
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_05",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        { "label": "work", "distance_meters": 300, "pace": "medium" },
+        { "label": "rest", "rest_seconds": 30 },
+        { "label": "work", "distance_meters": 300, "pace": "medium" },
+        { "label": "rest", "rest_seconds": 30 },
+        { "label": "work", "distance_meters": 300, "pace": "quick" },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_06",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 16,
+          "segments": [
+            { "label": "work", "distance_meters": 50, "pace": "medium" }
+          ],
+          "rest_seconds": 15
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_07",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            { "label": "work", "distance_meters": 500, "pace": "medium" }
+          ],
+          "rest_seconds": 60
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_08",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        { "label": "work", "duration_minutes": 20, "pace": "medium" },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "work", "distance_meters": 25, "pace": "quick" }
+          ],
+          "rest_seconds": 20
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_09",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            { "label": "work", "distance_meters": 150, "pace": "medium" },
+            { "label": "work", "distance_meters": 50, "pace": "quick" }
+          ],
+          "rest_seconds": 40
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_10",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "work", "distance_meters": 100, "pace": "medium", "equipment": "pull_buoy" }
+          ],
+          "rest_seconds": 20
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_01",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 12,
+          "segments": [
+            { "label": "work", "distance_meters": 100, "pace": "quick" }
+          ],
+          "rest_seconds": 25
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_02",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 20,
+          "segments": [
+            { "label": "work", "distance_meters": 50, "pace": "quick" }
+          ],
+          "rest_seconds": 20
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_03",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            { "label": "work", "distance_meters": 200, "pace": "quick" }
+          ],
+          "rest_seconds": 40
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_04",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            {
+              "label": "repeat",
+              "repeats": 4,
+              "segments": [
+                { "label": "work", "distance_meters": 25, "pace": "very_quick" }
+              ],
+              "rest_seconds": 30
+            }
+          ],
+          "recovery": { "label": "recovery", "distance_meters": 100, "pace": "slow" }
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_05",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        { "label": "work", "distance_meters": 50, "pace": "quick" },
+        { "label": "rest", "rest_seconds": 15 },
+        { "label": "work", "distance_meters": 100, "pace": "quick" },
+        { "label": "rest", "rest_seconds": 20 },
+        { "label": "work", "distance_meters": 150, "pace": "quick" },
+        { "label": "rest", "rest_seconds": 25 },
+        { "label": "work", "distance_meters": 200, "pace": "quick" },
+        { "label": "rest", "rest_seconds": 30 },
+        { "label": "work", "distance_meters": 150, "pace": "quick" },
+        { "label": "rest", "rest_seconds": 25 },
+        { "label": "work", "distance_meters": 100, "pace": "quick" },
+        { "label": "rest", "rest_seconds": 20 },
+        { "label": "work", "distance_meters": 50, "pace": "quick" },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_06",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 12,
+          "segments": [
+            { "label": "work", "distance_meters": 25, "pace": "quick" },
+            { "label": "recovery", "distance_meters": 25, "pace": "slow" }
+          ],
+          "rest_seconds": 15
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_07",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "work", "distance_meters": 100, "pace": "quick" }
+          ],
+          "rest_seconds": 20
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_08",
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "repeat",
+              "repeats": 4,
+              "segments": [
+                { "label": "work", "distance_meters": 50, "pace": "quick" }
+              ],
+              "rest_seconds": 20
+            }
+          ],
+          "recovery": { "label": "recovery", "distance_meters": 100, "pace": "slow" }
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_09",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 16,
+          "segments": [
+            { "label": "work", "distance_meters": 25, "pace": "very_quick" }
+          ],
+          "rest_seconds": 45
+        },
+        { "label": "cooldown", "distance_meters": 300, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_10",
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            { "label": "work", "distance_meters": 100, "pace": "quick" }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "work", "distance_meters": 50, "pace": "very_quick" }
+          ],
+          "rest_seconds": 20
+        },
+        { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Technique_01",
+      "segments": [
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "drill", "distance_meters": 25, "drill": "catch_up", "pace": "slow" },
+            { "label": "work", "distance_meters": 25, "pace": "slow" }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            { "label": "work", "distance_meters": 25, "drill": "build", "pace": "medium" }
+          ],
+          "rest_seconds": 20
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Technique_02",
+      "segments": [
+        {
+          "label": "repeat",
+          "repeats": 10,
+          "segments": [
+            { "label": "drill", "distance_meters": 25, "drill": "side_kick", "pace": "slow" },
+            { "label": "work", "distance_meters": 25, "pace": "slow" }
+          ],
+          "rest_seconds": 25
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            { "label": "work", "distance_meters": 25, "pace": "medium", "cue": "quiet head" }
+          ],
+          "rest_seconds": 20
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Technique_03",
+      "segments": [
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "drill", "distance_meters": 15, "drill": "scull", "pace": "slow" },
+            { "label": "work", "distance_meters": 35, "pace": "slow" }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "drill", "distance_meters": 25, "drill": "fist_drill", "pace": "medium" }
+          ],
+          "rest_seconds": 20
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Technique_04",
+      "segments": [
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            { "label": "drill", "distance_meters": 50, "drill": "6_kick_switch", "pace": "slow" }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "work", "distance_meters": 50, "pace": "slow", "cue": "press chest" }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            { "label": "work", "distance_meters": 25, "pace": "quick" }
+          ],
+          "rest_seconds": 30
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Technique_05",
+      "segments": [
+        {
+          "label": "repeat",
+          "repeats": 10,
+          "segments": [
+            { "label": "work", "distance_meters": 100, "pace": "slow", "equipment": "pull_buoy", "cue": "high elbow catch" }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            { "label": "work", "distance_meters": 25, "pace": "medium", "cue": "long strokes" }
+          ],
+          "rest_seconds": 15
+        }
+      ]
+    }
+  ]
+}

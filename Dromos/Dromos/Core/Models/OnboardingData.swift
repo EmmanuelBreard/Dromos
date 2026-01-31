@@ -202,13 +202,29 @@ struct CompleteOnboardingData: Codable {
         self.swimDays = availability?.swimDays.isEmpty == false ? availability?.swimDays : nil
         self.bikeDays = availability?.bikeDays.isEmpty == false ? availability?.bikeDays : nil
         self.runDays = availability?.runDays.isEmpty == false ? availability?.runDays : nil
-        self.monDuration = duration?.monDuration
-        self.tueDuration = duration?.tueDuration
-        self.wedDuration = duration?.wedDuration
-        self.thuDuration = duration?.thuDuration
-        self.friDuration = duration?.friDuration
-        self.satDuration = duration?.satDuration
-        self.sunDuration = duration?.sunDuration
+        
+        // Calculate union of available days to determine which duration values to keep
+        let allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        var availableDaysSet = Set<String>()
+        if let swimDays = availability?.swimDays {
+            availableDaysSet.formUnion(swimDays)
+        }
+        if let bikeDays = availability?.bikeDays {
+            availableDaysSet.formUnion(bikeDays)
+        }
+        if let runDays = availability?.runDays {
+            availableDaysSet.formUnion(runDays)
+        }
+        
+        // Only keep duration values for days that are in the union of available days
+        // Clear durations for days that are no longer available (prevents stale data)
+        self.monDuration = availableDaysSet.contains("Monday") ? duration?.monDuration : nil
+        self.tueDuration = availableDaysSet.contains("Tuesday") ? duration?.tueDuration : nil
+        self.wedDuration = availableDaysSet.contains("Wednesday") ? duration?.wedDuration : nil
+        self.thuDuration = availableDaysSet.contains("Thursday") ? duration?.thuDuration : nil
+        self.friDuration = availableDaysSet.contains("Friday") ? duration?.friDuration : nil
+        self.satDuration = availableDaysSet.contains("Saturday") ? duration?.satDuration : nil
+        self.sunDuration = availableDaysSet.contains("Sunday") ? duration?.sunDuration : nil
     }
 
     enum CodingKeys: String, CodingKey {

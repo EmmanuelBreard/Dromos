@@ -117,7 +117,7 @@ struct OnboardingDailyDurationView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.accentColor)
+                        .background(Color.blue)
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 }
@@ -207,6 +207,8 @@ struct DurationRow: View {
         .padding()
         .background(Color.secondary.opacity(0.1))
         .cornerRadius(10)
+        .accessibilityLabel("\(day), \(OnboardingDailyDurationView.formatDuration(selectedDuration))")
+        .accessibilityHint("Double tap to change training duration for \(day)")
     }
 }
 

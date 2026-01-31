@@ -1,6 +1,6 @@
 # Code Review Task
 
-Perform comprehensive code review. Be thorough but concise.
+Perform comprehensive code review on the PRs opened linked to the Linear Task shared. Be thorough but concise.
 
 ## Check For:
 
