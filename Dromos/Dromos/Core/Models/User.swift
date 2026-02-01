@@ -48,10 +48,7 @@ struct User: Codable, Identifiable, Equatable {
     /// Target race date
     var raceDate: Date?
 
-    /// Target finish time - hours component
-    var timeObjectiveHours: Int?
-
-    /// Target finish time - minutes component
+    /// Target finish time in total minutes (consolidated from hours + minutes)
     var timeObjectiveMinutes: Int?
 
     // MARK: - Onboarding: Performance Metrics (Screen 3)
@@ -59,11 +56,8 @@ struct User: Codable, Identifiable, Equatable {
     /// VMA (Vitesse Maximale Aérobie) in km/h (valid range: 10-25)
     var vma: Double?
 
-    /// CSS (Critical Swim Speed) - minutes component for 100m pace
-    var cssMinutes: Int?
-
-    /// CSS (Critical Swim Speed) - seconds component for 100m pace (valid range: 0-59)
-    var cssSeconds: Int?
+    /// CSS (Critical Swim Speed) in total seconds per 100m (consolidated from minutes + seconds, valid range: 25-300)
+    var cssSecondsPer100m: Int?
 
     /// FTP (Functional Threshold Power) in watts (valid range: 50-500)
     var ftp: Int?
@@ -127,16 +121,20 @@ struct User: Codable, Identifiable, Equatable {
     }
 
     /// Formats the CSS pace as a string (e.g., "1:45" for 1 min 45 sec per 100m)
+    /// Derives minutes:seconds from total seconds
     var formattedCSS: String? {
-        guard let minutes = cssMinutes else { return nil }
-        let seconds = cssSeconds ?? 0
+        guard let totalSeconds = cssSecondsPer100m else { return nil }
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
 
     /// Formats the target time as a string (e.g., "5h 30min")
+    /// Derives hours:minutes from total minutes
     var formattedTimeObjective: String? {
-        guard let hours = timeObjectiveHours else { return nil }
-        let minutes = timeObjectiveMinutes ?? 0
+        guard let totalMinutes = timeObjectiveMinutes else { return nil }
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
         return "\(hours)h \(minutes)min"
     }
 }
@@ -154,11 +152,9 @@ struct UserUpdate: Codable {
     var weightKg: Double?
     var raceObjective: RaceObjective?
     var raceDate: Date?
-    var timeObjectiveHours: Int?
     var timeObjectiveMinutes: Int?
     var vma: Double?
-    var cssMinutes: Int?
-    var cssSeconds: Int?
+    var cssSecondsPer100m: Int?
     var ftp: Int?
     var experienceYears: Int?
     var swimDays: [String]?

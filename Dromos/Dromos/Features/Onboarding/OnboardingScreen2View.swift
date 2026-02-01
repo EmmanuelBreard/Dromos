@@ -125,13 +125,16 @@ struct OnboardingScreen2View: View {
                                 .textFieldStyle(.roundedBorder)
                                 .multilineTextAlignment(.center)
                                 .onChange(of: hoursText) { _, newValue in
-                                    if let hours = Int(newValue) {
-                                        data.timeObjectiveHours = hours
-                                    }
-                                    // Don't set to nil on invalid input - preserve previous valid value
+                                    // Convert hours:minutes UI to total minutes
+                                    let hours = Int(newValue) ?? 0
+                                    let minutes = Int(minutesText) ?? 0
+                                    let total = hours * 60 + minutes
+                                    data.timeObjectiveMinutes = total > 0 ? total : nil
                                 }
                                 .onAppear {
-                                    if let hours = data.timeObjectiveHours {
+                                    // Decompose total minutes into hours:minutes for display
+                                    if let totalMinutes = data.timeObjectiveMinutes {
+                                        let hours = totalMinutes / 60
                                         hoursText = String(hours)
                                     }
                                 }
@@ -149,13 +152,16 @@ struct OnboardingScreen2View: View {
                                 .textFieldStyle(.roundedBorder)
                                 .multilineTextAlignment(.center)
                                 .onChange(of: minutesText) { _, newValue in
-                                    if let minutes = Int(newValue) {
-                                        data.timeObjectiveMinutes = minutes
-                                    }
-                                    // Don't set to nil on invalid input - preserve previous valid value
+                                    // Convert hours:minutes UI to total minutes
+                                    let hours = Int(hoursText) ?? 0
+                                    let minutes = Int(newValue) ?? 0
+                                    let total = hours * 60 + minutes
+                                    data.timeObjectiveMinutes = total > 0 ? total : nil
                                 }
                                 .onAppear {
-                                    if let minutes = data.timeObjectiveMinutes {
+                                    // Decompose total minutes into hours:minutes for display
+                                    if let totalMinutes = data.timeObjectiveMinutes {
+                                        let minutes = totalMinutes % 60
                                         minutesText = String(minutes)
                                     }
                                 }

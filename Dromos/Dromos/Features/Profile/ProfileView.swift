@@ -176,7 +176,7 @@ struct ProfileView: View {
             HStack {
                 Text("Time Objective")
                 Spacer()
-                Text(formatTimeObjective(hours: user.timeObjectiveHours, minutes: user.timeObjectiveMinutes))
+                Text(formatTimeObjective(totalMinutes: user.timeObjectiveMinutes))
                     .foregroundColor(.secondary)
             }
         }
@@ -231,7 +231,7 @@ struct ProfileView: View {
             HStack {
                 Text("CSS")
                 Spacer()
-                Text(formatCss(minutes: user.cssMinutes, seconds: user.cssSeconds))
+                Text(formatCss(totalSeconds: user.cssSecondsPer100m))
                     .foregroundColor(.secondary)
             }
 
@@ -422,7 +422,7 @@ struct ProfileView: View {
             }
         }
 
-        // CSS validation (25-300 total seconds, seconds 0-59)
+        // CSS validation (25-300 total seconds, seconds component 0-59)
         if !editCssMinutes.isEmpty || !editCssSeconds.isEmpty {
             let minutes = Int(editCssMinutes) ?? 0
             let seconds = Int(editCssSeconds) ?? 0
@@ -485,11 +485,23 @@ struct ProfileView: View {
         editWeightKg = user.weightKg.map { String(format: "%.1f", $0) } ?? ""
         editRaceObjective = user.raceObjective ?? .sprint
         editRaceDate = user.raceDate ?? Date()
-        editTimeHours = user.timeObjectiveHours.map(String.init) ?? ""
-        editTimeMinutes = user.timeObjectiveMinutes.map(String.init) ?? ""
+        // Decompose total minutes into hours:minutes for display
+        if let totalMinutes = user.timeObjectiveMinutes {
+            editTimeHours = String(totalMinutes / 60)
+            editTimeMinutes = String(totalMinutes % 60)
+        } else {
+            editTimeHours = ""
+            editTimeMinutes = ""
+        }
         editVma = user.vma.map { String(format: "%.1f", $0) } ?? ""
-        editCssMinutes = user.cssMinutes.map(String.init) ?? ""
-        editCssSeconds = user.cssSeconds.map(String.init) ?? ""
+        // Decompose total seconds into min:sec for display
+        if let totalSeconds = user.cssSecondsPer100m {
+            editCssMinutes = String(totalSeconds / 60)
+            editCssSeconds = String(totalSeconds % 60)
+        } else {
+            editCssMinutes = ""
+            editCssSeconds = ""
+        }
         editFtp = user.ftp.map(String.init) ?? ""
         editExperienceYears = user.experienceYears.map(String.init) ?? ""
     }
@@ -509,6 +521,22 @@ struct ProfileView: View {
 
         Task {
             do {
+                // Recompose hours:minutes UI into total minutes
+                let timeObjectiveMinutes: Int? = {
+                    let hours = Int(editTimeHours) ?? 0
+                    let minutes = Int(editTimeMinutes) ?? 0
+                    let total = hours * 60 + minutes
+                    return total > 0 ? total : nil
+                }()
+                
+                // Recompose min:sec UI into total seconds
+                let cssSecondsPer100m: Int? = {
+                    let minutes = Int(editCssMinutes) ?? 0
+                    let seconds = Int(editCssSeconds) ?? 0
+                    let total = minutes * 60 + seconds
+                    return total > 0 ? total : nil
+                }()
+                
                 try await profileService.updateProfile(
                     userId: userId,
                     name: editName.isEmpty ? nil : editName,
@@ -517,11 +545,9 @@ struct ProfileView: View {
                     weightKg: Double(editWeightKg),
                     raceObjective: editRaceObjective,
                     raceDate: editRaceDate,
-                    timeObjectiveHours: Int(editTimeHours),
-                    timeObjectiveMinutes: Int(editTimeMinutes),
+                    timeObjectiveMinutes: timeObjectiveMinutes,
                     vma: Double(editVma),
-                    cssMinutes: Int(editCssMinutes),
-                    cssSeconds: Int(editCssSeconds),
+                    cssSecondsPer100m: cssSecondsPer100m,
                     ftp: Int(editFtp),
                     experienceYears: Int(editExperienceYears)
                 )
@@ -569,11 +595,12 @@ struct ProfileView: View {
         return Self.dateFormatter.string(from: date)
     }
 
-    /// Format time objective (hours:minutes)
-    private func formatTimeObjective(hours: Int?, minutes: Int?) -> String {
-        guard let hours = hours else { return "Not set" }
-        let mins = minutes ?? 0
-        return "\(hours)h \(mins)m"
+    /// Format time objective (hours:minutes) from total minutes
+    private func formatTimeObjective(totalMinutes: Int?) -> String {
+        guard let totalMinutes = totalMinutes else { return "Not set" }
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return "\(hours)h \(minutes)m"
     }
 
     /// Format VMA (Vitesse Maximale Aérobie)
@@ -582,11 +609,12 @@ struct ProfileView: View {
         return String(format: "%.1f km/h", vma)
     }
 
-    /// Format CSS (Critical Swim Speed)
-    private func formatCss(minutes: Int?, seconds: Int?) -> String {
-        guard let minutes = minutes else { return "Not set" }
-        let secs = seconds ?? 0
-        return String(format: "%d:%02d / 100m", minutes, secs)
+    /// Format CSS (Critical Swim Speed) from total seconds
+    private func formatCss(totalSeconds: Int?) -> String {
+        guard let totalSeconds = totalSeconds else { return "Not set" }
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d / 100m", minutes, seconds)
     }
 
     /// Format FTP (Functional Threshold Power)

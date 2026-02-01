@@ -33,10 +33,7 @@ struct RaceGoalsData: Codable {
     /// Target race date
     var raceDate: Date?
 
-    /// Target finish time - hours component
-    var timeObjectiveHours: Int?
-
-    /// Target finish time - minutes component
+    /// Target finish time in total minutes (consolidated from hours + minutes)
     var timeObjectiveMinutes: Int?
 }
 
@@ -48,11 +45,8 @@ struct MetricsData: Codable {
     /// VMA (Vitesse Maximale Aérobie) in km/h - key running metric
     var vma: Double?
 
-    /// CSS (Critical Swim Speed) - minutes component for 100m pace
-    var cssMinutes: Int?
-
-    /// CSS (Critical Swim Speed) - seconds component for 100m pace
-    var cssSeconds: Int?
+    /// CSS (Critical Swim Speed) in total seconds per 100m (consolidated from minutes + seconds)
+    var cssSecondsPer100m: Int?
 
     /// FTP (Functional Threshold Power) in watts - key cycling metric
     var ftp: Int?
@@ -118,13 +112,11 @@ struct CompleteOnboardingData: Codable {
     // Race Goals (Screen 2)
     var raceObjective: RaceObjective?
     var raceDate: Date?
-    var timeObjectiveHours: Int?
     var timeObjectiveMinutes: Int?
 
     // Performance Metrics (Screen 3)
     var vma: Double?
-    var cssMinutes: Int?
-    var cssSeconds: Int?
+    var cssSecondsPer100m: Int?
     var ftp: Int?
     var experienceYears: Int?
 
@@ -155,11 +147,9 @@ struct CompleteOnboardingData: Codable {
         self.weightKg = basicInfo.weightKg
         self.raceObjective = raceGoals.raceObjective
         self.raceDate = raceGoals.raceDate
-        self.timeObjectiveHours = raceGoals.timeObjectiveHours
         self.timeObjectiveMinutes = raceGoals.timeObjectiveMinutes
         self.vma = metrics.vma
-        self.cssMinutes = metrics.cssMinutes
-        self.cssSeconds = metrics.cssSeconds
+        self.cssSecondsPer100m = metrics.cssSecondsPer100m
         self.ftp = metrics.ftp
         self.experienceYears = metrics.experienceYears
         self.swimDays = availability?.swimDays.isEmpty == false ? availability?.swimDays : nil

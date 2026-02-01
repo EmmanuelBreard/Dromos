@@ -2,6 +2,22 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import OpenAI from "npm:openai@4";
 
+// Static assets (bundled as TS modules for CLI deploy)
+import STEP1_MACRO_PLAN_PROMPT from "./prompts/step1-macro-plan-prompt.ts";
+import STEP1B_MD_TO_JSON_PROMPT from "./prompts/step1b-md-to-json-prompt.ts";
+import STEP3_WORKOUT_BLOCK_PROMPT from "./prompts/step3-workout-block-prompt.ts";
+import TRAINING_PHILOSOPHY from "./context/training-philosophy-content.ts";
+
+// Large static asset fetched at runtime from Supabase Storage (too big to bundle on free plan)
+// Construct URL dynamically from SUPABASE_URL environment variable
+function getWorkoutLibraryUrl(): string {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!supabaseUrl) {
+    throw new Error("SUPABASE_URL environment variable not set");
+  }
+  return `${supabaseUrl}/storage/v1/object/public/static-assets/workout-library.json`;
+}
+
 // Constants
 const BLOCK_SIZE = 4;
 const MODEL_STEP1 = "gpt-4o";
@@ -47,12 +63,6 @@ function normDay(d: string): string {
   return DAY_NORM[(d || "").toLowerCase()] || d;
 }
 
-// Helper: Load file from function directory
-async function loadFile(path: string): Promise<string> {
-  const file = await Deno.readTextFile(path);
-  return file;
-}
-
 // Helper: Format date as YYYY-MM-DD
 function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -93,10 +103,12 @@ function expandRaceObjective(raceObjective: string | null): string {
   return mapping[raceObjective] || raceObjective;
 }
 
-// Helper: Format CSS pace
-function formatCSS(cssMinutes: number | null, cssSeconds: number | null): string {
-  if (cssMinutes === null || cssSeconds === null) return "not provided";
-  return `${cssMinutes}:${cssSeconds.toString().padStart(2, "0")}`;
+// Helper: Format CSS pace from total seconds per 100m
+function formatCSS(cssSecondsPer100m: number | null): string {
+  if (cssSecondsPer100m === null || cssSecondsPer100m === undefined) return "not provided";
+  const minutes = Math.floor(cssSecondsPer100m / 60);
+  const seconds = cssSecondsPer100m % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 // Helper: Calculate weekly hours from daily durations
@@ -151,16 +163,9 @@ async function callOpenAI(
 }
 
 // Build prompt for Step 1 (macro plan)
-async function buildStep1Prompt(user: any, vars: any): Promise<string> {
-  const promptTemplate = await loadFile(
-    "./prompts/step1-macro-plan.txt"
-  );
-  const trainingPhilosophy = await loadFile(
-    "./context/training-philosophy.md"
-  );
-
-  let prompt = promptTemplate;
-  prompt = prompt.replace("{{training_philosophy}}", trainingPhilosophy);
+function buildStep1Prompt(user: any, vars: any): string {
+  let prompt = STEP1_MACRO_PLAN_PROMPT;
+  prompt = prompt.replace("{{training_philosophy}}", TRAINING_PHILOSOPHY);
   prompt = prompt.replace(
     "{{experience_level}}",
     mapExperienceLevel(user.experience_years)
@@ -183,7 +188,7 @@ async function buildStep1Prompt(user: any, vars: any): Promise<string> {
   );
   prompt = prompt.replace(
     "{{swim_css}}",
-    formatCSS(user.css_minutes, user.css_seconds)
+    formatCSS(user.css_seconds_per_100m)
   );
   prompt = prompt.replace("{{limiters}}", "none");
   prompt = prompt.replace("{{constraints}}", "none");
@@ -192,9 +197,8 @@ async function buildStep1Prompt(user: any, vars: any): Promise<string> {
 }
 
 // Build prompt for Step 2 (MD → JSON)
-async function buildStep2Prompt(step1Output: string): Promise<string> {
-  const promptTemplate = await loadFile("./prompts/step1b-md-to-json.txt");
-  return promptTemplate.replace("{{step1_output}}", step1Output);
+function buildStep2Prompt(step1Output: string): string {
+  return STEP1B_MD_TO_JSON_PROMPT.replace("{{step1_output}}", step1Output);
 }
 
 // Note: Step 3 prompt building is done inline in the main handler
@@ -502,7 +506,7 @@ Deno.serve(async (req) => {
     const openai = getOpenAIClient();
 
     // Step 1: Generate macro plan (markdown)
-    const step1Prompt = await buildStep1Prompt(userProfile, vars);
+    const step1Prompt = buildStep1Prompt(userProfile, vars);
     const step1Output = await callOpenAI(
       openai,
       MODEL_STEP1,
@@ -512,7 +516,7 @@ Deno.serve(async (req) => {
     );
 
     // Step 2: Convert markdown to JSON
-    const step2Prompt = await buildStep2Prompt(step1Output);
+    const step2Prompt = buildStep2Prompt(step1Output);
     const step2Output = await callOpenAI(
       openai,
       MODEL_STEP2,
@@ -531,9 +535,13 @@ Deno.serve(async (req) => {
     }
 
     // Step 3: Process blocks
-    const workoutLibraryStr = await loadFile("./context/workout-library.json");
-    const workoutLibrary = JSON.parse(workoutLibraryStr);
-    const step3PromptTemplate = await loadFile("./prompts/step3-workout-block.txt");
+    // Fetch workout library from Supabase Storage at runtime
+    const wlResponse = await fetch(getWorkoutLibraryUrl());
+    if (!wlResponse.ok) {
+      throw new Error(`Failed to fetch workout library: ${wlResponse.status}`);
+    }
+    const WORKOUT_LIBRARY_STR = await wlResponse.text();
+    const workoutLibrary = JSON.parse(WORKOUT_LIBRARY_STR);
 
     const weeks = macroPlan.weeks;
     const blocks = [];
@@ -547,8 +555,8 @@ Deno.serve(async (req) => {
     for (let b = 0; b < blocks.length; b++) {
       const block = blocks[b];
       // Build prompt for this block
-      let finalPrompt = step3PromptTemplate;
-      finalPrompt = finalPrompt.replace("{{workout_library}}", workoutLibraryStr);
+      let finalPrompt = STEP3_WORKOUT_BLOCK_PROMPT;
+      finalPrompt = finalPrompt.replace("{{workout_library}}", WORKOUT_LIBRARY_STR);
       finalPrompt = finalPrompt.replace(
         "{{block_weeks_json}}",
         JSON.stringify(block, null, 2)
