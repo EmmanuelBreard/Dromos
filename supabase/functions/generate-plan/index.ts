@@ -469,7 +469,14 @@ Deno.serve(async (req) => {
     };
 
     // Delete existing plan (CASCADE deletes weeks + sessions)
-    await dbClient.from("training_plans").delete().eq("user_id", userId);
+    const { error: deleteError } = await dbClient
+      .from("training_plans")
+      .delete()
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete existing plan: ${deleteError.message}`);
+    }
 
     // Create new training_plans row with status 'generating'
     const { data: plan, error: planError } = await dbClient
@@ -579,6 +586,27 @@ Deno.serve(async (req) => {
     fixBrickPairs(allBlockWeeks);
     fixConsecutiveRepeats(allBlockWeeks, workoutLibrary);
     fixRestDays(allBlockWeeks, weeks);
+
+    // Validate LLM output before DB writes
+    const VALID_PHASES = ["Base", "Build", "Peak", "Taper", "Recovery"];
+    const VALID_SPORTS = ["swim", "bike", "run"];
+    const VALID_TYPES = ["Easy", "Tempo", "Intervals"];
+    for (const week of allBlockWeeks) {
+      if (!VALID_PHASES.includes(week.phase)) {
+        throw new Error(`Invalid phase "${week.phase}" in week ${week.week_number}. Expected: ${VALID_PHASES.join(", ")}`);
+      }
+      for (const session of week.sessions || []) {
+        if (!VALID_SPORTS.includes(session.sport)) {
+          throw new Error(`Invalid sport "${session.sport}" in week ${week.week_number}. Expected: ${VALID_SPORTS.join(", ")}`);
+        }
+        if (!VALID_TYPES.includes(session.type)) {
+          throw new Error(`Invalid type "${session.type}" in week ${week.week_number}. Expected: ${VALID_TYPES.join(", ")}`);
+        }
+        if (!session.duration_minutes || session.duration_minutes <= 0) {
+          throw new Error(`Invalid duration ${session.duration_minutes} in week ${week.week_number}`);
+        }
+      }
+    }
 
     // Write to database
     const weekIds: Record<number, string> = {};
