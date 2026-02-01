@@ -26,7 +26,8 @@ struct WorkoutTemplate: Codable {
 /// A segment within a workout template.
 /// Segments can be simple (work, warmup, cooldown) or nested repeats.
 /// Fields are optional since different segment types use different subsets.
-struct WorkoutSegment: Codable {
+/// Uses `class` instead of `struct` to support recursive nesting (segments within segments).
+final class WorkoutSegment: Codable {
     let label: String
     let durationMinutes: Int?
     let durationSeconds: Int?
