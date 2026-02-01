@@ -67,11 +67,9 @@ final class ProfileService: ObservableObject {
     ///   - weightKg: User's weight in kg (optional)
     ///   - raceObjective: Target triathlon race distance (optional)
     ///   - raceDate: Target race date (optional)
-    ///   - timeObjectiveHours: Target finish time hours component (optional)
-    ///   - timeObjectiveMinutes: Target finish time minutes component (optional)
+    ///   - timeObjectiveMinutes: Target finish time in total minutes (optional)
     ///   - vma: VMA in km/h (optional)
-    ///   - cssMinutes: CSS minutes component (optional)
-    ///   - cssSeconds: CSS seconds component (optional)
+    ///   - cssSecondsPer100m: CSS in total seconds per 100m (optional)
     ///   - ftp: FTP in watts (optional)
     ///   - experienceYears: Years of triathlon experience (optional)
     /// - Returns: The updated user profile
@@ -85,11 +83,9 @@ final class ProfileService: ObservableObject {
         weightKg: Double? = nil,
         raceObjective: RaceObjective? = nil,
         raceDate: Date? = nil,
-        timeObjectiveHours: Int? = nil,
         timeObjectiveMinutes: Int? = nil,
         vma: Double? = nil,
-        cssMinutes: Int? = nil,
-        cssSeconds: Int? = nil,
+        cssSecondsPer100m: Int? = nil,
         ftp: Int? = nil,
         experienceYears: Int? = nil
     ) async throws -> User {
@@ -106,11 +102,9 @@ final class ProfileService: ObservableObject {
                 weightKg: weightKg,
                 raceObjective: raceObjective,
                 raceDate: raceDate,
-                timeObjectiveHours: timeObjectiveHours,
                 timeObjectiveMinutes: timeObjectiveMinutes,
                 vma: vma,
-                cssMinutes: cssMinutes,
-                cssSeconds: cssSeconds,
+                cssSecondsPer100m: cssSecondsPer100m,
                 ftp: ftp,
                 experienceYears: experienceYears,
                 onboardingCompleted: nil
@@ -155,11 +149,9 @@ final class ProfileService: ObservableObject {
                 let weightKg: Double?
                 let raceObjective: String?
                 let raceDate: Date?
-                let timeObjectiveHours: Int?
                 let timeObjectiveMinutes: Int?
                 let vma: Double?
-                let cssMinutes: Int?
-                let cssSeconds: Int?
+                let cssSecondsPer100m: Int?
                 let ftp: Int?
                 let experienceYears: Int?
                 let swimDays: [String]?
@@ -180,11 +172,9 @@ final class ProfileService: ObservableObject {
                 weightKg: data.weightKg,
                 raceObjective: data.raceObjective?.rawValue,
                 raceDate: data.raceDate,
-                timeObjectiveHours: data.timeObjectiveHours,
                 timeObjectiveMinutes: data.timeObjectiveMinutes,
                 vma: data.vma,
-                cssMinutes: data.cssMinutes,
-                cssSeconds: data.cssSeconds,
+                cssSecondsPer100m: data.cssSecondsPer100m,
                 ftp: data.ftp,
                 experienceYears: data.experienceYears,
                 swimDays: data.swimDays,

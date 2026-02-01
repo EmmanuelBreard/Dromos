@@ -97,10 +97,12 @@ function expandRaceObjective(raceObjective: string | null): string {
   return mapping[raceObjective] || raceObjective;
 }
 
-// Helper: Format CSS pace
-function formatCSS(cssMinutes: number | null, cssSeconds: number | null): string {
-  if (cssMinutes === null || cssSeconds === null) return "not provided";
-  return `${cssMinutes}:${cssSeconds.toString().padStart(2, "0")}`;
+// Helper: Format CSS pace from total seconds per 100m
+function formatCSS(cssSecondsPer100m: number | null): string {
+  if (cssSecondsPer100m === null || cssSecondsPer100m === undefined) return "not provided";
+  const minutes = Math.floor(cssSecondsPer100m / 60);
+  const seconds = cssSecondsPer100m % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 // Helper: Calculate weekly hours from daily durations
@@ -180,7 +182,7 @@ function buildStep1Prompt(user: any, vars: any): string {
   );
   prompt = prompt.replace(
     "{{swim_css}}",
-    formatCSS(user.css_minutes, user.css_seconds)
+    formatCSS(user.css_seconds_per_100m)
   );
   prompt = prompt.replace("{{limiters}}", "none");
   prompt = prompt.replace("{{constraints}}", "none");
