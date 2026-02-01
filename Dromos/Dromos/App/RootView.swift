@@ -24,18 +24,26 @@ struct RootView: View {
             } else if !authService.onboardingCompleted {
                 // Signed in but onboarding incomplete → show onboarding flow
                 OnboardingFlowView(authService: authService)
+            } else if !authService.hasPlan {
+                // Signed in and onboarded but no active plan → show plan generation
+                PlanGenerationView(authService: authService)
             } else {
-                // Signed in and onboarded → show main app
+                // Signed in, onboarded, and has plan → show main app
                 MainTabView(authService: authService)
             }
         }
         .animation(.default, value: authService.isAuthenticated)
         .animation(.default, value: authService.onboardingCompleted)
+        .animation(.default, value: authService.hasPlan)
         .task {
-            // Check onboarding status on app launch if user is already authenticated
-            // This ensures onboardingCompleted is up-to-date with the database
+            // Check onboarding and plan status on app launch if user is already authenticated
+            // This ensures state is up-to-date with the database
             if authService.isAuthenticated {
                 try? await authService.checkOnboardingStatus()
+                // Check plan status after onboarding check succeeds
+                if authService.onboardingCompleted {
+                    try? await authService.checkPlanStatus()
+                }
             }
         }
     }

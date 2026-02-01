@@ -29,6 +29,10 @@ final class AuthService: ObservableObject {
     /// Updated automatically when auth state changes.
     @Published private(set) var onboardingCompleted: Bool = false
 
+    /// Whether the current user has an active training plan.
+    /// Updated automatically when auth state changes.
+    @Published private(set) var hasPlan: Bool = false
+
     // MARK: - Computed Properties
 
     /// Whether the user is currently authenticated.
@@ -127,6 +131,7 @@ final class AuthService: ObservableObject {
             try await client.auth.signOut()
             session = nil
             onboardingCompleted = false
+            hasPlan = false
         } catch {
             errorMessage = mapAuthError(error)
             throw error
@@ -170,6 +175,46 @@ final class AuthService: ObservableObject {
         onboardingCompleted = true
     }
 
+    /// Check the current user's training plan status.
+    /// Updates the `hasPlan` published property by querying for an active plan.
+    /// - Throws: Error if fetch fails
+    func checkPlanStatus() async throws {
+        guard let userId = currentUserId else {
+            hasPlan = false
+            return
+        }
+
+        do {
+            // Minimal struct for fetching only plan status
+            struct PlanStatus: Codable {
+                let status: String
+            }
+
+            // Fetch only the status field from training_plans table
+            // Check for status = 'active' (plan is ready for use)
+            let response: [PlanStatus] = try await client
+                .from("training_plans")
+                .select("status")
+                .eq("user_id", value: userId.uuidString)
+                .eq("status", value: "active")
+                .execute()
+                .value
+
+            // If we found an active plan, user has a plan
+            hasPlan = !response.isEmpty
+        } catch {
+            // On error, default to false to be safe
+            hasPlan = false
+            throw error
+        }
+    }
+
+    /// Manually mark that the user has a plan.
+    /// Use this as a fallback when plan generation succeeded but status check failed.
+    func markHasPlanLocally() {
+        hasPlan = true
+    }
+
     // MARK: - Private Methods
 
     /// Check for an existing session on app launch.
@@ -181,9 +226,14 @@ final class AuthService: ObservableObject {
                 session = existingSession
                 // Check onboarding status for existing session
                 try? await checkOnboardingStatus()
+                // Check plan status after onboarding check succeeds
+                if onboardingCompleted {
+                    try? await checkPlanStatus()
+                }
             } else {
                 session = nil
                 onboardingCompleted = false
+                hasPlan = false
             }
         } catch {
             // No existing session, user needs to sign in
@@ -203,24 +253,38 @@ final class AuthService: ObservableObject {
                         self.session = session
                         // Check onboarding status when session is restored
                         try? await checkOnboardingStatus()
+                        // Check plan status after onboarding check succeeds
+                        if onboardingCompleted {
+                            try? await checkPlanStatus()
+                        }
                     } else {
                         self.session = nil
                         self.onboardingCompleted = false
+                        self.hasPlan = false
                     }
                 case .signedIn:
                     self.session = session
                     // Check onboarding status when user signs in
                     try? await checkOnboardingStatus()
+                    // Check plan status after onboarding check succeeds
+                    if onboardingCompleted {
+                        try? await checkPlanStatus()
+                    }
                 case .signedOut:
                     self.session = nil
                     self.onboardingCompleted = false
+                    self.hasPlan = false
                 case .tokenRefreshed:
                     self.session = session
-                    // Token refresh doesn't require onboarding status check
+                    // Token refresh doesn't require onboarding/plan status check
                 case .userUpdated:
                     self.session = session
                     // User update might include onboarding changes, so re-check
                     try? await checkOnboardingStatus()
+                    // Check plan status after onboarding check succeeds
+                    if onboardingCompleted {
+                        try? await checkPlanStatus()
+                    }
                 default:
                     break
                 }
