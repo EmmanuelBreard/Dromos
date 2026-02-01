@@ -21,6 +21,12 @@ final class PlanService: ObservableObject {
     /// Last error message from plan generation, nil if no error.
     @Published var errorMessage: String?
 
+    /// Current training plan, nil if not loaded.
+    @Published private(set) var trainingPlan: TrainingPlan?
+
+    /// Whether plan data is currently being fetched.
+    @Published private(set) var isLoadingPlan: Bool = false
+
     // MARK: - Private Properties
 
     private let client = SupabaseClientProvider.client
@@ -87,6 +93,67 @@ final class PlanService: ObservableObject {
                 throw PlanGenerationError.unknown(error.localizedDescription)
             }
         }
+    }
+
+    /// Fetch the full training plan for a user.
+    /// Performs a nested query to fetch training_plans → plan_weeks → plan_sessions.
+    /// - Parameter userId: The user's ID
+    /// - Throws: Error if fetch fails
+    func fetchFullPlan(userId: UUID) async throws {
+        isLoadingPlan = true
+        errorMessage = nil
+
+        defer { isLoadingPlan = false }
+
+        do {
+            // Nested select: training_plans → plan_weeks → plan_sessions
+            // PostgREST nested selects don't guarantee order, so we sort client-side
+            let response: TrainingPlan = try await client
+                .from("training_plans")
+                .select("*, plan_weeks(*, plan_sessions(*))")
+                .eq("user_id", value: userId.uuidString)
+                .eq("status", value: "active")
+                .single()
+                .execute()
+                .value
+
+            // Sort planWeeks by weekNumber
+            var sortedPlan = response
+            sortedPlan.planWeeks.sort { $0.weekNumber < $1.weekNumber }
+
+            // Sort planSessions within each week by day order then orderInDay
+            for weekIndex in sortedPlan.planWeeks.indices {
+                let weekdayOrder: [String: Int] = [
+                    "Monday": 0,
+                    "Tuesday": 1,
+                    "Wednesday": 2,
+                    "Thursday": 3,
+                    "Friday": 4,
+                    "Saturday": 5,
+                    "Sunday": 6
+                ]
+
+                sortedPlan.planWeeks[weekIndex].planSessions.sort { session1, session2 in
+                    let dayOrder1 = weekdayOrder[session1.day] ?? 99
+                    let dayOrder2 = weekdayOrder[session2.day] ?? 99
+                    if dayOrder1 != dayOrder2 {
+                        return dayOrder1 < dayOrder2
+                    }
+                    return session1.orderInDay < session2.orderInDay
+                }
+            }
+
+            self.trainingPlan = sortedPlan
+        } catch {
+            errorMessage = "Failed to load training plan"
+            throw error
+        }
+    }
+
+    /// Clear the cached training plan (e.g., on sign out).
+    func clearPlan() {
+        trainingPlan = nil
+        errorMessage = nil
     }
 }
 

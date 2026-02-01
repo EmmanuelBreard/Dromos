@@ -1,0 +1,288 @@
+//
+//  TrainingPlan.swift
+//  Dromos
+//
+//  Created by Emmanuel Breard on 01/02/2026.
+//
+
+import Foundation
+import SwiftUI
+
+// MARK: - Weekday Enum
+
+/// Represents a day of the week, ordered Monday through Sunday.
+/// Handles normalization between abbreviated names ("Mon") and full names ("Monday").
+enum Weekday: String, CaseIterable, Codable, Hashable {
+    case monday = "Monday"
+    case tuesday = "Tuesday"
+    case wednesday = "Wednesday"
+    case thursday = "Thursday"
+    case friday = "Friday"
+    case saturday = "Saturday"
+    case sunday = "Sunday"
+
+    /// All weekdays ordered Monday through Sunday.
+    static var allCases: [Weekday] {
+        [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
+    }
+
+    /// Full name of the weekday (e.g., "Monday").
+    var fullName: String {
+        rawValue
+    }
+
+    /// Abbreviated name of the weekday (e.g., "Mon").
+    var abbreviation: String {
+        switch self {
+        case .monday: return "Mon"
+        case .tuesday: return "Tue"
+        case .wednesday: return "Wed"
+        case .thursday: return "Thu"
+        case .friday: return "Fri"
+        case .saturday: return "Sat"
+        case .sunday: return "Sun"
+        }
+    }
+
+    /// Initialize from abbreviated name (e.g., "Mon" → .monday).
+    init?(from abbreviation: String) {
+        let normalized = abbreviation.prefix(3).capitalized
+        switch normalized {
+        case "Mon": self = .monday
+        case "Tue": self = .tuesday
+        case "Wed": self = .wednesday
+        case "Thu": self = .thursday
+        case "Fri": self = .friday
+        case "Sat": self = .saturday
+        case "Sun": self = .sunday
+        default: return nil
+        }
+    }
+
+    /// Initialize from full name (e.g., "Monday" → .monday).
+    init?(from fullName: String) {
+        self.init(rawValue: fullName)
+    }
+
+    /// Computes the calendar date for this weekday relative to a week's start date.
+    /// - Parameter weekStartDate: The start date of the week (may be any day of the week)
+    /// - Returns: The date for this weekday within that week
+    func date(relativeTo weekStartDate: Date) -> Date {
+        let calendar = Calendar.current
+        let weekdayComponent = calendar.component(.weekday, from: weekStartDate)
+        
+        // Convert Calendar's weekday (Sunday=1, Monday=2, ..., Saturday=7) to our offset (Monday=0, ..., Sunday=6)
+        let startOffset: Int
+        switch weekdayComponent {
+        case 1: startOffset = 6 // Sunday → offset 6
+        case 2: startOffset = 0 // Monday → offset 0
+        case 3: startOffset = 1 // Tuesday → offset 1
+        case 4: startOffset = 2 // Wednesday → offset 2
+        case 5: startOffset = 3 // Thursday → offset 3
+        case 6: startOffset = 4 // Friday → offset 4
+        case 7: startOffset = 5 // Saturday → offset 5
+        default: startOffset = 0
+        }
+        
+        // Calculate target weekday offset (Monday=0, Tuesday=1, ..., Sunday=6)
+        let targetOffset: Int
+        switch self {
+        case .monday: targetOffset = 0
+        case .tuesday: targetOffset = 1
+        case .wednesday: targetOffset = 2
+        case .thursday: targetOffset = 3
+        case .friday: targetOffset = 4
+        case .saturday: targetOffset = 5
+        case .sunday: targetOffset = 6
+        }
+        
+        // Calculate days to add (can be negative if target is before start)
+        let daysToAdd = targetOffset - startOffset
+        return calendar.date(byAdding: .day, value: daysToAdd, to: weekStartDate) ?? weekStartDate
+    }
+}
+
+// MARK: - Plan Session Model
+
+/// Individual training session within a week.
+/// Represents a single workout (swim, bike, or run) scheduled for a specific day.
+struct PlanSession: Codable, Identifiable {
+    let id: UUID
+    let weekId: UUID
+    let day: String // Full name: "Monday", "Tuesday", etc.
+    let sport: String // "swim", "bike", "run"
+    let type: String // "Easy", "Tempo", "Intervals"
+    let templateId: String
+    let durationMinutes: Int
+    let isBrick: Bool
+    let notes: String?
+    let orderInDay: Int
+
+    // MARK: - Computed Properties
+
+    /// Display name derived from type + sport (e.g., "Easy Swim", "Tempo Run").
+    var displayName: String {
+        "\(type) \(sport.capitalized)"
+    }
+
+    /// SF Symbol name for the sport icon.
+    var sportIcon: String {
+        switch sport.lowercased() {
+        case "swim":
+            return "figure.pool.swim"
+        case "bike":
+            return "bicycle"
+        case "run":
+            return "figure.run"
+        default:
+            return "figure.run"
+        }
+    }
+
+    /// Formatted duration string (e.g., "60 min", "1h 30 min").
+    var formattedDuration: String {
+        let hours = durationMinutes / 60
+        let minutes = durationMinutes % 60
+
+        if hours > 0 && minutes > 0 {
+            return "\(hours)h \(minutes) min"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else {
+            return "\(minutes) min"
+        }
+    }
+
+    /// Sport color for UI display.
+    var sportColor: Color {
+        switch sport.lowercased() {
+        case "swim":
+            return .cyan
+        case "bike":
+            return .green
+        case "run":
+            return .orange
+        default:
+            return .primary
+        }
+    }
+}
+
+// MARK: - Plan Week Model
+
+/// Weekly plan information within a training plan.
+/// Contains sessions and metadata for a single week.
+struct PlanWeek: Codable, Identifiable {
+    let id: UUID
+    let planId: UUID
+    let weekNumber: Int
+    let phase: String // "Base", "Build", "Peak", "Taper", "Recovery"
+    let isRecovery: Bool
+    let restDays: [String] // Abbreviated names: ["Mon", "Fri"] or full names: ["Monday", "Friday"]
+    let notes: String?
+    let startDate: String // ISO date string (YYYY-MM-DD)
+    var planSessions: [PlanSession]
+
+    // MARK: - Computed Properties
+
+    /// Total training minutes for this week (sum of all session durations).
+    var totalMinutes: Int {
+        planSessions.reduce(0) { $0 + $1.durationMinutes }
+    }
+
+    /// Parsed start date as Date object.
+    var startDateAsDate: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        return formatter.date(from: startDate)
+    }
+
+    /// Sessions grouped by weekday, sorted by orderInDay.
+    var sessionsByDay: [Weekday: [PlanSession]] {
+        var grouped: [Weekday: [PlanSession]] = [:]
+
+        for session in planSessions {
+            guard let weekday = Weekday(from: session.day) else { continue }
+            if grouped[weekday] == nil {
+                grouped[weekday] = []
+            }
+            grouped[weekday]?.append(session)
+        }
+
+        // Sort sessions within each day by orderInDay
+        for (weekday, sessions) in grouped {
+            grouped[weekday] = sessions.sorted { $0.orderInDay < $1.orderInDay }
+        }
+
+        return grouped
+    }
+
+    /// Set of rest days normalized from abbreviated or full names.
+    var restDaySet: Set<Weekday> {
+        var restDaysSet = Set<Weekday>()
+        for restDay in restDays {
+            // Try full name first, then abbreviation
+            if let weekday = Weekday(from: restDay) {
+                restDaysSet.insert(weekday)
+            } else if let weekday = Weekday(from: abbreviation: restDay) {
+                restDaysSet.insert(weekday)
+            }
+        }
+        return restDaysSet
+    }
+}
+
+// MARK: - Training Plan Model
+
+/// Top-level training plan for a user.
+/// Contains all weeks and sessions for the entire plan.
+struct TrainingPlan: Codable, Identifiable {
+    let id: UUID
+    let userId: UUID
+    let status: String // "generating" or "active"
+    let raceDate: String? // ISO date string (YYYY-MM-DD)
+    let raceObjective: String?
+    let totalWeeks: Int
+    let startDate: String // ISO date string (YYYY-MM-DD)
+    var planWeeks: [PlanWeek]
+
+    // MARK: - Computed Properties
+
+    /// Parsed start date as Date object.
+    var startDateAsDate: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        return formatter.date(from: startDate)
+    }
+
+    /// Parsed race date as Date object.
+    var raceDateAsDate: Date? {
+        guard let raceDate = raceDate else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        return formatter.date(from: raceDate)
+    }
+}
+
+// MARK: - Color Extension
+
+extension Color {
+    /// Phase color for training plan phases.
+    static func phaseColor(for phase: String) -> Color {
+        switch phase {
+        case "Base":
+            return .blue
+        case "Build":
+            return .orange
+        case "Peak":
+            return .red
+        case "Taper":
+            return .purple
+        case "Recovery":
+            return .green
+        default:
+            return .primary
+        }
+    }
+}
+

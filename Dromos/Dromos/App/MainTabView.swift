@@ -19,7 +19,7 @@ struct MainTabView: View {
             }
 
             Tab("Calendar", systemImage: "calendar") {
-                CalendarView()
+                CalendarPlanView(authService: authService)
             }
 
             Tab("Profile", systemImage: "person") {
