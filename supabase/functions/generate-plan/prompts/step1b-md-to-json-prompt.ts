@@ -1,0 +1,44 @@
+export default `Convert the following triathlon training plan from markdown to JSON.
+
+## Markdown Plan
+{{step1_output}}
+
+## Rules
+- Convert EXACTLY what is in the markdown — do not add, remove, or change any values
+- Every week in the markdown must appear in the JSON
+- Session types must be preserved exactly (Easy, Tempo, Intervals)
+- Hours and durations must match the markdown numbers
+
+## Output
+Return ONLY valid JSON (no markdown fences, no explanation) matching this schema:
+
+{
+  "plan_summary": {
+    "total_weeks": <number>,
+    "race": "<distance>",
+    "race_date": "<YYYY-MM-DD>",
+    "phases": [{"name": "<Base|Build|Peak|Taper|Recovery>", "weeks": "<e.g. 1-8>"}]
+  },
+  "weeks": [
+    {
+      "week_number": <number>,
+      "start_date": "<YYYY-MM-DD>",
+      "phase": "<Base|Build|Peak|Taper|Recovery>",
+      "total_hours": <number>,
+      "swim": {
+        "hours": <number>,
+        "sessions": [{"type": "<Easy|Tempo|Intervals>", "duration_minutes": <number>}]
+      },
+      "bike": {
+        "hours": <number>,
+        "sessions": [{"type": "<Easy|Tempo|Intervals>", "duration_minutes": <number>}]
+      },
+      "run": {
+        "hours": <number>,
+        "sessions": [{"type": "<Easy|Tempo|Intervals>", "duration_minutes": <number>}]
+      },
+      "rest_days": ["<day_name>"],
+      "notes": "<string>"
+    }
+  ]
+}`;

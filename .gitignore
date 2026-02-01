@@ -36,6 +36,9 @@ Secrets.swift
 .env.*
 !.env.example
 
+# Supabase local link state
+supabase/.temp/
+
 # AI eval
 ai/eval/node_modules/
 ai/eval/results/
