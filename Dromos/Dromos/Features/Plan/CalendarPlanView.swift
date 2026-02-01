@@ -10,9 +10,10 @@ import OSLog
 
 /// Main calendar view displaying week-by-week training plan overview.
 /// Auto-opens to current week, allows navigation between weeks.
+/// Receives planService from parent (MainTabView) for shared data access.
 struct CalendarPlanView: View {
     @ObservedObject var authService: AuthService
-    @StateObject private var planService = PlanService()
+    @ObservedObject var planService: PlanService
 
     @State private var currentWeekIndex: Int = 0
 
@@ -38,8 +39,12 @@ struct CalendarPlanView: View {
                 }
             }
             .navigationTitle("Plan")
-            .task {
-                await loadPlan()
+            .onChange(of: planService.trainingPlan?.id) { _, _ in
+                // Recalculate current week when plan data changes
+                if let plan = planService.trainingPlan {
+                    currentWeekIndex = calculateCurrentWeekIndex(plan: plan)
+                    logger.debug("Current week index recalculated: \(currentWeekIndex, privacy: .public)")
+                }
             }
         }
     }
@@ -132,7 +137,7 @@ struct CalendarPlanView: View {
 
             Button(action: {
                 Task {
-                    await loadPlan()
+                    await retryLoadPlan()
                 }
             }) {
                 Text("Retry")
@@ -150,8 +155,8 @@ struct CalendarPlanView: View {
 
     // MARK: - Helper Methods
 
-    /// Loads the training plan and calculates current week index.
-    private func loadPlan() async {
+    /// Retries loading the training plan.
+    private func retryLoadPlan() async {
         guard let userId = authService.currentUserId else {
             logger.error("Cannot load plan: No user ID available")
             return
@@ -159,13 +164,7 @@ struct CalendarPlanView: View {
 
         do {
             try await planService.fetchFullPlan(userId: userId)
-            logger.info("Successfully loaded training plan")
-
-            // Calculate current week index
-            if let plan = planService.trainingPlan {
-                currentWeekIndex = calculateCurrentWeekIndex(plan: plan)
-                logger.debug("Current week index: \(currentWeekIndex, privacy: .public)")
-            }
+            logger.info("Successfully loaded training plan on retry")
         } catch {
             logger.error("Failed to load training plan: \(error.localizedDescription, privacy: .public)")
         }
@@ -264,7 +263,7 @@ struct CalendarPlanView: View {
 // MARK: - Day Info
 
 /// Information about a single day in the week.
-private struct DayInfo {
+struct DayInfo {
     let weekday: Weekday
     let date: Date
     let sessions: [PlanSession]
@@ -272,6 +271,5 @@ private struct DayInfo {
 }
 
 #Preview {
-    CalendarPlanView(authService: AuthService())
+    CalendarPlanView(authService: AuthService(), planService: PlanService())
 }
-
