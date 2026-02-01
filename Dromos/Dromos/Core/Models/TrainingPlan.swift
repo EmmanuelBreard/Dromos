@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SwiftUI
 
 // MARK: - Weekday Enum
 
@@ -45,7 +44,7 @@ enum Weekday: String, CaseIterable, Codable, Hashable {
     }
 
     /// Initialize from abbreviated name (e.g., "Mon" → .monday).
-    init?(from abbreviation: String) {
+    init?(abbreviation: String) {
         let normalized = abbreviation.prefix(3).capitalized
         switch normalized {
         case "Mon": self = .monday
@@ -60,7 +59,7 @@ enum Weekday: String, CaseIterable, Codable, Hashable {
     }
 
     /// Initialize from full name (e.g., "Monday" → .monday).
-    init?(from fullName: String) {
+    init?(fullName: String) {
         self.init(rawValue: fullName)
     }
 
@@ -202,7 +201,7 @@ struct PlanWeek: Codable, Identifiable {
         var grouped: [Weekday: [PlanSession]] = [:]
 
         for session in planSessions {
-            guard let weekday = Weekday(from: session.day) else { continue }
+            guard let weekday = Weekday(fullName: session.day) else { continue }
             if grouped[weekday] == nil {
                 grouped[weekday] = []
             }
@@ -222,9 +221,9 @@ struct PlanWeek: Codable, Identifiable {
         var restDaysSet = Set<Weekday>()
         for restDay in restDays {
             // Try full name first, then abbreviation
-            if let weekday = Weekday(from: restDay) {
+            if let weekday = Weekday(fullName: restDay) {
                 restDaysSet.insert(weekday)
-            } else if let weekday = Weekday(from: abbreviation: restDay) {
+            } else if let weekday = Weekday(abbreviation: restDay) {
                 restDaysSet.insert(weekday)
             }
         }
@@ -261,28 +260,6 @@ struct TrainingPlan: Codable, Identifiable {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         return formatter.date(from: raceDate)
-    }
-}
-
-// MARK: - Color Extension
-
-extension Color {
-    /// Phase color for training plan phases.
-    static func phaseColor(for phase: String) -> Color {
-        switch phase {
-        case "Base":
-            return .blue
-        case "Build":
-            return .orange
-        case "Peak":
-            return .red
-        case "Taper":
-            return .purple
-        case "Recovery":
-            return .green
-        default:
-            return .primary
-        }
     }
 }
 

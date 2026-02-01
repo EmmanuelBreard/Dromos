@@ -114,3 +114,25 @@ struct WeekHeaderView: View {
     .padding()
 }
 
+// MARK: - Color Extension
+
+extension Color {
+    /// Phase color for training plan phases.
+    static func phaseColor(for phase: String) -> Color {
+        switch phase {
+        case "Base":
+            return .blue
+        case "Build":
+            return .orange
+        case "Peak":
+            return .red
+        case "Taper":
+            return .purple
+        case "Recovery":
+            return .green
+        default:
+            return .primary
+        }
+    }
+}
+

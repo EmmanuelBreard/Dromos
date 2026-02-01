@@ -121,18 +121,18 @@ final class PlanService: ObservableObject {
             var sortedPlan = response
             sortedPlan.planWeeks.sort { $0.weekNumber < $1.weekNumber }
 
+            let weekdayOrder: [String: Int] = [
+                "Monday": 0,
+                "Tuesday": 1,
+                "Wednesday": 2,
+                "Thursday": 3,
+                "Friday": 4,
+                "Saturday": 5,
+                "Sunday": 6
+            ]
+
             // Sort planSessions within each week by day order then orderInDay
             for weekIndex in sortedPlan.planWeeks.indices {
-                let weekdayOrder: [String: Int] = [
-                    "Monday": 0,
-                    "Tuesday": 1,
-                    "Wednesday": 2,
-                    "Thursday": 3,
-                    "Friday": 4,
-                    "Saturday": 5,
-                    "Sunday": 6
-                ]
-
                 sortedPlan.planWeeks[weekIndex].planSessions.sort { session1, session2 in
                     let dayOrder1 = weekdayOrder[session1.day] ?? 99
                     let dayOrder2 = weekdayOrder[session2.day] ?? 99
