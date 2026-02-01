@@ -146,10 +146,6 @@ final class AuthService: ObservableObject {
             // Minimal struct for fetching only onboarding status
             struct OnboardingStatus: Codable {
                 let onboardingCompleted: Bool
-
-                enum CodingKeys: String, CodingKey {
-                    case onboardingCompleted = "onboarding_completed"
-                }
             }
 
             // Fetch only the onboarding_completed field

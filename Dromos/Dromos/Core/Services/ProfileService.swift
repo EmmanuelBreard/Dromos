@@ -172,31 +172,6 @@ final class ProfileService: ObservableObject {
                 let friDuration: Int?
                 let satDuration: Int?
                 let sunDuration: Int?
-
-                enum CodingKeys: String, CodingKey {
-                    case sex
-                    case birthDate = "birth_date"
-                    case weightKg = "weight_kg"
-                    case raceObjective = "race_objective"
-                    case raceDate = "race_date"
-                    case timeObjectiveHours = "time_objective_hours"
-                    case timeObjectiveMinutes = "time_objective_minutes"
-                    case vma
-                    case cssMinutes = "css_minutes"
-                    case cssSeconds = "css_seconds"
-                    case ftp
-                    case experienceYears = "experience_years"
-                    case swimDays = "swim_days"
-                    case bikeDays = "bike_days"
-                    case runDays = "run_days"
-                    case monDuration = "mon_duration"
-                    case tueDuration = "tue_duration"
-                    case wedDuration = "wed_duration"
-                    case thuDuration = "thu_duration"
-                    case friDuration = "fri_duration"
-                    case satDuration = "sat_duration"
-                    case sunDuration = "sun_duration"
-                }
             }
 
             let update = OnboardingUpdate(
@@ -250,10 +225,6 @@ final class ProfileService: ObservableObject {
         do {
             struct OnboardingStatusUpdate: Encodable {
                 let onboardingCompleted: Bool
-
-                enum CodingKeys: String, CodingKey {
-                    case onboardingCompleted = "onboarding_completed"
-                }
             }
 
             let update = OnboardingStatusUpdate(onboardingCompleted: true)

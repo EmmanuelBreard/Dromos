@@ -141,42 +141,6 @@ struct User: Codable, Identifiable, Equatable {
     }
 }
 
-// MARK: - CodingKeys
-
-extension User {
-    /// Maps Swift property names (camelCase) to database column names (snake_case)
-    enum CodingKeys: String, CodingKey {
-        case id
-        case email
-        case name
-        case sex
-        case birthDate = "birth_date"
-        case weightKg = "weight_kg"
-        case raceObjective = "race_objective"
-        case raceDate = "race_date"
-        case timeObjectiveHours = "time_objective_hours"
-        case timeObjectiveMinutes = "time_objective_minutes"
-        case vma
-        case cssMinutes = "css_minutes"
-        case cssSeconds = "css_seconds"
-        case ftp
-        case experienceYears = "experience_years"
-        case swimDays = "swim_days"
-        case bikeDays = "bike_days"
-        case runDays = "run_days"
-        case monDuration = "mon_duration"
-        case tueDuration = "tue_duration"
-        case wedDuration = "wed_duration"
-        case thuDuration = "thu_duration"
-        case friDuration = "fri_duration"
-        case satDuration = "sat_duration"
-        case sunDuration = "sun_duration"
-        case onboardingCompleted = "onboarding_completed"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-}
-
 // MARK: - User Update Payload
 
 /// Payload for updating user profile.
@@ -208,31 +172,4 @@ struct UserUpdate: Codable {
     var satDuration: Int?
     var sunDuration: Int?
     var onboardingCompleted: Bool?
-
-    enum CodingKeys: String, CodingKey {
-        case name
-        case sex
-        case birthDate = "birth_date"
-        case weightKg = "weight_kg"
-        case raceObjective = "race_objective"
-        case raceDate = "race_date"
-        case timeObjectiveHours = "time_objective_hours"
-        case timeObjectiveMinutes = "time_objective_minutes"
-        case vma
-        case cssMinutes = "css_minutes"
-        case cssSeconds = "css_seconds"
-        case ftp
-        case experienceYears = "experience_years"
-        case swimDays = "swim_days"
-        case bikeDays = "bike_days"
-        case runDays = "run_days"
-        case monDuration = "mon_duration"
-        case tueDuration = "tue_duration"
-        case wedDuration = "wed_duration"
-        case thuDuration = "thu_duration"
-        case friDuration = "fri_duration"
-        case satDuration = "sat_duration"
-        case sunDuration = "sun_duration"
-        case onboardingCompleted = "onboarding_completed"
-    }
 }

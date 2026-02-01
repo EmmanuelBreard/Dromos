@@ -20,12 +20,6 @@ struct BasicInfoData: Codable {
 
     /// User's weight in kilograms
     var weightKg: Double?
-
-    enum CodingKeys: String, CodingKey {
-        case sex
-        case birthDate = "birth_date"
-        case weightKg = "weight_kg"
-    }
 }
 
 // MARK: - Screen 2: Race Goals
@@ -44,13 +38,6 @@ struct RaceGoalsData: Codable {
 
     /// Target finish time - minutes component
     var timeObjectiveMinutes: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case raceObjective = "race_objective"
-        case raceDate = "race_date"
-        case timeObjectiveHours = "time_objective_hours"
-        case timeObjectiveMinutes = "time_objective_minutes"
-    }
 }
 
 // MARK: - Screen 3: Performance Metrics
@@ -72,14 +59,6 @@ struct MetricsData: Codable {
 
     /// Years of triathlon/endurance sport experience
     var experienceYears: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case vma
-        case cssMinutes = "css_minutes"
-        case cssSeconds = "css_seconds"
-        case ftp
-        case experienceYears = "experience_years"
-    }
 }
 
 // MARK: - Screens 4, 5, 6: Weekly Availability
@@ -96,12 +75,6 @@ struct AvailabilityData: Codable {
 
     /// Days of the week user can train running
     var runDays: [String] = []
-
-    enum CodingKeys: String, CodingKey {
-        case swimDays = "swim_days"
-        case bikeDays = "bike_days"
-        case runDays = "run_days"
-    }
 }
 
 // MARK: - Screen 7: Daily Training Duration
@@ -130,16 +103,6 @@ struct DailyDurationData: Codable {
 
     /// Total training duration for Sunday in minutes (30-420, nullable if day not available)
     var sunDuration: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case monDuration = "mon_duration"
-        case tueDuration = "tue_duration"
-        case wedDuration = "wed_duration"
-        case thuDuration = "thu_duration"
-        case friDuration = "fri_duration"
-        case satDuration = "sat_duration"
-        case sunDuration = "sun_duration"
-    }
 }
 
 // MARK: - Complete Onboarding Payload
@@ -224,30 +187,5 @@ struct CompleteOnboardingData: Codable {
         self.friDuration = availableDaysSet.contains("Friday") ? duration?.friDuration : nil
         self.satDuration = availableDaysSet.contains("Saturday") ? duration?.satDuration : nil
         self.sunDuration = availableDaysSet.contains("Sunday") ? duration?.sunDuration : nil
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case sex
-        case birthDate = "birth_date"
-        case weightKg = "weight_kg"
-        case raceObjective = "race_objective"
-        case raceDate = "race_date"
-        case timeObjectiveHours = "time_objective_hours"
-        case timeObjectiveMinutes = "time_objective_minutes"
-        case vma
-        case cssMinutes = "css_minutes"
-        case cssSeconds = "css_seconds"
-        case ftp
-        case experienceYears = "experience_years"
-        case swimDays = "swim_days"
-        case bikeDays = "bike_days"
-        case runDays = "run_days"
-        case monDuration = "mon_duration"
-        case tueDuration = "tue_duration"
-        case wedDuration = "wed_duration"
-        case thuDuration = "thu_duration"
-        case friDuration = "fri_duration"
-        case satDuration = "sat_duration"
-        case sunDuration = "sun_duration"
     }
 }
