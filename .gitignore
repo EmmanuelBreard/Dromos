@@ -35,3 +35,10 @@ Secrets.swift
 .env
 .env.*
 !.env.example
+
+# AI eval
+ai/eval/node_modules/
+ai/eval/results/
+
+# Design mockups
+*.png

@@ -1,0 +1,50 @@
+# Dromos Training Plan Eval — Step 1: Macro Plan (Markdown)
+# Run: npx promptfoo eval
+# View: npx promptfoo view
+
+# Load API keys from project root .env
+commandLineOptions:
+  envPath: ../../.env
+
+description: "Step 1 — Macro plan generation (markdown)"
+
+prompts:
+  - file://../prompts/step1-macro-plan.txt
+
+providers:
+  - id: openai:gpt-4o
+    config:
+      temperature: 0.3
+      max_tokens: 16384
+  # Uncomment when ANTHROPIC_API_KEY is added to ../../.env
+  # - id: anthropic:messages:claude-sonnet-4-20250514
+  #   config:
+  #     temperature: 0.3
+  #     max_tokens: 16384
+
+# Load test athlete profiles
+tests: file://vars/athletes.yaml
+
+# Inject context files as variables available to all tests
+defaultTest:
+  vars:
+    training_philosophy: file://../context/training-philosophy.md
+  assert:
+    # Structural validation of the MD plan
+    - type: javascript
+      value: file://assertions/validate-macro-plan-md.js
+    # LLM-graded: does the plan make coaching sense?
+    - type: llm-rubric
+      value: |
+        Evaluate this triathlon training plan as an experienced coach.
+        The athlete profile: {{athlete_name}}, {{experience_level}}, racing {{race_distance}}.
+        Weekly hour budget: {{weekly_hours}}h. Limiters: {{limiters}}. Constraints: {{constraints}}.
+
+        Score 1 (pass) if ALL of these are true:
+        - Periodization phases are in logical order (Base -> Build -> Peak -> Taper)
+        - Volume ramps gradually and recovery weeks are present (recovery = labeled or significant volume drop)
+        - Session types match the training phase (more Easy/Technique in Base, more Intervals in Build/Peak)
+        - The plan respects the athlete's weekly hour budget
+        - Constraints are respected (e.g. injury limitations, scheduling restrictions)
+        - The limiter is acknowledged in notes or session choices (e.g. extra easy swim sessions for weak swimmers, brick sessions for weak run-off-the-bike). Do NOT penalize if the limiter sport doesn't get the most hours — it's valid to address a swim limiter with quality rather than raw volume.
+        Score 0 (fail) if any major coaching error is present (dangerous load spikes, no recovery, ignoring injury constraints).

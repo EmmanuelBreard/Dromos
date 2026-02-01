@@ -1,0 +1,41 @@
+# Athlete test cases for training plan evaluation
+# Each row is a different athlete profile to test plan generation
+
+- vars:
+    athlete_name: "Alex - Beginner Olympic"
+    experience_level: "beginner (first triathlon)"
+    race_distance: "Olympic (1.5km swim / 40km bike / 10km run)"
+    race_date: "2026-06-28"
+    plan_start_date: "2026-02-16"
+    weekly_hours: "8"
+    ftp_watts: "180"
+    mas_kmh: "14"
+    swim_css: "2:10"
+    limiters: "weak swimmer, low bike endurance"
+    constraints: "none"
+
+- vars:
+    athlete_name: "Jordan - Experienced Half-Ironman"
+    experience_level: "intermediate (3 years triathlon, done 2 Olympic races)"
+    race_distance: "Half-Ironman (1.9km swim / 90km bike / 21.1km run)"
+    race_date: "2026-09-13"
+    plan_start_date: "2026-04-06"
+    weekly_hours: "12"
+    ftp_watts: "240"
+    mas_kmh: "16.5"
+    swim_css: "1:45"
+    limiters: "run off the bike is weak"
+    constraints: "mild knee tendinitis — avoid consecutive hard run days"
+
+- vars:
+    athlete_name: "Sam - Time-Crunched Sprint"
+    experience_level: "intermediate (runner transitioning to triathlon)"
+    race_distance: "Sprint (750m swim / 20km bike / 5km run)"
+    race_date: "2026-05-17"
+    plan_start_date: "2026-03-02"
+    weekly_hours: "5"
+    ftp_watts: "200"
+    mas_kmh: "17"
+    swim_css: "2:00"
+    limiters: "very limited swim experience"
+    constraints: "only available to train weekdays before work (max 60min) and weekends"

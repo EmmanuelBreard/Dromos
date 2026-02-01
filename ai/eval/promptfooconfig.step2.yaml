@@ -1,0 +1,41 @@
+# Dromos Training Plan Eval — Step 2: MD → JSON conversion
+# Run: npx promptfoo eval -c promptfooconfig.step2.yaml
+# View: npx promptfoo view
+
+# Load API keys from project root .env
+commandLineOptions:
+  envPath: ../../.env
+
+description: "Step 2 — Markdown to JSON conversion"
+
+prompts:
+  - file://../prompts/step1b-md-to-json.txt
+
+# Use mini for mechanical conversion — cheap and fast
+providers:
+  - id: openai:gpt-4o-mini
+    config:
+      temperature: 0
+      max_tokens: 16384
+      response_format:
+        type: json_object
+
+# Tests are loaded from step 1 outputs by the run script
+# Each test injects step1_output as a variable
+tests: file://vars/step2-inputs.yaml
+
+defaultTest:
+  assert:
+    # Must be valid JSON
+    - type: javascript
+      value: |
+        try {
+          const s = output.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          JSON.parse(s);
+          return { pass: true, score: 1, reason: 'Valid JSON' };
+        } catch (e) {
+          return { pass: false, score: 0, reason: 'Invalid JSON: ' + e.message };
+        }
+    # Validate structure
+    - type: javascript
+      value: file://assertions/validate-macro-plan.js

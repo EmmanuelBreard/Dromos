@@ -1,0 +1,464 @@
+# Auto-generated from step 1 outputs — do not edit
+
+- vars:
+    athlete_name: "Alex - Beginner Olympic"
+    weekly_hours: "8"
+    step1_output: |
+      ```markdown
+      # Plan Summary
+      Total weeks: 19 | Race: Olympic | Date: 2026-06-28
+      Phases: Base W1-W8, Build W9-W13, Peak W14-W16, Taper W17-W18
+      
+      ## W1 — Base — 2026-02-16
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Focus on form and technique, especially in swimming.
+      
+      ## W2 — Base — 2026-02-23
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Maintain easy pace, focus on endurance building.
+      
+      ## W3 — Base — 2026-03-02
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Consistency is key, keep sessions relaxed.
+      
+      ## W4 — Recovery — 2026-03-09
+      Total: 5h | Swim 1.5h | Bike 1.5h | Run 2h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Reduce volume, maintain frequency.
+      
+      ## W5 — Base — 2026-03-16
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Reintroduce full volume, focus on swimming technique.
+      
+      ## W6 — Base — 2026-03-23
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Maintain steady effort, focus on aerobic base.
+      
+      ## W7 — Base — 2026-03-30
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Keep sessions easy, prioritize recovery.
+      
+      ## W8 — Recovery — 2026-04-06
+      Total: 5h | Swim 1.5h | Bike 1.5h | Run 2h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Reduce volume and intensity, focus on recovery.
+      
+      ## W9 — Build — 2026-04-13
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min
+      - Run: Tempo 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Introduce intensity, focus on bike intervals.
+      
+      ## W10 — Build — 2026-04-20
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min
+      - Run: Tempo 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Maintain intensity, focus on run tempo.
+      
+      ## W11 — Build — 2026-04-27
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min
+      - Run: Tempo 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Consistent effort, focus on maintaining intensity.
+      
+      ## W12 — Recovery — 2026-05-04
+      Total: 5h | Swim 1.5h | Bike 1.5h | Run 2h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Recovery focus, reduce volume and intensity.
+      
+      ## W13 — Build — 2026-05-11
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min
+      - Run: Tempo 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Final build week, focus on quality sessions.
+      
+      ## W14 — Peak — 2026-05-18
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min
+      - Run: Tempo 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Peak intensity, focus on race pace efforts.
+      
+      ## W15 — Peak — 2026-05-25
+      Total: 8h | Swim 2h | Bike 3h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min
+      - Run: Tempo 60min, Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Maintain peak intensity, simulate race conditions.
+      
+      ## W16 — Recovery — 2026-06-01
+      Total: 5h | Swim 1.5h | Bike 1.5h | Run 2h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Recovery focus, prepare for taper.
+      
+      ## W17 — Taper — 2026-06-08
+      Total: 6h | Swim 1.5h | Bike 2.5h | Run 2h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 75min, Easy 75min
+      - Run: Easy 60min, Easy 60min
+      Rest: Sunday
+      Notes: Reduce volume, maintain intensity.
+      
+      ## W18 — Taper — 2026-06-15
+      Total: 4h | Swim 1h | Bike 1.5h | Run 1.5h
+      - Swim: Easy 30min, Easy 30min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 45min, Easy 45min
+      Rest: Sunday
+      Notes: Final taper week, focus on freshness.
+      
+      ## W19 — Race Week — 2026-06-22
+      Total: 3h | Swim 1h | Bike 1h | Run 1h
+      - Swim: Easy 30min, Easy 30min
+      - Bike: Easy 30min, Easy 30min
+      - Run: Easy 30min, Easy 30min
+      Rest: Friday, Saturday
+      Notes: Race on Sunday, stay relaxed and focused.
+      ```
+
+- vars:
+    athlete_name: "Jordan - Experienced Half-Ironman"
+    weekly_hours: "12"
+    step1_output: |
+      ```markdown
+      # Plan Summary
+      Total weeks: 24 | Race: Half-Ironman | Date: 2026-09-13
+      Phases: Base W1-W10, Build W11-W16, Peak W17-W19, Taper W20-W21, Recovery W22
+      
+      ## W1 — Base — 2026-04-06
+      Total: 10h | Swim 2h | Bike 5h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 120min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Mon
+      Notes: Focus on aerobic base
+      
+      ## W2 — Base — 2026-04-13
+      Total: 10.5h | Swim 2h | Bike 5.5h | Run 3h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 150min
+      - Run: Easy 60min, Easy 60min, Easy 60min
+      Rest: Mon
+      Notes: Increase bike volume
+      
+      ## W3 — Base — 2026-04-20
+      Total: 11h | Swim 2h | Bike 5.5h | Run 3.5h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 150min
+      - Run: Easy 60min, Easy 60min, Tempo 90min
+      Rest: Mon
+      Notes: Introduce tempo run
+      
+      ## W4 — Recovery — 2026-04-27
+      Total: 7h | Swim 1.5h | Bike 3.5h | Run 2h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 60min, Easy 90min
+      - Run: Easy 60min, Easy 60min
+      Rest: Mon, Fri
+      Notes: Reduce volume for recovery
+      
+      ## W5 — Base — 2026-05-04
+      Total: 11.5h | Swim 2h | Bike 6h | Run 3.5h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Easy 60min, Tempo 90min
+      Rest: Mon
+      Notes: Long bike session
+      
+      ## W6 — Base — 2026-05-11
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Easy 60min, Tempo 120min
+      Rest: Mon
+      Notes: Increase run volume
+      
+      ## W7 — Base — 2026-05-18
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Easy 60min, Tempo 120min
+      Rest: Mon
+      Notes: Maintain volume
+      
+      ## W8 — Recovery — 2026-05-25
+      Total: 7.5h | Swim 1.5h | Bike 3.5h | Run 2.5h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 60min, Easy 90min
+      - Run: Easy 60min, Easy 90min
+      Rest: Mon, Fri
+      Notes: Recovery focus
+      
+      ## W9 — Base — 2026-06-01
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Easy 60min, Tempo 120min
+      Rest: Mon
+      Notes: Maintain base volume
+      
+      ## W10 — Base — 2026-06-08
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Easy 60min, Tempo 120min
+      Rest: Mon
+      Notes: Final base week
+      
+      ## W11 — Build — 2026-06-15
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Introduce intervals and brick session
+      
+      ## W12 — Build — 2026-06-22
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Maintain intensity
+      
+      ## W13 — Recovery — 2026-06-29
+      Total: 7.5h | Swim 1.5h | Bike 3.5h | Run 2.5h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 60min, Easy 90min
+      - Run: Easy 60min, Easy 90min
+      Rest: Mon, Fri
+      Notes: Recovery focus
+      
+      ## W14 — Build — 2026-07-06
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Increase intensity
+      
+      ## W15 — Build — 2026-07-13
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Maintain intensity
+      
+      ## W16 — Build — 2026-07-20
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Intervals 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Final build week
+      
+      ## W17 — Peak — 2026-07-27
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Race-pace 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Race-pace focus
+      
+      ## W18 — Peak — 2026-08-03
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Race-pace 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Maintain race-pace
+      
+      ## W19 — Peak — 2026-08-10
+      Total: 12h | Swim 2h | Bike 6h | Run 4h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Race-pace 90min, Easy 90min, Easy 180min
+      - Run: Easy 60min, Tempo 60min, Brick: bike→run 60min
+      Rest: Mon
+      Notes: Final peak week
+      
+      ## W20 — Taper — 2026-08-17
+      Total: 8h | Swim 1.5h | Bike 4h | Run 2.5h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 60min, Easy 120min
+      - Run: Easy 60min, Brick: bike→run 90min
+      Rest: Mon, Fri
+      Notes: Begin taper
+      
+      ## W21 — Taper — 2026-08-24
+      Total: 6h | Swim 1h | Bike 3h | Run 2h
+      - Swim: Easy 30min, Easy 30min
+      - Bike: Easy 60min, Easy 120min
+      - Run: Easy 60min, Brick: bike→run 60min
+      Rest: Mon, Fri
+      Notes: Final taper week
+      
+      ## W22 — Recovery — 2026-08-31
+      Total: 4h | Swim 1h | Bike 2h | Run 1h
+      - Swim: Easy 30min, Easy 30min
+      - Bike: Easy 60min, Easy 60min
+      - Run: Easy 60min
+      Rest: Mon, Fri, Sun
+      Notes: Full recovery week
+      
+      ## W23 — Race Week — 2026-09-07
+      Total: 3h | Swim 0.5h | Bike 1.5h | Run 1h
+      - Swim: Easy 30min
+      - Bike: Easy 60min, Easy 30min
+      - Run: Easy 60min
+      Rest: Mon, Fri, Sat
+      Notes: Race on Sunday
+      
+      ## W24 — Recovery — 2026-09-14
+      Total: 3h | Swim 1h | Bike 1h | Run 1h
+      - Swim: Easy 30min, Easy 30min
+      - Bike: Easy 60min
+      - Run: Easy 60min
+      Rest: Mon, Fri, Sun
+      Notes: Post-race recovery
+      ```
+
+- vars:
+    athlete_name: "Sam - Time-Crunched Sprint"
+    weekly_hours: "5"
+    step1_output: |
+      ```markdown
+      # Plan Summary
+      Total weeks: 11 | Race: Sprint | Date: 2026-05-17
+      Phases: Base W1-W4, Build W5-W7, Peak W8-W9, Taper W10-W11
+      
+      ## W1 — Base — 2026-03-02
+      Total: 5h | Swim 2h | Bike 1.5h | Run 1.5h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 45min, Easy 45min
+      Rest: Sunday
+      Notes: Focus on swim technique
+      
+      ## W2 — Base — 2026-03-09
+      Total: 5h | Swim 2h | Bike 1.5h | Run 1.5h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 45min, Easy 45min
+      Rest: Sunday
+      Notes: Maintain swim focus
+      
+      ## W3 — Base — 2026-03-16
+      Total: 5h | Swim 2h | Bike 1.5h | Run 1.5h
+      - Swim: Easy 60min, Easy 60min
+      - Bike: Easy 45min, Easy 45min
+      - Run: Easy 45min, Easy 45min
+      Rest: Sunday
+      Notes: Continue swim development
+      
+      ## W4 — Recovery — 2026-03-23
+      Total: 3.5h | Swim 1.5h | Bike 1h | Run 1h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 30min, Easy 30min
+      - Run: Easy 30min, Easy 30min
+      Rest: Sunday
+      Notes: Recovery week, reduced volume
+      
+      ## W5 — Build — 2026-03-30
+      Total: 5h | Swim 1.5h | Bike 2h | Run 1.5h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Intervals 60min, Easy 60min
+      - Run: Tempo 45min, Easy 45min
+      Rest: Sunday
+      Notes: Introduce intensity, focus on bike intervals
+      
+      ## W6 — Build — 2026-04-06
+      Total: 5h | Swim 1.5h | Bike 2h | Run 1.5h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Intervals 60min, Easy 60min
+      - Run: Tempo 45min, Easy 45min
+      Rest: Sunday
+      Notes: Maintain intensity, brick session: bike→run
+      
+      ## W7 — Recovery — 2026-04-13
+      Total: 3.5h | Swim 1.5h | Bike 1h | Run 1h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Easy 30min, Easy 30min
+      - Run: Easy 30min, Easy 30min
+      Rest: Sunday
+      Notes: Recovery week, reduced volume
+      
+      ## W8 — Peak — 2026-04-20
+      Total: 5h | Swim 1.5h | Bike 2h | Run 1.5h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Intervals 60min, Easy 60min
+      - Run: Tempo 45min, Easy 45min
+      Rest: Sunday
+      Notes: Increase race-specific intensity
+      
+      ## W9 — Peak — 2026-04-27
+      Total: 5h | Swim 1.5h | Bike 2h | Run 1.5h
+      - Swim: Easy 45min, Easy 45min
+      - Bike: Intervals 60min, Easy 60min
+      - Run: Tempo 45min, Easy 45min
+      Rest: Sunday
+      Notes: Final peak week, brick session: bike→run
+      
+      ## W10 — Taper — 2026-05-04
+      Total: 3.5h | Swim 1h | Bike 1.25h | Run 1.25h
+      - Swim: Easy 30min, Easy 30min
+      - Bike: Easy 45min, Easy 30min
+      - Run: Easy 45min, Easy 30min
+      Rest: Sunday
+      Notes: Begin taper, reduce volume
+      
+      ## W11 — Taper — 2026-05-11
+      Total: 3h | Swim 1h | Bike 1h | Run 1h
+      - Swim: Easy 30min, Easy 30min
+      - Bike: Easy 30min, Easy 30min
+      - Run: Easy 30min, Easy 30min
+      Rest: Sunday
+      Notes: Final taper, race week preparation
+      ```
+
