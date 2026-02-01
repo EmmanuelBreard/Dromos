@@ -190,9 +190,8 @@ struct PlanGenerationView: View {
                     // Fallback: Manually mark has plan locally since generation succeeded
                     // This prevents user from being stuck on plan generation screen
                     logger.warning("Failed to check plan status, using local fallback: \(error.localizedDescription, privacy: .public)")
-                    await MainActor.run {
-                        authService.markHasPlanLocally()
-                    }
+                    // Already on MainActor, no need for MainActor.run
+                    authService.markHasPlanLocally()
                 }
             } catch {
                 logger.error("Plan generation failed: \(error.localizedDescription, privacy: .public)")
@@ -228,17 +227,5 @@ struct PlanGenerationView: View {
 
 #Preview("Idle") {
     PlanGenerationView(authService: AuthService())
-}
-
-#Preview("Generating") {
-    let view = PlanGenerationView(authService: AuthService())
-    view.planService.isGenerating = true
-    return view
-}
-
-#Preview("Error") {
-    let view = PlanGenerationView(authService: AuthService())
-    view.planService.errorMessage = "Unable to connect to the server. Please check your internet connection and try again."
-    return view
 }
 

@@ -5,7 +5,6 @@
 //  Created by Emmanuel Breard on 01/02/2026.
 //
 
-import Combine
 import Foundation
 import Supabase
 
@@ -41,25 +40,17 @@ final class PlanService: ObservableObject {
         do {
             // Invoke the Edge Function (no body needed — Edge Function reads profile server-side)
             // The SDK automatically includes the Bearer token from the current session
-            // Note: The SDK uses URLSession which has a default timeout that should accommodate
-            // the ~140s generation time. If timeout issues occur, we can configure URLSession
-            // timeout in SupabaseClientOptions in the future.
-            let response = try await client.functions.invoke(
+            // Note: The SDK's FunctionsClient.requestIdleTimeout is hardcoded to 150s.
+            // Edge Function takes ~140s, leaving only a 10s margin. If timeout issues occur,
+            // we may need to configure URLSession timeout in SupabaseClientOptions.
+            try await client.functions.invoke(
                 "generate-plan",
                 options: FunctionInvokeOptions(body: nil, headers: [:])
             )
 
-            // Check if response contains an error
-            // Edge Function may return HTTP 200 with error in body
-            if let data = response.data,
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMessage = json["error"] as? String {
-                self.errorMessage = errorMessage
-                throw PlanGenerationError.serverError(errorMessage)
-            }
-
             // Success — plan generation completed
             // The plan is now in the database with status='active'
+            // Edge Function returns 4xx/5xx on errors, which are handled in the catch block
         } catch {
             // Map various error types to user-friendly messages
             if let functionsError = error as? FunctionsError {
