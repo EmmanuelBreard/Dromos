@@ -98,21 +98,19 @@ final class WorkoutLibraryService {
                 let nestedDistance = calculateDistance(segments: nestedSegments)
                 total += nestedDistance * repeats
                 
-                // Also add recovery distance if present (once per repeat set, not multiplied)
+                // Recovery is swum between repeats, so (repeats - 1) times
+                // Example: 3 repeats = swim recovery 2 times (after rep 1 and rep 2)
                 if let recovery = segment.recovery, let recoveryDistance = recovery.distanceMeters {
-                    // Recovery is done between repeats, so (repeats - 1) times,
-                    // but in the workout library, recovery is often listed as the set recovery
-                    // For simplicity, we add it once per repeat block (as designed in library)
-                    total += recoveryDistance
+                    total += recoveryDistance * max(0, repeats - 1)
                 }
             } else if let distance = segment.distanceMeters {
                 // Simple segment with direct distance
                 total += distance
             }
             
-            // Check if segment has inline recovery with distance
+            // Check if segment has inline recovery with distance (non-repeat blocks)
             if let recovery = segment.recovery, let recoveryDistance = recovery.distanceMeters {
-                // Only count if not already counted in repeat block
+                // Only count if not already counted in repeat block above
                 if segment.repeats == nil {
                     total += recoveryDistance
                 }

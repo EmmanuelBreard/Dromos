@@ -42,7 +42,7 @@ struct CalendarPlanView: View {
             .onChange(of: planService.trainingPlan?.id) { _, _ in
                 // Recalculate current week when plan data changes
                 if let plan = planService.trainingPlan {
-                    currentWeekIndex = calculateCurrentWeekIndex(plan: plan)
+                    currentWeekIndex = plan.currentWeekIndex()
                     logger.debug("Current week index recalculated: \(currentWeekIndex, privacy: .public)")
                 }
             }
@@ -81,7 +81,7 @@ struct CalendarPlanView: View {
 
                 // Days list
                 LazyVStack(spacing: 0) {
-                    ForEach(daysForWeek(currentWeek, plan: plan), id: \.weekday) { dayInfo in
+                    ForEach(plan.daysForWeek(currentWeek), id: \.weekday) { dayInfo in
                         DaySessionRow(
                             weekday: dayInfo.weekday,
                             date: dayInfo.date,
@@ -137,7 +137,9 @@ struct CalendarPlanView: View {
 
             Button(action: {
                 Task {
-                    await retryLoadPlan()
+                    if let userId = authService.currentUserId {
+                        await planService.retryFetchPlan(userId: userId)
+                    }
                 }
             }) {
                 Text("Retry")
@@ -152,122 +154,6 @@ struct CalendarPlanView: View {
         }
         .padding()
     }
-
-    // MARK: - Helper Methods
-
-    /// Retries loading the training plan.
-    private func retryLoadPlan() async {
-        guard let userId = authService.currentUserId else {
-            logger.error("Cannot load plan: No user ID available")
-            return
-        }
-
-        do {
-            try await planService.fetchFullPlan(userId: userId)
-            logger.info("Successfully loaded training plan on retry")
-        } catch {
-            logger.error("Failed to load training plan: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    /// Calculates which week contains today's date.
-    /// Falls back to Week 1 if before plan start, last week if after plan end.
-    private func calculateCurrentWeekIndex(plan: TrainingPlan) -> Int {
-        let today = Date()
-        let calendar = Calendar.current
-
-        // If before plan start, return Week 1
-        if let planStart = plan.startDateAsDate, today < planStart {
-            return 0
-        }
-
-        // Find week containing today
-        for (index, week) in plan.planWeeks.enumerated() {
-            guard let weekStart = week.startDateAsDate else { continue }
-            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-
-            if today >= weekStart && today <= weekEnd {
-                return index
-            }
-        }
-
-        // If after all weeks, return last week
-        return max(0, plan.planWeeks.count - 1)
-    }
-
-    /// Returns day information for the current week, handling partial Week 1.
-    private func daysForWeek(_ week: PlanWeek, plan: TrainingPlan) -> [DayInfo] {
-        guard let weekStartDate = week.startDateAsDate else { return [] }
-
-        let calendar = Calendar.current
-        let sessionsByDay = week.sessionsByDay
-        let restDaySet = week.restDaySet
-
-        var days: [DayInfo] = []
-
-        // Determine which weekdays to show
-        let weekdaysToShow: [Weekday]
-        if week.weekNumber == 1, let planStart = plan.startDateAsDate {
-            // Partial Week 1: only show days from plan start to Sunday
-            let weekdayComponent = calendar.component(.weekday, from: planStart)
-            // Convert Calendar weekday (Sunday=1, Monday=2, ..., Saturday=7) to our Weekday enum
-            let startWeekday: Weekday
-            switch weekdayComponent {
-            case 1: startWeekday = .sunday
-            case 2: startWeekday = .monday
-            case 3: startWeekday = .tuesday
-            case 4: startWeekday = .wednesday
-            case 5: startWeekday = .thursday
-            case 6: startWeekday = .friday
-            case 7: startWeekday = .saturday
-            default: startWeekday = .monday
-            }
-            
-            // Get all weekdays from start to Sunday
-            if let startIndex = Weekday.allCases.firstIndex(of: startWeekday) {
-                weekdaysToShow = Array(Weekday.allCases[startIndex...])
-            } else {
-                weekdaysToShow = Weekday.allCases
-            }
-        } else {
-            // Full week: show all days Monday through Sunday
-            weekdaysToShow = Weekday.allCases
-        }
-
-        // Create day info for each weekday
-        for weekday in weekdaysToShow {
-            let dayDate = weekday.date(relativeTo: weekStartDate)
-
-            // Skip days before plan start for Week 1 (safety check)
-            if week.weekNumber == 1,
-               let planStart = plan.startDateAsDate,
-               dayDate < planStart {
-                continue
-            }
-
-            let sessions = sessionsByDay[weekday] ?? []
-            let isRestDay = restDaySet.contains(weekday) && sessions.isEmpty
-
-            days.append(DayInfo(
-                weekday: weekday,
-                date: dayDate,
-                sessions: sessions,
-                isRestDay: isRestDay
-            ))
-        }
-
-        return days
-    }
-}
-
-// MARK: - Day Info
-
-/// Information about a single day in the week.
-struct DayInfo {
-    let weekday: Weekday
-    let date: Date
-    let sessions: [PlanSession]
-    let isRestDay: Bool
 }
 
 #Preview {

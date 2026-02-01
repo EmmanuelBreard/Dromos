@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import OSLog
 
 /// Home dashboard view displaying the current week's training sessions.
 /// Shows day-by-day view with rich session cards, auto-scrolling to today.
@@ -17,9 +16,6 @@ struct HomeView: View {
     
     /// Reference to the workout library for swim distance lookups.
     private let workoutLibrary = WorkoutLibraryService.shared
-    
-    /// Logger for home view operations.
-    private let logger = Logger(subsystem: "com.dromos.app", category: "Home")
     
     var body: some View {
         NavigationStack {
@@ -55,15 +51,15 @@ struct HomeView: View {
     
     /// Main content view with week header and day sections.
     private func contentView(plan: TrainingPlan) -> some View {
-        let currentWeekIndex = calculateCurrentWeekIndex(plan: plan)
+        let currentWeekIndex = plan.currentWeekIndex()
         let currentWeek = plan.planWeeks[currentWeekIndex]
-        let days = daysForWeek(currentWeek, plan: plan)
+        let days = plan.daysForWeek(currentWeek)
         
         return ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
                     // Week header (simplified, no navigation arrows)
-                    weekHeader(week: currentWeek, plan: plan)
+                    weekHeader(week: currentWeek)
                         .padding(.horizontal)
                         .padding(.top)
                         .padding(.bottom, 8)
@@ -71,7 +67,7 @@ struct HomeView: View {
                     // Day sections
                     LazyVStack(spacing: 16) {
                         ForEach(days, id: \.weekday) { dayInfo in
-                            daySectionView(dayInfo: dayInfo, week: currentWeek)
+                            daySectionView(dayInfo: dayInfo)
                                 .id(dayInfo.weekday)
                         }
                     }
@@ -89,7 +85,7 @@ struct HomeView: View {
     // MARK: - Week Header
     
     /// Simplified week header showing "Week N — Phase" with phase badge.
-    private func weekHeader(week: PlanWeek, plan: TrainingPlan) -> some View {
+    private func weekHeader(week: PlanWeek) -> some View {
         VStack(spacing: 8) {
             // Week number and phase
             HStack(spacing: 12) {
@@ -121,7 +117,7 @@ struct HomeView: View {
     // MARK: - Day Section
     
     /// A day section with header and session cards.
-    private func daySectionView(dayInfo: DayInfo, week: PlanWeek) -> some View {
+    private func daySectionView(dayInfo: DayInfo) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             // Day header with relative label + full date
             Text(dayHeaderLabel(for: dayInfo.date, weekday: dayInfo.weekday))
@@ -183,7 +179,9 @@ struct HomeView: View {
             
             Button(action: {
                 Task {
-                    await retryLoadPlan()
+                    if let userId = authService.currentUserId {
+                        await planService.retryFetchPlan(userId: userId)
+                    }
                 }
             }) {
                 Text("Retry")
@@ -200,107 +198,6 @@ struct HomeView: View {
     }
     
     // MARK: - Helper Methods
-    
-    /// Retries loading the training plan.
-    private func retryLoadPlan() async {
-        guard let userId = authService.currentUserId else {
-            logger.error("Cannot load plan: No user ID available")
-            return
-        }
-        
-        do {
-            try await planService.fetchFullPlan(userId: userId)
-            logger.info("Successfully loaded training plan on retry")
-        } catch {
-            logger.error("Failed to load training plan: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-    
-    /// Calculates which week contains today's date.
-    /// Falls back to Week 1 if before plan start, last week if after plan end.
-    private func calculateCurrentWeekIndex(plan: TrainingPlan) -> Int {
-        let today = Date()
-        let calendar = Calendar.current
-        
-        // If before plan start, return Week 1
-        if let planStart = plan.startDateAsDate, today < planStart {
-            return 0
-        }
-        
-        // Find week containing today
-        for (index, week) in plan.planWeeks.enumerated() {
-            guard let weekStart = week.startDateAsDate else { continue }
-            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-            
-            if today >= weekStart && today <= weekEnd {
-                return index
-            }
-        }
-        
-        // If after all weeks, return last week
-        return max(0, plan.planWeeks.count - 1)
-    }
-    
-    /// Returns day information for the current week, handling partial Week 1.
-    private func daysForWeek(_ week: PlanWeek, plan: TrainingPlan) -> [DayInfo] {
-        guard let weekStartDate = week.startDateAsDate else { return [] }
-        
-        let calendar = Calendar.current
-        let sessionsByDay = week.sessionsByDay
-        let restDaySet = week.restDaySet
-        
-        var days: [DayInfo] = []
-        
-        // Determine which weekdays to show
-        let weekdaysToShow: [Weekday]
-        if week.weekNumber == 1, let planStart = plan.startDateAsDate {
-            // Partial Week 1: only show days from plan start to Sunday
-            let weekdayComponent = calendar.component(.weekday, from: planStart)
-            let startWeekday: Weekday
-            switch weekdayComponent {
-            case 1: startWeekday = .sunday
-            case 2: startWeekday = .monday
-            case 3: startWeekday = .tuesday
-            case 4: startWeekday = .wednesday
-            case 5: startWeekday = .thursday
-            case 6: startWeekday = .friday
-            case 7: startWeekday = .saturday
-            default: startWeekday = .monday
-            }
-            
-            if let startIndex = Weekday.allCases.firstIndex(of: startWeekday) {
-                weekdaysToShow = Array(Weekday.allCases[startIndex...])
-            } else {
-                weekdaysToShow = Weekday.allCases
-            }
-        } else {
-            weekdaysToShow = Weekday.allCases
-        }
-        
-        // Create day info for each weekday
-        for weekday in weekdaysToShow {
-            let dayDate = weekday.date(relativeTo: weekStartDate)
-            
-            // Skip days before plan start for Week 1
-            if week.weekNumber == 1,
-               let planStart = plan.startDateAsDate,
-               dayDate < planStart {
-                continue
-            }
-            
-            let sessions = sessionsByDay[weekday] ?? []
-            let isRestDay = restDaySet.contains(weekday) && sessions.isEmpty
-            
-            days.append(DayInfo(
-                weekday: weekday,
-                date: dayDate,
-                sessions: sessions,
-                isRestDay: isRestDay
-            ))
-        }
-        
-        return days
-    }
     
     /// Creates the day header label with relative prefix (Today/Tomorrow) + full date.
     /// Examples: "Today Saturday 1 February", "Tomorrow Sunday 2 February", "Monday 3 February"
