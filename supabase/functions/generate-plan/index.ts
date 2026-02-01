@@ -188,7 +188,7 @@ function buildStep1Prompt(user: any, vars: any): string {
   );
   prompt = prompt.replace(
     "{{swim_css}}",
-    formatCSS(user.css_seconds_per_100m)
+    formatCSS(user.css_seconds_per100m)
   );
   prompt = prompt.replace("{{limiters}}", "none");
   prompt = prompt.replace("{{constraints}}", "none");
