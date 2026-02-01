@@ -31,12 +31,13 @@ struct OnboardingScreen3View: View {
         return vma >= 10 && vma <= 25
     }
 
-    /// Validates CSS total seconds is 25-300 if filled
+    /// Validates CSS total seconds is 25-300 and seconds component is 0-59 if filled
     private var isCssValid: Bool {
-        // If either field is filled, validate total seconds
+        // If either field is filled, validate total seconds and seconds component
         guard !cssMinutesText.isEmpty || !cssSecondsText.isEmpty else { return true }
         guard let totalSeconds = data.cssSecondsPer100m else { return true }
-        return totalSeconds >= 25 && totalSeconds <= 300
+        let seconds = Int(cssSecondsText) ?? 0
+        return totalSeconds >= 25 && totalSeconds <= 300 && seconds >= 0 && seconds <= 59
     }
 
     /// Validates FTP is 50-500 watts if filled
@@ -120,19 +121,20 @@ struct OnboardingScreen3View: View {
                                     .keyboardType(.numberPad)
                                     .textFieldStyle(.roundedBorder)
                                     .multilineTextAlignment(.center)
-                                .onChange(of: cssMinutesText) { _, newValue in
-                                    // Convert min:sec UI to total seconds
-                                    let minutes = Int(newValue) ?? 0
-                                    let seconds = Int(cssSecondsText) ?? 0
-                                    data.cssSecondsPer100m = minutes * 60 + seconds
-                                }
-                                .onAppear {
-                                    // Decompose total seconds into min:sec for display
-                                    if let totalSeconds = data.cssSecondsPer100m {
-                                        let minutes = totalSeconds / 60
-                                        cssMinutesText = String(minutes)
+                                    .onChange(of: cssMinutesText) { _, newValue in
+                                        // Convert min:sec UI to total seconds
+                                        let minutes = Int(newValue) ?? 0
+                                        let seconds = Int(cssSecondsText) ?? 0
+                                        let total = minutes * 60 + seconds
+                                        data.cssSecondsPer100m = total > 0 ? total : nil
                                     }
-                                }
+                                    .onAppear {
+                                        // Decompose total seconds into min:sec for display
+                                        if let totalSeconds = data.cssSecondsPer100m {
+                                            let minutes = totalSeconds / 60
+                                            cssMinutesText = String(minutes)
+                                        }
+                                    }
                                 Text("Minutes")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -146,19 +148,20 @@ struct OnboardingScreen3View: View {
                                     .keyboardType(.numberPad)
                                     .textFieldStyle(.roundedBorder)
                                     .multilineTextAlignment(.center)
-                                .onChange(of: cssSecondsText) { _, newValue in
-                                    // Convert min:sec UI to total seconds
-                                    let minutes = Int(cssMinutesText) ?? 0
-                                    let seconds = Int(newValue) ?? 0
-                                    data.cssSecondsPer100m = minutes * 60 + seconds
-                                }
-                                .onAppear {
-                                    // Decompose total seconds into min:sec for display
-                                    if let totalSeconds = data.cssSecondsPer100m {
-                                        let seconds = totalSeconds % 60
-                                        cssSecondsText = String(seconds)
+                                    .onChange(of: cssSecondsText) { _, newValue in
+                                        // Convert min:sec UI to total seconds
+                                        let minutes = Int(cssMinutesText) ?? 0
+                                        let seconds = Int(newValue) ?? 0
+                                        let total = minutes * 60 + seconds
+                                        data.cssSecondsPer100m = total > 0 ? total : nil
                                     }
-                                }
+                                    .onAppear {
+                                        // Decompose total seconds into min:sec for display
+                                        if let totalSeconds = data.cssSecondsPer100m {
+                                            let seconds = totalSeconds % 60
+                                            cssSecondsText = String(seconds)
+                                        }
+                                    }
                                 Text("Seconds")
                                     .font(.caption)
                                     .foregroundColor(.secondary)

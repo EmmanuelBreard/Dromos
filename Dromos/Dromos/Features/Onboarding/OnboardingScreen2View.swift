@@ -128,7 +128,8 @@ struct OnboardingScreen2View: View {
                                     // Convert hours:minutes UI to total minutes
                                     let hours = Int(newValue) ?? 0
                                     let minutes = Int(minutesText) ?? 0
-                                    data.timeObjectiveMinutes = hours * 60 + minutes
+                                    let total = hours * 60 + minutes
+                                    data.timeObjectiveMinutes = total > 0 ? total : nil
                                 }
                                 .onAppear {
                                     // Decompose total minutes into hours:minutes for display
@@ -154,7 +155,8 @@ struct OnboardingScreen2View: View {
                                     // Convert hours:minutes UI to total minutes
                                     let hours = Int(hoursText) ?? 0
                                     let minutes = Int(newValue) ?? 0
-                                    data.timeObjectiveMinutes = hours * 60 + minutes
+                                    let total = hours * 60 + minutes
+                                    data.timeObjectiveMinutes = total > 0 ? total : nil
                                 }
                                 .onAppear {
                                     // Decompose total minutes into hours:minutes for display

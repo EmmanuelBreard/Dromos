@@ -56,14 +56,18 @@ ADD CONSTRAINT check_time_objective_minutes
 -- DROP CONSTRAINT IF EXISTS check_css_seconds_per_100m,
 -- DROP CONSTRAINT IF EXISTS check_time_objective_minutes;
 
--- Step 2: Add back old split columns
+-- Step 2: Rename time_objective_minutes to time_objective_total_min to avoid name conflict
+-- ALTER TABLE public.users
+-- RENAME COLUMN time_objective_minutes TO time_objective_total_min;
+
+-- Step 3: Add back old split columns
 -- ALTER TABLE public.users
 -- ADD COLUMN css_minutes INT,
 -- ADD COLUMN css_seconds INT,
 -- ADD COLUMN time_objective_hours INT,
 -- ADD COLUMN time_objective_minutes INT;
 
--- Step 3: Compute values from consolidated columns back to split columns
+-- Step 4: Compute values from consolidated columns back to split columns
 -- UPDATE public.users
 -- SET css_minutes = CASE
 --     WHEN css_seconds_per_100m IS NOT NULL THEN css_seconds_per_100m / 60
@@ -74,28 +78,24 @@ ADD CONSTRAINT check_time_objective_minutes
 --     ELSE NULL
 -- END,
 -- time_objective_hours = CASE
---     WHEN time_objective_minutes IS NOT NULL THEN time_objective_minutes / 60
+--     WHEN time_objective_total_min IS NOT NULL THEN time_objective_total_min / 60
 --     ELSE NULL
 -- END,
 -- time_objective_minutes = CASE
---     WHEN time_objective_minutes IS NOT NULL THEN time_objective_minutes % 60
+--     WHEN time_objective_total_min IS NOT NULL THEN time_objective_total_min % 60
 --     ELSE NULL
 -- END;
 
--- Step 4: Rename time_objective_minutes back to time_objective_total_min temporarily
+-- Step 5: Drop consolidated columns
 -- ALTER TABLE public.users
--- RENAME COLUMN time_objective_minutes TO time_objective_total_min;
+-- DROP COLUMN IF EXISTS css_seconds_per_100m,
+-- DROP COLUMN IF EXISTS time_objective_total_min;
 
--- Step 5: Add back old CHECK constraints
+-- Step 6: Add back old CHECK constraints
 -- ALTER TABLE public.users
 -- ADD CONSTRAINT check_css_seconds
 --   CHECK (css_seconds IS NULL OR css_seconds BETWEEN 0 AND 59),
 -- ADD CONSTRAINT check_css_total
 --   CHECK ((css_minutes IS NULL AND css_seconds IS NULL) OR
 --          (css_minutes IS NOT NULL AND (css_minutes * 60 + COALESCE(css_seconds, 0)) BETWEEN 25 AND 300));
-
--- Step 6: Drop consolidated columns
--- ALTER TABLE public.users
--- DROP COLUMN IF EXISTS css_seconds_per_100m,
--- DROP COLUMN IF EXISTS time_objective_total_min;
 

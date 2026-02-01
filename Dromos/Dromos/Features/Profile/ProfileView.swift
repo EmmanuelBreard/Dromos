@@ -422,11 +422,15 @@ struct ProfileView: View {
             }
         }
 
-        // CSS validation (25-300 total seconds)
+        // CSS validation (25-300 total seconds, seconds component 0-59)
         if !editCssMinutes.isEmpty || !editCssSeconds.isEmpty {
             let minutes = Int(editCssMinutes) ?? 0
             let seconds = Int(editCssSeconds) ?? 0
             let totalSeconds = minutes * 60 + seconds
+
+            if seconds < 0 || seconds > 59 {
+                return "CSS seconds must be between 0 and 59"
+            }
 
             if totalSeconds < 25 || totalSeconds > 300 {
                 return "CSS must be between 0:25 and 5:00 per 100m"

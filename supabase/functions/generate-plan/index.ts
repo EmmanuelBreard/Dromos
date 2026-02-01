@@ -9,8 +9,14 @@ import STEP3_WORKOUT_BLOCK_PROMPT from "./prompts/step3-workout-block-prompt.ts"
 import TRAINING_PHILOSOPHY from "./context/training-philosophy-content.ts";
 
 // Large static asset fetched at runtime from Supabase Storage (too big to bundle on free plan)
-const WORKOUT_LIBRARY_URL =
-  "https://cumbrfnguykvxhvdelru.supabase.co/storage/v1/object/public/static-assets/workout-library.json";
+// Construct URL dynamically from SUPABASE_URL environment variable
+function getWorkoutLibraryUrl(): string {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!supabaseUrl) {
+    throw new Error("SUPABASE_URL environment variable not set");
+  }
+  return `${supabaseUrl}/storage/v1/object/public/static-assets/workout-library.json`;
+}
 
 // Constants
 const BLOCK_SIZE = 4;
@@ -530,7 +536,7 @@ Deno.serve(async (req) => {
 
     // Step 3: Process blocks
     // Fetch workout library from Supabase Storage at runtime
-    const wlResponse = await fetch(WORKOUT_LIBRARY_URL);
+    const wlResponse = await fetch(getWorkoutLibraryUrl());
     if (!wlResponse.ok) {
       throw new Error(`Failed to fetch workout library: ${wlResponse.status}`);
     }
