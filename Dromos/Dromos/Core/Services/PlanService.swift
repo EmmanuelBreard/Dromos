@@ -5,6 +5,7 @@
 //  Created by Emmanuel Breard on 01/02/2026.
 //
 
+import Combine
 import Foundation
 import Supabase
 
@@ -49,10 +50,7 @@ final class PlanService: ObservableObject {
             // Note: The SDK's FunctionsClient.requestIdleTimeout is hardcoded to 150s.
             // Edge Function takes ~140s, leaving only a 10s margin. If timeout issues occur,
             // we may need to configure URLSession timeout in SupabaseClientOptions.
-            try await client.functions.invoke(
-                "generate-plan",
-                options: FunctionInvokeOptions(body: nil, headers: [:])
-            )
+            try await client.functions.invoke("generate-plan")
 
             // Success — plan generation completed
             // The plan is now in the database with status='active'
@@ -63,8 +61,7 @@ final class PlanService: ObservableObject {
                 switch functionsError {
                 case .httpError(let code, let data):
                     // HTTP error from Edge Function
-                    if let data = data,
-                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let errorMessage = json["error"] as? String {
                         self.errorMessage = errorMessage
                         throw PlanGenerationError.serverError(errorMessage)
@@ -73,11 +70,11 @@ final class PlanService: ObservableObject {
                         self.errorMessage = message
                         throw PlanGenerationError.serverError(message)
                     }
-                case .relayError(let message):
+                case .relayError:
                     // Network/timeout error
                     let userMessage = "Unable to connect to the server. Please check your internet connection and try again."
                     self.errorMessage = userMessage
-                    throw PlanGenerationError.networkError(message)
+                    throw PlanGenerationError.networkError(userMessage)
                 @unknown default:
                     let message = "An unexpected error occurred. Please try again."
                     self.errorMessage = message
