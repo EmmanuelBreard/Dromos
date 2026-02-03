@@ -41,11 +41,11 @@ Fix 9 broken swim templates in workout-library.json:
 | SWIM_Easy_02 | 600m | 1900m | ~1900m | ✅ |
 | SWIM_Easy_03 | 600m | 2000m | ~2000m | ✅ |
 | SWIM_Easy_04 | 850m | 2100m | ~2100m | ✅ |
-| SWIM_Easy_05 | 1200m | 2200m | ~2200m | ✅ |
+| SWIM_Easy_05 | 1200m | 2200m | ~2200m | ✅ (25% drill ratio) |
 | SWIM_Tempo_08 | 700m | 1700m | ~1700m | ✅ |
 | SWIM_Intervals_04 | 1000m | 1400m | ~1400m | ✅ |
 | SWIM_Intervals_06 | 1100m | 1400m | ~1400m | ✅ |
-| SWIM_Intervals_09 | 1100m | 1400m | ~1400m | ✅ |
+| SWIM_Intervals_09 | 1100m | 1500m | ~1400m | ✅ (proper cooldown) |
 
 ## Distance Calculation Breakdown
 
@@ -75,8 +75,8 @@ Fix 9 broken swim templates in workout-library.json:
 
 ### SWIM_Easy_05 (2200m)
 - Warmup: 300m
-- Drill: 6×100m pull_buoy = 600m
-- Main: 5×200m slow = 1000m
+- Drill: 4×100m pull_buoy = 400m (~25% of main set)
+- Main: 6×200m slow = 1200m
 - Cooldown: 300m
 
 ### SWIM_Tempo_08 (1700m)
@@ -95,7 +95,7 @@ Fix 9 broken swim templates in workout-library.json:
 - Main: 12×(50m work + 25m recovery) = 900m
 - Cooldown: 200m
 
-### SWIM_Intervals_09 (1400m)
+### SWIM_Intervals_09 (1500m)
 - Warmup: 400m
 - Main: 16×50m very_quick = 800m
-- Cooldown: 200m
+- Cooldown: 300m (preserved original cooldown for proper recovery)

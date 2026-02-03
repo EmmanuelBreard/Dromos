@@ -615,7 +615,7 @@
         },
         {
           "label": "cooldown",
-          "distance_meters": 200,
+          "distance_meters": 300,
           "pace": "slow"
         }
       ]
@@ -856,7 +856,7 @@
         },
         {
           "label": "repeat",
-          "repeats": 6,
+          "repeats": 4,
           "segments": [
             {
               "label": "drill",
@@ -870,7 +870,7 @@
         },
         {
           "label": "repeat",
-          "repeats": 5,
+          "repeats": 6,
           "segments": [
             {
               "label": "work",
