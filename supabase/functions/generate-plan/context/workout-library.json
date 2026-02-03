@@ -221,7 +221,7 @@
         },
         {
           "label": "work",
-          "duration_minutes": 20,
+          "distance_meters": 1000,
           "pace": "medium"
         },
         {
@@ -402,7 +402,7 @@
               "segments": [
                 {
                   "label": "work",
-                  "distance_meters": 25,
+                  "distance_meters": 50,
                   "pace": "very_quick"
                 }
               ],
@@ -417,7 +417,7 @@
         },
         {
           "label": "cooldown",
-          "distance_meters": 200,
+          "distance_meters": 300,
           "pace": "slow"
         }
       ]
@@ -510,7 +510,7 @@
           "segments": [
             {
               "label": "work",
-              "distance_meters": 25,
+              "distance_meters": 50,
               "pace": "quick"
             },
             {
@@ -607,7 +607,7 @@
           "segments": [
             {
               "label": "work",
-              "distance_meters": 25,
+              "distance_meters": 50,
               "pace": "very_quick"
             }
           ],
@@ -615,7 +615,7 @@
         },
         {
           "label": "cooldown",
-          "distance_meters": 300,
+          "distance_meters": 200,
           "pace": "slow"
         }
       ]
@@ -663,35 +663,39 @@
       "template_id": "SWIM_Easy_01",
       "segments": [
         {
-          "label": "repeat",
-          "repeats": 8,
-          "segments": [
-            {
-              "label": "drill",
-              "distance_meters": 25,
-              "drill": "catch_up",
-              "pace": "slow"
-            },
-            {
-              "label": "work",
-              "distance_meters": 25,
-              "pace": "slow"
-            }
-          ],
-          "rest_seconds": 20
+          "label": "warmup",
+          "distance_meters": 200,
+          "pace": "slow"
         },
         {
           "label": "repeat",
           "repeats": 6,
           "segments": [
             {
-              "label": "work",
-              "distance_meters": 25,
-              "drill": "build",
-              "pace": "medium"
+              "label": "drill",
+              "distance_meters": 50,
+              "drill": "catch_up",
+              "pace": "slow"
             }
           ],
-          "rest_seconds": 20
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 10,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "slow"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 300,
+          "pace": "slow"
         }
       ]
     },
@@ -699,22 +703,22 @@
       "template_id": "SWIM_Easy_02",
       "segments": [
         {
+          "label": "warmup",
+          "distance_meters": 250,
+          "pace": "slow"
+        },
+        {
           "label": "repeat",
-          "repeats": 10,
+          "repeats": 6,
           "segments": [
             {
               "label": "drill",
-              "distance_meters": 25,
+              "distance_meters": 50,
               "drill": "side_kick",
-              "pace": "slow"
-            },
-            {
-              "label": "work",
-              "distance_meters": 25,
               "pace": "slow"
             }
           ],
-          "rest_seconds": 25
+          "rest_seconds": 15
         },
         {
           "label": "repeat",
@@ -722,31 +726,7 @@
           "segments": [
             {
               "label": "work",
-              "distance_meters": 25,
-              "pace": "medium",
-              "cue": "quiet head"
-            }
-          ],
-          "rest_seconds": 20
-        }
-      ]
-    },
-    {
-      "template_id": "SWIM_Easy_03",
-      "segments": [
-        {
-          "label": "repeat",
-          "repeats": 8,
-          "segments": [
-            {
-              "label": "drill",
-              "distance_meters": 15,
-              "drill": "scull",
-              "pace": "slow"
-            },
-            {
-              "label": "work",
-              "distance_meters": 35,
+              "distance_meters": 200,
               "pace": "slow"
             }
           ],
@@ -754,16 +734,61 @@
         },
         {
           "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "slow",
+              "cue": "quiet head"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 150,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_03",
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 300,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
           "repeats": 8,
           "segments": [
             {
               "label": "drill",
-              "distance_meters": 25,
-              "drill": "fist_drill",
-              "pace": "medium"
+              "distance_meters": 50,
+              "drill": "scull",
+              "pace": "slow"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 200,
+              "pace": "slow"
             }
           ],
           "rest_seconds": 20
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 300,
+          "pace": "slow"
         }
       ]
     },
@@ -771,8 +796,13 @@
       "template_id": "SWIM_Easy_04",
       "segments": [
         {
+          "label": "warmup",
+          "distance_meters": 300,
+          "pace": "slow"
+        },
+        {
           "label": "repeat",
-          "repeats": 6,
+          "repeats": 4,
           "segments": [
             {
               "label": "drill",
@@ -781,17 +811,17 @@
               "pace": "slow"
             }
           ],
-          "rest_seconds": 20
+          "rest_seconds": 15
         },
         {
           "label": "repeat",
-          "repeats": 8,
+          "repeats": 4,
           "segments": [
             {
-              "label": "work",
+              "label": "drill",
               "distance_meters": 50,
-              "pace": "slow",
-              "cue": "press chest"
+              "drill": "fist_drill",
+              "pace": "slow"
             }
           ],
           "rest_seconds": 15
@@ -802,11 +832,17 @@
           "segments": [
             {
               "label": "work",
-              "distance_meters": 25,
-              "pace": "quick"
+              "distance_meters": 200,
+              "pace": "slow",
+              "cue": "press chest"
             }
           ],
-          "rest_seconds": 30
+          "rest_seconds": 20
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 200,
+          "pace": "slow"
         }
       ]
     },
@@ -814,11 +850,16 @@
       "template_id": "SWIM_Easy_05",
       "segments": [
         {
+          "label": "warmup",
+          "distance_meters": 300,
+          "pace": "slow"
+        },
+        {
           "label": "repeat",
-          "repeats": 10,
+          "repeats": 6,
           "segments": [
             {
-              "label": "work",
+              "label": "drill",
               "distance_meters": 100,
               "pace": "slow",
               "equipment": "pull_buoy",
@@ -829,16 +870,21 @@
         },
         {
           "label": "repeat",
-          "repeats": 8,
+          "repeats": 5,
           "segments": [
             {
               "label": "work",
-              "distance_meters": 25,
-              "pace": "medium",
+              "distance_meters": 200,
+              "pace": "slow",
               "cue": "long strokes"
             }
           ],
-          "rest_seconds": 15
+          "rest_seconds": 20
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 300,
+          "pace": "slow"
         }
       ]
     }
