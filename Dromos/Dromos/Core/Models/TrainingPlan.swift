@@ -152,20 +152,6 @@ struct PlanSession: Codable, Identifiable {
             return "\(minutes) min"
         }
     }
-
-    /// Sport color for UI display.
-    var sportColor: Color {
-        switch sport.lowercased() {
-        case "swim":
-            return .cyan
-        case "bike":
-            return .green
-        case "run":
-            return .orange
-        default:
-            return .primary
-        }
-    }
 }
 
 // MARK: - Plan Week Model
@@ -262,5 +248,106 @@ struct TrainingPlan: Codable, Identifiable {
         formatter.formatOptions = [.withFullDate]
         return formatter.date(from: raceDate)
     }
+
+    // MARK: - Navigation Helpers
+
+    /// Calculates which week index contains today's date.
+    /// Falls back to Week 1 (index 0) if before plan start, last week if after plan end.
+    func currentWeekIndex() -> Int {
+        let today = Date()
+        let calendar = Calendar.current
+
+        // If before plan start, return Week 1
+        if let planStart = startDateAsDate, today < planStart {
+            return 0
+        }
+
+        // Find week containing today
+        for (index, week) in planWeeks.enumerated() {
+            guard let weekStart = week.startDateAsDate else { continue }
+            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+
+            if today >= weekStart && today <= weekEnd {
+                return index
+            }
+        }
+
+        // If after all weeks, return last week
+        return max(0, planWeeks.count - 1)
+    }
+
+    /// Returns day information for a given week, handling partial Week 1.
+    /// - Parameter week: The week to get days for
+    /// - Returns: Array of DayInfo for each day in the week
+    func daysForWeek(_ week: PlanWeek) -> [DayInfo] {
+        guard let weekStartDate = week.startDateAsDate else { return [] }
+
+        let calendar = Calendar.current
+        let sessionsByDay = week.sessionsByDay
+        let restDaySet = week.restDaySet
+
+        var days: [DayInfo] = []
+
+        // Determine which weekdays to show
+        let weekdaysToShow: [Weekday]
+        if week.weekNumber == 1, let planStart = startDateAsDate {
+            // Partial Week 1: only show days from plan start to Sunday
+            let weekdayComponent = calendar.component(.weekday, from: planStart)
+            let startWeekday: Weekday
+            switch weekdayComponent {
+            case 1: startWeekday = .sunday
+            case 2: startWeekday = .monday
+            case 3: startWeekday = .tuesday
+            case 4: startWeekday = .wednesday
+            case 5: startWeekday = .thursday
+            case 6: startWeekday = .friday
+            case 7: startWeekday = .saturday
+            default: startWeekday = .monday
+            }
+
+            if let startIndex = Weekday.allCases.firstIndex(of: startWeekday) {
+                weekdaysToShow = Array(Weekday.allCases[startIndex...])
+            } else {
+                weekdaysToShow = Weekday.allCases
+            }
+        } else {
+            weekdaysToShow = Weekday.allCases
+        }
+
+        // Create day info for each weekday
+        for weekday in weekdaysToShow {
+            let dayDate = weekday.date(relativeTo: weekStartDate)
+
+            // Skip days before plan start for Week 1
+            if week.weekNumber == 1,
+               let planStart = startDateAsDate,
+               dayDate < planStart {
+                continue
+            }
+
+            let sessions = sessionsByDay[weekday] ?? []
+            let isRestDay = restDaySet.contains(weekday) && sessions.isEmpty
+
+            days.append(DayInfo(
+                weekday: weekday,
+                date: dayDate,
+                sessions: sessions,
+                isRestDay: isRestDay
+            ))
+        }
+
+        return days
+    }
+}
+
+// MARK: - Day Info
+
+/// Information about a single day in a week.
+/// Used by both HomeView and CalendarPlanView to display day sections.
+struct DayInfo {
+    let weekday: Weekday
+    let date: Date
+    let sessions: [PlanSession]
+    let isRestDay: Bool
 }
 

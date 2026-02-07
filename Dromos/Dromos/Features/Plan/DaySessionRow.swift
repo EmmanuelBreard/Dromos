@@ -168,3 +168,21 @@ struct DaySessionRow: View {
     .padding()
 }
 
+// MARK: - PlanSession Extension
+
+extension PlanSession {
+    /// Sport color for UI display.
+    var sportColor: Color {
+        switch sport.lowercased() {
+        case "swim":
+            return .cyan
+        case "bike":
+            return .green
+        case "run":
+            return .orange
+        default:
+            return .primary
+        }
+    }
+}
+
