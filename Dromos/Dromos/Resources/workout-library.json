@@ -2,6 +2,7 @@
   "swim": [
     {
       "template_id": "SWIM_Tempo_01",
+      "duration_minutes": 33,
       "segments": [
         {
           "label": "warmup",
@@ -29,6 +30,7 @@
     },
     {
       "template_id": "SWIM_Tempo_02",
+      "duration_minutes": 38,
       "segments": [
         {
           "label": "warmup",
@@ -67,6 +69,7 @@
     },
     {
       "template_id": "SWIM_Tempo_03",
+      "duration_minutes": 38,
       "segments": [
         {
           "label": "warmup",
@@ -94,6 +97,7 @@
     },
     {
       "template_id": "SWIM_Tempo_04",
+      "duration_minutes": 37,
       "segments": [
         {
           "label": "warmup",
@@ -121,6 +125,7 @@
     },
     {
       "template_id": "SWIM_Tempo_05",
+      "duration_minutes": 31,
       "segments": [
         {
           "label": "warmup",
@@ -159,6 +164,7 @@
     },
     {
       "template_id": "SWIM_Tempo_06",
+      "duration_minutes": 30,
       "segments": [
         {
           "label": "warmup",
@@ -186,6 +192,7 @@
     },
     {
       "template_id": "SWIM_Tempo_07",
+      "duration_minutes": 44,
       "segments": [
         {
           "label": "warmup",
@@ -213,6 +220,7 @@
     },
     {
       "template_id": "SWIM_Tempo_08",
+      "duration_minutes": 36,
       "segments": [
         {
           "label": "warmup",
@@ -245,6 +253,7 @@
     },
     {
       "template_id": "SWIM_Tempo_09",
+      "duration_minutes": 30,
       "segments": [
         {
           "label": "warmup",
@@ -277,6 +286,7 @@
     },
     {
       "template_id": "SWIM_Tempo_10",
+      "duration_minutes": 28,
       "segments": [
         {
           "label": "warmup",
@@ -305,6 +315,7 @@
     },
     {
       "template_id": "SWIM_Intervals_01",
+      "duration_minutes": 41,
       "segments": [
         {
           "label": "warmup",
@@ -332,6 +343,7 @@
     },
     {
       "template_id": "SWIM_Intervals_02",
+      "duration_minutes": 36,
       "segments": [
         {
           "label": "warmup",
@@ -359,6 +371,7 @@
     },
     {
       "template_id": "SWIM_Intervals_03",
+      "duration_minutes": 35,
       "segments": [
         {
           "label": "warmup",
@@ -386,6 +399,7 @@
     },
     {
       "template_id": "SWIM_Intervals_04",
+      "duration_minutes": 28,
       "segments": [
         {
           "label": "warmup",
@@ -424,6 +438,7 @@
     },
     {
       "template_id": "SWIM_Intervals_05",
+      "duration_minutes": 30,
       "segments": [
         {
           "label": "warmup",
@@ -498,6 +513,7 @@
     },
     {
       "template_id": "SWIM_Intervals_06",
+      "duration_minutes": 31,
       "segments": [
         {
           "label": "warmup",
@@ -530,6 +546,7 @@
     },
     {
       "template_id": "SWIM_Intervals_07",
+      "duration_minutes": 30,
       "segments": [
         {
           "label": "warmup",
@@ -557,6 +574,7 @@
     },
     {
       "template_id": "SWIM_Intervals_08",
+      "duration_minutes": 32,
       "segments": [
         {
           "label": "warmup",
@@ -595,6 +613,7 @@
     },
     {
       "template_id": "SWIM_Intervals_09",
+      "duration_minutes": 41,
       "segments": [
         {
           "label": "warmup",
@@ -622,6 +641,7 @@
     },
     {
       "template_id": "SWIM_Intervals_10",
+      "duration_minutes": 36,
       "segments": [
         {
           "label": "warmup",
@@ -661,6 +681,7 @@
     },
     {
       "template_id": "SWIM_Easy_01",
+      "duration_minutes": 40,
       "segments": [
         {
           "label": "warmup",
@@ -701,6 +722,7 @@
     },
     {
       "template_id": "SWIM_Easy_02",
+      "duration_minutes": 41,
       "segments": [
         {
           "label": "warmup",
@@ -754,6 +776,7 @@
     },
     {
       "template_id": "SWIM_Easy_03",
+      "duration_minutes": 43,
       "segments": [
         {
           "label": "warmup",
@@ -794,6 +817,7 @@
     },
     {
       "template_id": "SWIM_Easy_04",
+      "duration_minutes": 45,
       "segments": [
         {
           "label": "warmup",
@@ -848,6 +872,7 @@
     },
     {
       "template_id": "SWIM_Easy_05",
+      "duration_minutes": 47,
       "segments": [
         {
           "label": "warmup",
@@ -892,6 +917,7 @@
   "bike": [
     {
       "template_id": "BIKE_Tempo_01",
+      "duration_minutes": 45,
       "segments": [
         {
           "label": "warmup",
@@ -915,6 +941,7 @@
     },
     {
       "template_id": "BIKE_Tempo_02",
+      "duration_minutes": 70,
       "segments": [
         {
           "label": "warmup",
@@ -950,6 +977,7 @@
     },
     {
       "template_id": "BIKE_Tempo_03",
+      "duration_minutes": 61,
       "segments": [
         {
           "label": "warmup",
@@ -985,6 +1013,7 @@
     },
     {
       "template_id": "BIKE_Tempo_04",
+      "duration_minutes": 66,
       "segments": [
         {
           "label": "warmup",
@@ -1020,6 +1049,7 @@
     },
     {
       "template_id": "BIKE_Tempo_05",
+      "duration_minutes": 53,
       "segments": [
         {
           "label": "warmup",
@@ -1067,6 +1097,7 @@
     },
     {
       "template_id": "BIKE_Tempo_06",
+      "duration_minutes": 69,
       "segments": [
         {
           "label": "warmup",
@@ -1102,6 +1133,7 @@
     },
     {
       "template_id": "BIKE_Tempo_07",
+      "duration_minutes": 65,
       "segments": [
         {
           "label": "warmup",
@@ -1125,6 +1157,7 @@
     },
     {
       "template_id": "BIKE_Tempo_08",
+      "duration_minutes": 45,
       "segments": [
         {
           "label": "warmup",
@@ -1166,6 +1199,7 @@
     },
     {
       "template_id": "BIKE_Tempo_09",
+      "duration_minutes": 55,
       "segments": [
         {
           "label": "warmup",
@@ -1201,6 +1235,7 @@
     },
     {
       "template_id": "BIKE_Tempo_10",
+      "duration_minutes": 63,
       "segments": [
         {
           "label": "warmup",
@@ -1236,6 +1271,7 @@
     },
     {
       "template_id": "BIKE_Intervals_01",
+      "duration_minutes": 57,
       "segments": [
         {
           "label": "warmup",
@@ -1271,6 +1307,7 @@
     },
     {
       "template_id": "BIKE_Intervals_02",
+      "duration_minutes": 58,
       "segments": [
         {
           "label": "warmup",
@@ -1306,6 +1343,7 @@
     },
     {
       "template_id": "BIKE_Intervals_03",
+      "duration_minutes": 65,
       "segments": [
         {
           "label": "warmup",
@@ -1341,6 +1379,7 @@
     },
     {
       "template_id": "BIKE_Intervals_04",
+      "duration_minutes": 51,
       "segments": [
         {
           "label": "warmup",
@@ -1376,6 +1415,7 @@
     },
     {
       "template_id": "BIKE_Intervals_05",
+      "duration_minutes": 78,
       "segments": [
         {
           "label": "warmup",
@@ -1423,6 +1463,7 @@
     },
     {
       "template_id": "BIKE_Intervals_06",
+      "duration_minutes": 50,
       "segments": [
         {
           "label": "warmup",
@@ -1470,6 +1511,7 @@
     },
     {
       "template_id": "BIKE_Intervals_07",
+      "duration_minutes": 50,
       "segments": [
         {
           "label": "warmup",
@@ -1517,6 +1559,7 @@
     },
     {
       "template_id": "BIKE_Intervals_08",
+      "duration_minutes": 55,
       "segments": [
         {
           "label": "warmup",
@@ -1552,6 +1595,7 @@
     },
     {
       "template_id": "BIKE_Intervals_09",
+      "duration_minutes": 43,
       "segments": [
         {
           "label": "warmup",
@@ -1587,6 +1631,7 @@
     },
     {
       "template_id": "BIKE_Intervals_10",
+      "duration_minutes": 68,
       "segments": [
         {
           "label": "warmup",
@@ -1640,6 +1685,7 @@
     },
     {
       "template_id": "BIKE_Easy_01",
+      "duration_minutes": 30,
       "segments": [
         {
           "label": "work",
@@ -1651,6 +1697,7 @@
     },
     {
       "template_id": "BIKE_Easy_02",
+      "duration_minutes": 55,
       "segments": [
         {
           "label": "work",
@@ -1680,6 +1727,7 @@
     },
     {
       "template_id": "BIKE_Easy_03",
+      "duration_minutes": 60,
       "segments": [
         {
           "label": "work",
@@ -1691,6 +1739,7 @@
     },
     {
       "template_id": "BIKE_Easy_04",
+      "duration_minutes": 80,
       "segments": [
         {
           "label": "work",
@@ -1702,6 +1751,7 @@
     },
     {
       "template_id": "BIKE_Easy_05",
+      "duration_minutes": 90,
       "segments": [
         {
           "label": "work",
@@ -1713,6 +1763,7 @@
     },
     {
       "template_id": "BIKE_Easy_06",
+      "duration_minutes": 120,
       "segments": [
         {
           "label": "work",
@@ -1726,6 +1777,7 @@
   "run": [
     {
       "template_id": "RUN_Tempo_01",
+      "duration_minutes": 45,
       "segments": [
         {
           "label": "warmup",
@@ -1746,6 +1798,7 @@
     },
     {
       "template_id": "RUN_Tempo_02",
+      "duration_minutes": 68,
       "segments": [
         {
           "label": "warmup",
@@ -1777,6 +1830,7 @@
     },
     {
       "template_id": "RUN_Tempo_03",
+      "duration_minutes": 59,
       "segments": [
         {
           "label": "warmup",
@@ -1808,6 +1862,7 @@
     },
     {
       "template_id": "RUN_Tempo_04",
+      "duration_minutes": 62,
       "segments": [
         {
           "label": "warmup",
@@ -1839,6 +1894,7 @@
     },
     {
       "template_id": "RUN_Tempo_05",
+      "duration_minutes": 51,
       "segments": [
         {
           "label": "warmup",
@@ -1879,6 +1935,7 @@
     },
     {
       "template_id": "RUN_Tempo_06",
+      "duration_minutes": 65,
       "segments": [
         {
           "label": "warmup",
@@ -1910,6 +1967,7 @@
     },
     {
       "template_id": "RUN_Tempo_07",
+      "duration_minutes": 63,
       "segments": [
         {
           "label": "warmup",
@@ -1930,6 +1988,7 @@
     },
     {
       "template_id": "RUN_Tempo_08",
+      "duration_minutes": 45,
       "segments": [
         {
           "label": "warmup",
@@ -1966,6 +2025,7 @@
     },
     {
       "template_id": "RUN_Tempo_09",
+      "duration_minutes": 55,
       "segments": [
         {
           "label": "warmup",
@@ -1997,6 +2057,7 @@
     },
     {
       "template_id": "RUN_Tempo_10",
+      "duration_minutes": 57,
       "segments": [
         {
           "label": "warmup",
@@ -2030,6 +2091,7 @@
     },
     {
       "template_id": "RUN_Intervals_01",
+      "duration_minutes": 53,
       "segments": [
         {
           "label": "warmup",
@@ -2061,6 +2123,7 @@
     },
     {
       "template_id": "RUN_Intervals_02",
+      "duration_minutes": 55,
       "segments": [
         {
           "label": "warmup",
@@ -2092,6 +2155,7 @@
     },
     {
       "template_id": "RUN_Intervals_03",
+      "duration_minutes": 68,
       "segments": [
         {
           "label": "warmup",
@@ -2123,6 +2187,7 @@
     },
     {
       "template_id": "RUN_Intervals_04",
+      "duration_minutes": 66,
       "segments": [
         {
           "label": "warmup",
@@ -2154,6 +2219,7 @@
     },
     {
       "template_id": "RUN_Intervals_05",
+      "duration_minutes": 55,
       "segments": [
         {
           "label": "warmup",
@@ -2234,6 +2300,7 @@
     },
     {
       "template_id": "RUN_Intervals_06",
+      "duration_minutes": 48,
       "segments": [
         {
           "label": "warmup",
@@ -2276,6 +2343,7 @@
     },
     {
       "template_id": "RUN_Intervals_07",
+      "duration_minutes": 40,
       "segments": [
         {
           "label": "warmup",
@@ -2318,6 +2386,7 @@
     },
     {
       "template_id": "RUN_Intervals_08",
+      "duration_minutes": 51,
       "segments": [
         {
           "label": "warmup",
@@ -2349,6 +2418,7 @@
     },
     {
       "template_id": "RUN_Intervals_09",
+      "duration_minutes": 58,
       "segments": [
         {
           "label": "warmup",
@@ -2382,6 +2452,7 @@
     },
     {
       "template_id": "RUN_Intervals_10",
+      "duration_minutes": 77,
       "segments": [
         {
           "label": "warmup",
@@ -2434,6 +2505,7 @@
     },
     {
       "template_id": "RUN_Easy_01",
+      "duration_minutes": 30,
       "segments": [
         {
           "label": "work",
@@ -2444,6 +2516,7 @@
     },
     {
       "template_id": "RUN_Easy_02",
+      "duration_minutes": 45,
       "segments": [
         {
           "label": "work",
@@ -2454,6 +2527,7 @@
     },
     {
       "template_id": "RUN_Easy_03",
+      "duration_minutes": 60,
       "segments": [
         {
           "label": "work",
@@ -2464,6 +2538,7 @@
     },
     {
       "template_id": "RUN_Easy_04",
+      "duration_minutes": 80,
       "segments": [
         {
           "label": "work",
@@ -2474,6 +2549,7 @@
     },
     {
       "template_id": "RUN_Easy_05",
+      "duration_minutes": 90,
       "segments": [
         {
           "label": "work",
@@ -2484,6 +2560,7 @@
     },
     {
       "template_id": "RUN_Easy_06",
+      "duration_minutes": 120,
       "segments": [
         {
           "label": "work",
