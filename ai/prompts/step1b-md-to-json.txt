@@ -37,7 +37,6 @@ Return ONLY valid JSON (no markdown fences, no explanation) matching this schema
         "hours": <number>,
         "sessions": [{"type": "<Easy|Tempo|Intervals>", "duration_minutes": <number>}]
       },
-      "rest_days": ["<day_name>"],
       "notes": "<string>"
     }
   ]
