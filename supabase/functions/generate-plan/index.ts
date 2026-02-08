@@ -147,7 +147,7 @@ function calculateSessionDurationCaps(user: any): { maxWeekday: number; maxWeeke
   ].filter((d: number | null) => d !== null && d !== undefined) as number[];
 
   const maxWeekday = weekdayDurations.length > 0 ? Math.min(...weekdayDurations) : 60;
-  const maxWeekend = weekendDurations.length > 0 ? Math.max(...weekendDurations) : 180;
+  const maxWeekend = weekendDurations.length > 0 ? Math.max(...weekendDurations) : 240;
 
   return { maxWeekday, maxWeekend };
 }
