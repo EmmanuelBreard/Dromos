@@ -42,6 +42,7 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 ### Budget (HARD CONSTRAINT)
 - The athlete has {{weekly_hours}}h per week. This is a HARD CEILING — no week may exceed it.
 - Before finalizing each week, verify: swim_hours + bike_hours + run_hours ≤ {{weekly_hours}}
+- Session sizing: no single session longer than {{max_weekday_minutes}}min on weekdays or {{max_weekend_minutes}}min on weekends
 - If sessions don't fit, drop the lowest-priority session (usually an extra Easy)
 
 ## Output Format

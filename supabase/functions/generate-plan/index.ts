@@ -129,6 +129,29 @@ function calculateWeeklyHours(user: any): number {
   return Math.round((totalMinutes / 60) * 10) / 10; // Round to 1 decimal
 }
 
+// Helper: Compute per-session duration caps for weekdays and weekends
+// Weekday cap = smallest non-null Mon-Fri duration (conservative: fits any weekday)
+// Weekend cap = largest non-null Sat-Sun duration (generous: allows long sessions)
+function calculateSessionDurationCaps(user: any): { maxWeekday: number; maxWeekend: number } {
+  const weekdayDurations = [
+    user.mon_duration,
+    user.tue_duration,
+    user.wed_duration,
+    user.thu_duration,
+    user.fri_duration,
+  ].filter((d: number | null) => d !== null && d !== undefined) as number[];
+
+  const weekendDurations = [
+    user.sat_duration,
+    user.sun_duration,
+  ].filter((d: number | null) => d !== null && d !== undefined) as number[];
+
+  const maxWeekday = weekdayDurations.length > 0 ? Math.min(...weekdayDurations) : 60;
+  const maxWeekend = weekendDurations.length > 0 ? Math.max(...weekendDurations) : 180;
+
+  return { maxWeekday, maxWeekend };
+}
+
 // OpenAI client initialization
 function getOpenAIClient(): OpenAI {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
@@ -191,6 +214,11 @@ function buildStep1Prompt(user: any, vars: any): string {
     formatCSS(user.css_seconds_per100m)
   );
   prompt = prompt.replace("{{limiters}}", "none");
+
+  // Session duration caps (derived from per-day availability)
+  const caps = calculateSessionDurationCaps(user);
+  prompt = prompt.replace("{{max_weekday_minutes}}", caps.maxWeekday.toString());
+  prompt = prompt.replace("{{max_weekend_minutes}}", caps.maxWeekend.toString());
 
   return prompt;
 }
