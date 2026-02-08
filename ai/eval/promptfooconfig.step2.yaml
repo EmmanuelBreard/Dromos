@@ -9,7 +9,7 @@ commandLineOptions:
 description: "Step 2 — Markdown to JSON conversion"
 
 prompts:
-  - file://../prompts/step1b-md-to-json.txt
+  - file://../prompts/step2-md-to-json.txt
 
 # Use mini for mechanical conversion — cheap and fast
 providers:
