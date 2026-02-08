@@ -71,6 +71,12 @@ You MUST schedule every session according to these 7 rules in priority order:
 
 7. **Volume maximization** — Use available time efficiently. If a day has 120min available and only 60min scheduled, consider whether additional Easy sessions could fit the macro plan's target hours for that week.
 
+### Final Validation (MANDATORY)
+Before outputting your JSON, verify EVERY session against these checks. Fix any violations:
+1. Is this sport eligible on this day? Check Daily Availability. If not → move to nearest eligible day with remaining capacity, or drop if no day fits.
+2. Does the total duration on this day exceed the available minutes? If yes → reduce the longest session on that day to fit within the cap.
+3. Are there available days with no sessions scheduled? If yes and the week's total hours are below target → add Easy sessions to unused eligible days.
+
 ## Output Format
 Return ONLY valid JSON matching this schema:
 

@@ -13,6 +13,12 @@ export default `You are an expert triathlon coach building a multi-week training
 - Swim CSS pace: {{swim_css}} per 100m
 - Limiters: {{limiters}}
 
+### Sport Day Availability
+- Swim: {{swim_weekday_count}} weekdays + {{swim_weekend_count}} weekend days
+- Bike: {{bike_weekday_count}} weekdays + {{bike_weekend_count}} weekend days
+- Run: {{run_weekday_count}} weekdays + {{run_weekend_count}} weekend days
+Plan session counts per sport accordingly — a sport with fewer available days should have fewer sessions. Use all available days to maximize volume toward the weekly budget.
+
 ## Task
 Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}} (race on {{race_date}}).
 
