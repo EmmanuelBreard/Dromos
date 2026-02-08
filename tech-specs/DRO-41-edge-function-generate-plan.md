@@ -55,7 +55,7 @@ Source of truth: `ai/eval/run-step3-blocks.js` (382 lines). All post-processing 
   - [x] 🟩 Created `supabase/functions/generate-plan/index.ts` — main entry point (765 lines)
   - [x] 🟩 Copied static assets into function directory:
     - `supabase/functions/generate-plan/prompts/step1-macro-plan.txt`
-    - `supabase/functions/generate-plan/prompts/step1b-md-to-json.txt`
+    - `supabase/functions/generate-plan/prompts/step2-md-to-json.txt`
     - `supabase/functions/generate-plan/prompts/step3-workout-block.txt`
     - `supabase/functions/generate-plan/context/workout-library.json`
     - `supabase/functions/generate-plan/context/training-philosophy.md`
@@ -80,7 +80,7 @@ Source of truth: `ai/eval/run-step3-blocks.js` (382 lines). All post-processing 
   - [x] 🟩 Stored markdown output as `step1Output`
 
 - [x] 🟩 **Step 6: Implement Edge Function — Step 2 (MD → JSON)**
-  - [x] 🟩 Read `step1b-md-to-json.txt` prompt
+  - [x] 🟩 Read `step2-md-to-json.txt` prompt
   - [x] 🟩 Replaced `{{step1_output}}` variable
   - [x] 🟩 Called OpenAI GPT-4o-mini with JSON response format
   - [x] 🟩 Parsed JSON output and validated structure

@@ -4,7 +4,7 @@ import OpenAI from "npm:openai@4";
 
 // Static assets (bundled as TS modules for CLI deploy)
 import STEP1_MACRO_PLAN_PROMPT from "./prompts/step1-macro-plan-prompt.ts";
-import STEP1B_MD_TO_JSON_PROMPT from "./prompts/step1b-md-to-json-prompt.ts";
+import STEP2_MD_TO_JSON_PROMPT from "./prompts/step2-md-to-json-prompt.ts";
 import STEP3_WORKOUT_BLOCK_PROMPT from "./prompts/step3-workout-block-prompt.ts";
 import TRAINING_PHILOSOPHY from "./context/training-philosophy-content.ts";
 
@@ -239,7 +239,7 @@ function buildStep1Prompt(user: any, vars: any): string {
 
 // Build prompt for Step 2 (MD → JSON)
 function buildStep2Prompt(step1Output: string): string {
-  return STEP1B_MD_TO_JSON_PROMPT.replace("{{step1_output}}", step1Output);
+  return STEP2_MD_TO_JSON_PROMPT.replace("{{step1_output}}", step1Output);
 }
 
 // Build constraint string from user profile
