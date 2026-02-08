@@ -200,6 +200,49 @@ function buildStep2Prompt(step1Output: string): string {
   return STEP1B_MD_TO_JSON_PROMPT.replace("{{step1_output}}", step1Output);
 }
 
+// Build constraint string from user profile
+// Formats per-day availability, sport eligibility, and duration caps for Step 3
+function buildConstraintString(user: any): string {
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const durationFields = ["mon_duration", "tue_duration", "wed_duration", "thu_duration", "fri_duration", "sat_duration", "sun_duration"];
+
+  // Parse sport availability arrays (JSONB)
+  const swimDays = new Set(user.swim_days || []);
+  const bikeDays = new Set(user.bike_days || []);
+  const runDays = new Set(user.run_days || []);
+
+  const lines: string[] = [];
+
+  for (let i = 0; i < dayNames.length; i++) {
+    const day = dayNames[i];
+    const duration = user[durationFields[i]];
+
+    if (duration === null || duration === undefined) {
+      // No availability on this day = REST day
+      lines.push(`${day}: REST`);
+    } else {
+      // Build list of eligible sports for this day
+      const eligibleSports: string[] = [];
+      if (swimDays.has(day)) eligibleSports.push("swim");
+      if (bikeDays.has(day)) eligibleSports.push("bike");
+      if (runDays.has(day)) eligibleSports.push("run");
+
+      if (eligibleSports.length === 0) {
+        // User has duration but no sport eligibility = constraint error, but handle gracefully
+        lines.push(`${day}: ${duration}min available (no sports eligible)`);
+      } else if (eligibleSports.length === 3) {
+        // All sports eligible = simpler format
+        lines.push(`${day}: ${duration}min available (all sports)`);
+      } else {
+        // Some sports eligible
+        lines.push(`${day}: ${duration}min available (${eligibleSports.join(", ")} only)`);
+      }
+    }
+  }
+
+  return lines.join("\n");
+}
+
 // Note: Step 3 prompt building is done inline in the main handler
 // to avoid loading the template file multiple times
 
@@ -313,44 +356,6 @@ function fixConsecutiveRepeats(planWeeks: any[], workoutLibrary: any): number {
           // Pick a random alternative to avoid always defaulting to the same swap
           const alt = options[Math.floor(Math.random() * options.length)];
           session.template_id = alt;
-          fixes++;
-        }
-      }
-    }
-  }
-  return fixes;
-}
-
-// Post-processing: fix rest day violations
-function fixRestDays(planWeeks: any[], macroWeeks: any[]): number {
-  let fixes = 0;
-  for (const week of planWeeks) {
-    const macroWeek = macroWeeks.find(
-      (w) => w.week_number === week.week_number
-    );
-    if (!macroWeek || !macroWeek.rest_days) continue;
-
-    const restDays = new Set(macroWeek.rest_days.map(normDay));
-    if (restDays.size === 0) continue;
-
-    // Find available days (not rest days)
-    const usedDays: Record<string, number> = {};
-    for (const s of week.sessions || []) {
-      const d = normDay(s.day);
-      usedDays[d] = (usedDays[d] || 0) + 1;
-    }
-
-    for (const session of week.sessions || []) {
-      const d = normDay(session.day);
-      if (restDays.has(d)) {
-        // Find the least-loaded available day
-        const available = ALL_DAYS.filter((day) => !restDays.has(day));
-        available.sort((a, b) => (usedDays[a] || 0) - (usedDays[b] || 0));
-        const newDay = available[0];
-        if (newDay) {
-          usedDays[d] = (usedDays[d] || 1) - 1;
-          session.day = newDay;
-          usedDays[newDay] = (usedDays[newDay] || 0) + 1;
           fixes++;
         }
       }
@@ -551,6 +556,9 @@ Deno.serve(async (req) => {
     let previouslyUsed: any[] = [];
     const allBlockWeeks: any[] = [];
 
+    // Build constraint string once (same for all blocks)
+    const constraintString = buildConstraintString(userProfile);
+
     for (let b = 0; b < blocks.length; b++) {
       const block = blocks[b];
       // Build prompt for this block
@@ -561,7 +569,7 @@ Deno.serve(async (req) => {
         JSON.stringify(block, null, 2)
       );
       finalPrompt = finalPrompt.replace("{{limiters}}", "none");
-      finalPrompt = finalPrompt.replace("{{constraints}}", "none");
+      finalPrompt = finalPrompt.replace("{{constraints}}", constraintString);
       const prevStr =
         previouslyUsed.length > 0
           ? previouslyUsed
@@ -592,7 +600,6 @@ Deno.serve(async (req) => {
     fixTypes(allBlockWeeks);
     fixBrickPairs(allBlockWeeks);
     fixConsecutiveRepeats(allBlockWeeks, workoutLibrary);
-    fixRestDays(allBlockWeeks, weeks);
 
     // Validate LLM output before DB writes
     const VALID_PHASES = ["Base", "Build", "Peak", "Taper", "Recovery"];
@@ -622,6 +629,12 @@ Deno.serve(async (req) => {
       const weekStartDate = addDays(planStartDate, (week.week_number - 1) * 7);
       const macroWeek = weeks.find((w: any) => w.week_number === week.week_number);
 
+      // Compute rest_days from actual sessions (days with no sessions = rest days)
+      const scheduledDays = new Set(
+        (week.sessions || []).map((s: any) => normDay(s.day))
+      );
+      const restDays = ALL_DAYS.filter((day) => !scheduledDays.has(day));
+
       const { data: weekRow, error: weekError } = await dbClient
         .from("plan_weeks")
         .insert({
@@ -629,7 +642,7 @@ Deno.serve(async (req) => {
           week_number: week.week_number,
           phase: week.phase,
           is_recovery: week.phase === "Recovery",
-          rest_days: macroWeek?.rest_days || [],
+          rest_days: restDays,
           notes: macroWeek?.notes || null,
           start_date: formatDate(weekStartDate),
         })
