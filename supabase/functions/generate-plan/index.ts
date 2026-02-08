@@ -191,7 +191,6 @@ function buildStep1Prompt(user: any, vars: any): string {
     formatCSS(user.css_seconds_per100m)
   );
   prompt = prompt.replace("{{limiters}}", "none");
-  prompt = prompt.replace("{{constraints}}", "none");
 
   return prompt;
 }
