@@ -285,8 +285,20 @@ function buildConstraintString(user: any): string {
   return lines.join("\n");
 }
 
-// Note: Step 3 prompt building is done inline in the main handler
-// to avoid loading the template file multiple times
+// Build a simplified workout library string for Step 3
+// Reads pre-computed duration_minutes from each template (added to workout-library.json)
+// Reduces prompt from ~20K tokens to ~1K tokens
+function buildSimplifiedLibrary(workoutLibrary: any): string {
+  const lines: string[] = [];
+  for (const sport of ["swim", "bike", "run"]) {
+    for (const tmpl of workoutLibrary[sport] || []) {
+      const tid: string = tmpl.template_id;
+      const type = tid.split("_")[1];
+      lines.push(`${tid} | ${sport} | ${type} | ${tmpl.duration_minutes}min`);
+    }
+  }
+  return "template_id | sport | type | duration\n" + lines.join("\n");
+}
 
 // Extract last-used templates from a block result
 function extractLastUsed(blockResult: any): any[] {
@@ -586,8 +598,7 @@ Deno.serve(async (req) => {
     if (!wlResponse.ok) {
       throw new Error(`Failed to fetch workout library: ${wlResponse.status}`);
     }
-    const WORKOUT_LIBRARY_STR = await wlResponse.text();
-    const workoutLibrary = JSON.parse(WORKOUT_LIBRARY_STR);
+    const workoutLibrary = await wlResponse.json();
 
     const weeks = macroPlan.weeks;
     const blocks = [];
@@ -601,11 +612,14 @@ Deno.serve(async (req) => {
     // Build constraint string once (same for all blocks)
     const constraintString = buildConstraintString(userProfile);
 
+    // Build simplified library for Step 3 (strips segment details, keeps only template matching info)
+    const simplifiedLibrary = buildSimplifiedLibrary(workoutLibrary);
+
     for (let b = 0; b < blocks.length; b++) {
       const block = blocks[b];
       // Build prompt for this block
       let finalPrompt = STEP3_WORKOUT_BLOCK_PROMPT;
-      finalPrompt = finalPrompt.replace("{{workout_library}}", WORKOUT_LIBRARY_STR);
+      finalPrompt = finalPrompt.replace("{{workout_library}}", simplifiedLibrary);
       finalPrompt = finalPrompt.replace(
         "{{block_weeks_json}}",
         JSON.stringify(block, null, 2)
