@@ -12,7 +12,12 @@ You are an expert triathlon coach building a multi-week training plan.
 - MAS (running): {{mas_kmh}} km/h
 - Swim CSS pace: {{swim_css}} per 100m
 - Limiters: {{limiters}}
-- Injuries / constraints: {{constraints}}
+
+### Sport Day Availability
+- Swim: {{swim_weekday_count}} weekdays + {{swim_weekend_count}} weekend days
+- Bike: {{bike_weekday_count}} weekdays + {{bike_weekend_count}} weekend days
+- Run: {{run_weekday_count}} weekdays + {{run_weekend_count}} weekend days
+Plan session counts per sport accordingly — a sport with fewer available days should have fewer sessions. Use all available days to maximize volume toward the weekly budget.
 
 ## Task
 Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}} (race on {{race_date}}).
@@ -33,7 +38,6 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 ### Intensity distribution
 - No back-to-back high-intensity days in the same sport
 - Max 2 high-intensity sessions (Intervals or Tempo) per sport per week
-- At least 1 rest day per week
 
 ### Limiter strategy (CRITICAL)
 - The athlete's limiters MUST drive sport-hour distribution
@@ -44,8 +48,8 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 ### Budget (HARD CONSTRAINT)
 - The athlete has {{weekly_hours}}h per week. This is a HARD CEILING — no week may exceed it.
 - Before finalizing each week, verify: swim_hours + bike_hours + run_hours ≤ {{weekly_hours}}
+- Session sizing: no single session longer than {{max_weekday_minutes}}min on weekdays or {{max_weekend_minutes}}min on weekends. If a sport needs more hours than one session allows, split into multiple shorter sessions.
 - If sessions don't fit, drop the lowest-priority session (usually an extra Easy)
-- Constraints: {{constraints}} — plan around these strictly
 
 ## Output Format
 Use EXACTLY this compact markdown format. No prose, no explanations — just the plan.
@@ -62,7 +66,6 @@ Total: <X>h | Swim <X>h | Bike <X>h | Run <X>h
 - Swim: <Type> <duration>min, <Type> <duration>min
 - Bike: <Type> <duration>min, <Type> <duration>min
 - Run: <Type> <duration>min, <Type> <duration>min
-Rest: <day>, <day>
 Notes: <brief note>
 ```
 

@@ -220,6 +220,20 @@ function buildStep1Prompt(user: any, vars: any): string {
   prompt = prompt.replace("{{max_weekday_minutes}}", caps.maxWeekday.toString());
   prompt = prompt.replace("{{max_weekend_minutes}}", caps.maxWeekend.toString());
 
+  // Sport day availability counts (how many weekdays/weekend days each sport can use)
+  const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const weekendDays = ["Saturday", "Sunday"];
+  const swimDays = new Set(user.swim_days || []);
+  const bikeDays = new Set(user.bike_days || []);
+  const runDays = new Set(user.run_days || []);
+
+  prompt = prompt.replace("{{swim_weekday_count}}", weekdays.filter(d => swimDays.has(d)).length.toString());
+  prompt = prompt.replace("{{swim_weekend_count}}", weekendDays.filter(d => swimDays.has(d)).length.toString());
+  prompt = prompt.replace("{{bike_weekday_count}}", weekdays.filter(d => bikeDays.has(d)).length.toString());
+  prompt = prompt.replace("{{bike_weekend_count}}", weekendDays.filter(d => bikeDays.has(d)).length.toString());
+  prompt = prompt.replace("{{run_weekday_count}}", weekdays.filter(d => runDays.has(d)).length.toString());
+  prompt = prompt.replace("{{run_weekend_count}}", weekendDays.filter(d => runDays.has(d)).length.toString());
+
   return prompt;
 }
 
