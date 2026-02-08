@@ -47,9 +47,6 @@ final class PlanService: ObservableObject {
         do {
             // Invoke the Edge Function (no body needed — Edge Function reads profile server-side)
             // The SDK automatically includes the Bearer token from the current session
-            // Note: The SDK's FunctionsClient.requestIdleTimeout is hardcoded to 150s.
-            // Edge Function takes ~140s, leaving only a 10s margin. If timeout issues occur,
-            // we may need to configure URLSession timeout in SupabaseClientOptions.
             try await client.functions.invoke("generate-plan")
 
             // Success — plan generation completed

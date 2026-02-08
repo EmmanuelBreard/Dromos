@@ -26,6 +26,12 @@ enum SupabaseClientProvider {
         }
         let key = Configuration.supabaseAnonKey
 
+        // Plan generation takes ~140s. Default URLSession timeout (60s) causes
+        // the iOS client to drop the connection before the edge function responds.
+        let sessionConfig = URLSessionConfiguration.default
+        sessionConfig.timeoutIntervalForRequest = 180
+        let session = URLSession(configuration: sessionConfig)
+
         return SupabaseClient(
             supabaseURL: url,
             supabaseKey: key,
@@ -53,6 +59,9 @@ enum SupabaseClientProvider {
                 ),
                 auth: SupabaseClientOptions.AuthOptions(
                     emitLocalSessionAsInitialSession: true
+                ),
+                global: SupabaseClientOptions.GlobalOptions(
+                    session: session
                 )
             )
         )
