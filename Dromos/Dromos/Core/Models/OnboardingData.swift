@@ -53,6 +53,10 @@ struct MetricsData: Codable {
 
     /// Years of triathlon/endurance sport experience
     var experienceYears: Int?
+
+    /// Average weekly training hours over the last 4 weeks (0-25, step 0.5)
+    /// Defaults to 3.0 so the slider is pre-filled (required field).
+    var currentWeeklyHours: Double? = 3.0
 }
 
 // MARK: - Screens 4, 5, 6: Weekly Availability
@@ -119,6 +123,7 @@ struct CompleteOnboardingData: Codable {
     var cssSecondsPer100m: Int?
     var ftp: Int?
     var experienceYears: Int?
+    var currentWeeklyHours: Double?
 
     // Weekly Availability (Screens 4, 5, 6)
     var swimDays: [String]?
@@ -152,6 +157,7 @@ struct CompleteOnboardingData: Codable {
         self.cssSecondsPer100m = metrics.cssSecondsPer100m
         self.ftp = metrics.ftp
         self.experienceYears = metrics.experienceYears
+        self.currentWeeklyHours = metrics.currentWeeklyHours
         self.swimDays = availability?.swimDays.isEmpty == false ? availability?.swimDays : nil
         self.bikeDays = availability?.bikeDays.isEmpty == false ? availability?.bikeDays : nil
         self.runDays = availability?.runDays.isEmpty == false ? availability?.runDays : nil

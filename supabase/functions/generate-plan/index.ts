@@ -215,6 +215,14 @@ function buildStep1Prompt(user: any, vars: any): string {
   );
   prompt = prompt.replace("{{limiters}}", "none");
 
+  // Current training volume (athlete's baseline for progressive overload)
+  prompt = prompt.replace(
+    "{{current_weekly_hours}}",
+    user.current_weekly_hours != null
+      ? user.current_weekly_hours.toString()
+      : "not provided"
+  );
+
   // Session duration caps (derived from per-day availability)
   const caps = calculateSessionDurationCaps(user);
   prompt = prompt.replace("{{max_weekday_minutes}}", caps.maxWeekday.toString());

@@ -65,6 +65,9 @@ struct User: Codable, Identifiable, Equatable {
     /// Years of triathlon/endurance sport experience
     var experienceYears: Int?
 
+    /// Average weekly training hours over the last 4 weeks (0-25)
+    var currentWeeklyHours: Double?
+
     // MARK: - Onboarding: Weekly Availability (Screens 4, 5, 6)
 
     /// Days of the week user can train swimming (e.g., ["Monday", "Wednesday", "Friday"])
@@ -157,6 +160,7 @@ struct UserUpdate: Codable {
     var cssSecondsPer100m: Int?
     var ftp: Int?
     var experienceYears: Int?
+    var currentWeeklyHours: Double?
     var swimDays: [String]?
     var bikeDays: [String]?
     var runDays: [String]?

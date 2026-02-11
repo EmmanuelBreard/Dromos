@@ -154,6 +154,7 @@ final class ProfileService: ObservableObject {
                 let cssSecondsPer100m: Int?
                 let ftp: Int?
                 let experienceYears: Int?
+                let currentWeeklyHours: Double?
                 let swimDays: [String]?
                 let bikeDays: [String]?
                 let runDays: [String]?
@@ -177,6 +178,7 @@ final class ProfileService: ObservableObject {
                 cssSecondsPer100m: data.cssSecondsPer100m,
                 ftp: data.ftp,
                 experienceYears: data.experienceYears,
+                currentWeeklyHours: data.currentWeeklyHours,
                 swimDays: data.swimDays,
                 bikeDays: data.bikeDays,
                 runDays: data.runDays,

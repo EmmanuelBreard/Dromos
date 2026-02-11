@@ -8,6 +8,7 @@ You are an expert triathlon coach building a multi-week training plan.
 - Race: {{race_distance}} on {{race_date}}
 - Plan start: {{plan_start_date}}
 - Weekly hours available: {{weekly_hours}}
+- Current training volume: {{current_weekly_hours}}h/week
 - FTP (cycling): {{ftp_watts}} watts
 - MAS (running): {{mas_kmh}} km/h
 - Swim CSS pace: {{swim_css}} per 100m
@@ -26,6 +27,7 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 
 ### Periodization
 - Follow the periodization model from the training philosophy (Base → Build → Peak → Taper)
+- Week 1 volume should start near the athlete's current training volume and build progressively toward the weekly hours ceiling
 - Progressive overload: ~5-10% load increase per loading week
 - Session types must match the training phase (more Easy in Base, more Intervals in Build/Peak)
 - Taper in final 1-2 weeks before race

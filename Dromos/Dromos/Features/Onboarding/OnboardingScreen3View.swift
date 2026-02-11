@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Third onboarding screen collecting performance metrics.
-/// All fields are optional: VMA, CSS, FTP, experience years.
+/// Current weekly training hours is required; VMA, CSS, FTP, experience years are optional.
 struct OnboardingScreen3View: View {
     @Binding var data: MetricsData
     var onBack: () -> Void
@@ -52,9 +52,15 @@ struct OnboardingScreen3View: View {
         return years >= 0
     }
 
+    /// Current weekly hours must be set (required field)
+    private var isCurrentWeeklyHoursValid: Bool {
+        data.currentWeeklyHours != nil
+    }
+
     /// Form is valid when all filled fields meet validation criteria
+    /// and the required current weekly hours field is set
     private var isFormValid: Bool {
-        isVmaValid && isCssValid && isFtpValid && isExperienceYearsValid
+        isVmaValid && isCssValid && isFtpValid && isExperienceYearsValid && isCurrentWeeklyHoursValid
     }
 
     // MARK: - Body
@@ -71,7 +77,7 @@ struct OnboardingScreen3View: View {
                 Text("Performance Metrics")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                Text("Help us personalize your training (all optional)")
+                Text("Help us personalize your training")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -79,6 +85,41 @@ struct OnboardingScreen3View: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    // Current Weekly Hours (required)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Current Training Volume")
+                            .font(.headline)
+
+                        VStack(spacing: 4) {
+                            Text(data.currentWeeklyHours.map { "\(String(format: "%.1f", $0))h / week" } ?? "Select your volume")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(data.currentWeeklyHours != nil ? .primary : .secondary)
+                                .frame(maxWidth: .infinity)
+
+                            Slider(
+                                value: Binding(
+                                    get: { data.currentWeeklyHours ?? 3.0 },
+                                    set: { data.currentWeeklyHours = $0 }
+                                ),
+                                in: 0...25,
+                                step: 0.5
+                            )
+                        }
+
+                        if showErrors && !isCurrentWeeklyHoursValid {
+                            Text("Please set your current training volume")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        } else {
+                            Text("In the last 4 weeks, how many hours per week did you train?")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Divider()
+
                     // VMA
                     VStack(alignment: .leading, spacing: 8) {
                         Text("VMA (km/h)")
