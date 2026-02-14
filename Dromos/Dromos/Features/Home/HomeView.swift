@@ -13,9 +13,32 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var planService: PlanService
-    
+    /// Toggled by MainTabView each time the Home tab is re-selected.
+    /// Using @Binding ensures the change propagates via Combine even when the tab is inactive.
+    @Binding var scrollReset: Bool
+
     /// Reference to the workout library for swim distance lookups.
     private let workoutLibrary = WorkoutLibraryService.shared
+
+    /// Cached calendar instance to avoid repeated allocations.
+    private let calendar = Calendar.current
+
+    /// Reusable date formatter for day headers (e.g., "1 February").
+    private static let dayDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMMM"
+        return f
+    }()
+
+    /// Reusable date formatter for month abbreviations (e.g., "Feb").
+    private static let monthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM"
+        return f
+    }()
+
+    /// Last visible week index (controls progressive disclosure).
+    @State private var lastVisibleWeekIndex: Int = 0
     
     var body: some View {
         NavigationStack {
@@ -48,52 +71,90 @@ struct HomeView: View {
     }
     
     // MARK: - Content View
-    
-    /// Main content view with week header and day sections.
+
+    /// Main content view with multi-week scrollable sections.
     private func contentView(plan: TrainingPlan) -> some View {
         let currentWeekIndex = plan.currentWeekIndex()
-        let currentWeek = plan.planWeeks[currentWeekIndex]
-        let days = plan.daysForWeek(currentWeek)
-        
+        let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex)
+        let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
+        let visibleWeeks = Array(plan.planWeeks[currentWeekIndex...endIndex])
+
         return ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
-                    // Week header (simplified, no navigation arrows)
-                    weekHeader(week: currentWeek)
-                        .padding(.horizontal)
-                        .padding(.top)
-                        .padding(.bottom, 8)
-                    
-                    // Day sections
-                    LazyVStack(spacing: 16) {
-                        ForEach(days, id: \.weekday) { dayInfo in
-                            daySectionView(dayInfo: dayInfo)
-                                .id(dayInfo.weekday)
+                    // Stable anchor for programmatic scroll-to-top on tab return
+                    Color.clear.frame(height: 0).id("scrollTop")
+
+                    // Multi-week sections (current week through lastVisibleWeekIndex)
+                    ForEach(Array(visibleWeeks.enumerated()), id: \.element.id) { offset, week in
+                        let weekIndex = currentWeekIndex + offset
+
+                        // Week section header
+                        weekSectionHeader(week: week, currentWeekIndex: currentWeekIndex, weekIndex: weekIndex)
+                            .padding(.horizontal)
+                            .padding(.top, offset == 0 ? 0 : 16)
+                            .padding(.bottom, 8)
+
+                        // Day sections for this week
+                        let days = plan.daysForWeek(week)
+                        LazyVStack(spacing: 16) {
+                            ForEach(days, id: \.weekday) { dayInfo in
+                                daySectionView(dayInfo: dayInfo, plan: plan)
+                                    .id("\(week.weekNumber)-\(dayInfo.weekday)")
+                            }
                         }
+                        .padding(.horizontal)
+                        .padding(.bottom, 20)
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
+
+                    // "Show next week" CTA (only if more weeks remain)
+                    if endIndex < plan.planWeeks.count - 1 {
+                        showNextWeekButton
+                    }
                 }
             }
             .onAppear {
-                // Auto-scroll to today
-                scrollToToday(proxy: proxy, days: days)
+                // Initial load: reset to current + next week and scroll to today
+                lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
+                scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
+            }
+            .onChange(of: scrollReset) { _, _ in
+                // Tab re-selection: reset weeks and scroll to top immediately
+                lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo("scrollTop", anchor: .top)
+                }
             }
         }
     }
     
-    // MARK: - Week Header
-    
-    /// Simplified week header showing "Week N — Phase" with phase badge.
-    private func weekHeader(week: PlanWeek) -> some View {
-        VStack(spacing: 8) {
-            // Week number and phase
+    // MARK: - Week Section Header
+
+    /// Week section header with title, date range, and phase badge.
+    /// Shows "Current Week" / "Next Week" for the first two weeks, then date range only.
+    private func weekSectionHeader(week: PlanWeek, currentWeekIndex: Int, weekIndex: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                Text("Week \(week.weekNumber)")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                // Phase badge
+                VStack(alignment: .leading, spacing: 4) {
+                    // Title: "Current Week", "Next Week", or date range
+                    if weekIndex == currentWeekIndex {
+                        Text("Current Week")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                    } else if weekIndex == currentWeekIndex + 1 {
+                        Text("Next Week")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                    }
+
+                    // Date range subtitle (always shown)
+                    Text(weekDateRange(week: week))
+                        .font(weekIndex <= currentWeekIndex + 1 ? .subheadline : .title3)
+                        .fontWeight(weekIndex <= currentWeekIndex + 1 ? .regular : .semibold)
+                        .foregroundColor(weekIndex <= currentWeekIndex + 1 ? .secondary : .primary)
+                }
+
+                // Phase badge (always shown)
                 HStack(spacing: 6) {
                     Circle()
                         .fill(Color.phaseColor(for: week.phase))
@@ -107,7 +168,7 @@ struct HomeView: View {
                 .padding(.vertical, 5)
                 .background(Color.phaseColor(for: week.phase).opacity(0.15))
                 .clipShape(Capsule())
-                
+
                 Spacer()
             }
         }
@@ -115,15 +176,15 @@ struct HomeView: View {
     }
     
     // MARK: - Day Section
-    
-    /// A day section with header and session cards.
-    private func daySectionView(dayInfo: DayInfo) -> some View {
+
+    /// A day section with header, session cards, and optional race day indicator.
+    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             // Day header with relative label + full date
             Text(dayHeaderLabel(for: dayInfo.date, weekday: dayInfo.weekday))
                 .font(.headline)
                 .foregroundColor(.primary)
-            
+
             // Content: session cards or rest day
             if dayInfo.isRestDay && dayInfo.sessions.isEmpty {
                 RestDayCardView()
@@ -134,6 +195,12 @@ struct HomeView: View {
                         swimDistance: swimDistance(for: session)
                     )
                 }
+            }
+
+            // Race Day card (if this day is the race date)
+            if let raceDate = plan.raceDateAsDate,
+               calendar.isDate(dayInfo.date, inSameDayAs: raceDate) {
+                RaceDayCardView(raceObjective: plan.raceObjective)
             }
         }
     }
@@ -199,16 +266,34 @@ struct HomeView: View {
         .padding()
     }
     
+    // MARK: - "Show Next Week" CTA
+
+    /// Button to progressively reveal more weeks.
+    private var showNextWeekButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                lastVisibleWeekIndex += 1
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Show next week")
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+            }
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .foregroundColor(.blue)
+        }
+        .padding(.vertical, 24)
+    }
+
     // MARK: - Helper Methods
-    
+
     /// Creates the day header label with relative prefix (Today/Tomorrow) + full date.
     /// Examples: "Today Saturday 1 February", "Tomorrow Sunday 2 February", "Monday 3 February"
     private func dayHeaderLabel(for date: Date, weekday: Weekday) -> String {
-        let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "d MMMM"
-        let dateString = dateFormatter.string(from: date)
-        
+        let dateString = Self.dayDateFormatter.string(from: date)
+
         if calendar.isDateInToday(date) {
             return "Today \(weekday.fullName) \(dateString)"
         } else if calendar.isDateInTomorrow(date) {
@@ -217,21 +302,55 @@ struct HomeView: View {
             return "\(weekday.fullName) \(dateString)"
         }
     }
-    
-    /// Scrolls to today's section if it exists.
-    private func scrollToToday(proxy: ScrollViewProxy, days: [DayInfo]) {
-        let calendar = Calendar.current
-        
-        // Find today's weekday in the current week
+
+    /// Formats a week's date range with ordinal suffixes.
+    /// Examples: "Feb 10th - 16th", "Feb 28th - Mar 6th"
+    private func weekDateRange(week: PlanWeek) -> String {
+        guard let startDate = week.startDateAsDate else { return "Week \(week.weekNumber)" }
+        let endDate = calendar.date(byAdding: .day, value: 6, to: startDate) ?? startDate
+
+        let startDay = calendar.component(.day, from: startDate)
+        let endDay = calendar.component(.day, from: endDate)
+
+        let startMonth = Self.monthFormatter.string(from: startDate)
+        let endMonth = Self.monthFormatter.string(from: endDate)
+
+        if startMonth == endMonth {
+            return "\(startMonth) \(ordinal(startDay)) - \(ordinal(endDay))"
+        } else {
+            return "\(startMonth) \(ordinal(startDay)) - \(endMonth) \(ordinal(endDay))"
+        }
+    }
+
+    /// Converts a day number to its ordinal form (1st, 2nd, 3rd, etc.).
+    private func ordinal(_ day: Int) -> String {
+        let suffix: String
+        switch day {
+        case 1, 21, 31: suffix = "st"
+        case 2, 22: suffix = "nd"
+        case 3, 23: suffix = "rd"
+        default: suffix = "th"
+        }
+        return "\(day)\(suffix)"
+    }
+
+    /// Scrolls to today's section if it exists (using composite week-day IDs).
+    private func scrollToToday(proxy: ScrollViewProxy, plan: TrainingPlan, currentWeekIndex: Int) {
+        guard currentWeekIndex < plan.planWeeks.count else { return }
+        let currentWeek = plan.planWeeks[currentWeekIndex]
+        let days = plan.daysForWeek(currentWeek)
+
+        // Find today's weekday in the current week.
+        // Delay allows view to re-render after lastVisibleWeekIndex reset.
         if let todayInfo = days.first(where: { calendar.isDateInToday($0.date) }) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(todayInfo.weekday, anchor: .top)
+                    proxy.scrollTo("\(currentWeek.weekNumber)-\(todayInfo.weekday)", anchor: .top)
                 }
             }
         }
     }
-    
+
     /// Gets swim distance for a session from the workout library.
     /// Returns nil for non-swim sessions.
     private func swimDistance(for session: PlanSession) -> Int? {
@@ -241,5 +360,5 @@ struct HomeView: View {
 }
 
 #Preview("Home - Content") {
-    HomeView(authService: AuthService(), planService: PlanService())
+    HomeView(authService: AuthService(), planService: PlanService(), scrollReset: .constant(false))
 }

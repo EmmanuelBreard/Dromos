@@ -29,9 +29,9 @@ Dromos/Dromos/
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 5-screen onboarding flow
-│   ├── Home/                         # Current week dashboard
-│   │   ├── HomeView.swift            # Week view with auto-scroll to today
-│   │   └── SessionCardView.swift     # Session card + RestDayCardView
+│   ├── Home/                         # Multi-week rolling dashboard
+│   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today
+│   │   └── SessionCardView.swift     # Session card + RestDayCardView + RaceDayCardView
 │   ├── Plan/                         # Week-by-week calendar navigator
 │   │   ├── CalendarPlanView.swift    # Plan tab main view
 │   │   ├── WeekHeaderView.swift      # Week nav + phase badge
@@ -121,6 +121,7 @@ All services follow:
 
 **SessionCardView** — Rich workout card with sport icon, duration, type tag, swim distance
 **RestDayCardView** — Bed icon + "Rest Day" label
+**RaceDayCardView** — Trophy icon + "Race Day" label with optional race objective
 **WeekHeaderView** — Week navigation arrows + phase badge + date range
 **DaySessionRow** — Day header + session list (reused in Home and Plan tabs)
 
