@@ -1,6 +1,6 @@
 # DRO-68: Add fixDurationCaps() Post-Processor
 
-**Overall Progress:** `15%`
+**Overall Progress:** `45%`
 
 ## TLDR
 Add a deterministic `fixDurationCaps()` post-processor to Step 3 that swaps overlong templates when the total session duration on a day exceeds the athlete's available minutes. Also upgrade `fixConsecutiveRepeats` to be duration-aware, make `fixRestDays` cap-aware, and port `fixRestDays` to production (currently missing).
@@ -36,10 +36,10 @@ fixTypes → fixBrickPairs → fixConsecutiveRepeats (duration-aware) → fixDur
   - [x] :white_check_mark: Implement priority function: `Intervals→3, Tempo→2, Easy→1, +0.5 if is_brick`
   - [x] :white_check_mark: Add in both `run-step3-blocks.js` and `index.ts`
 
-- [ ] :red_square: **Step 3: Upgrade `fixConsecutiveRepeats` to be duration-aware**
-  - [ ] :red_square: In `run-step3-blocks.js:235-281`: when picking alternative, sort candidates by `|candidate.duration - original.duration|` ascending, pick closest instead of random
+- [x] :white_check_mark: **Step 3: Upgrade `fixConsecutiveRepeats` to be duration-aware**
+  - [x] :white_check_mark: In `run-step3-blocks.js:235-281`: when picking alternative, sort candidates by `|candidate.duration - original.duration|` ascending, pick closest instead of random
   - [x] :white_check_mark: Needs workout library duration lookup (build `templateDurationMap` from library: `{SWIM_Easy_01: 40, ...}`)
-  - [ ] :red_square: Mirror in `index.ts:379-427`
+  - [x] :white_check_mark: Mirror in `index.ts:379-427`
 
 - [ ] :red_square: **Step 4: Implement `fixDurationCaps()`**
   - [ ] :red_square: For each week, for each day: sum session durations, compare to `dayCaps[day]`
@@ -49,10 +49,10 @@ fixTypes → fixBrickPairs → fixConsecutiveRepeats (duration-aware) → fixDur
   - [ ] :red_square: Last resort: drop lowest-priority session, log warning
   - [ ] :red_square: Implement in `run-step3-blocks.js`, mirror in `index.ts`
 
-- [ ] :red_square: **Step 5: Upgrade `fixRestDays` to be cap-aware + port to production**
-  - [ ] :red_square: In `run-step3-blocks.js:285-319`: when choosing target day, filter by `session.duration_minutes <= dayCaps[day] - usedMinutes[day]` and sport eligibility
-  - [ ] :red_square: Use priority system for eviction when no day has capacity
-  - [ ] :red_square: Port full `fixRestDays` implementation to `index.ts` (currently missing)
+- [x] :white_check_mark: **Step 5: Upgrade `fixRestDays` to be cap-aware + port to production**
+  - [x] :white_check_mark: In `run-step3-blocks.js:285-319`: when choosing target day, filter by `session.duration_minutes <= dayCaps[day] - usedMinutes[day]` and sport eligibility
+  - [x] :white_check_mark: Use priority system for eviction when no day has capacity
+  - [x] :white_check_mark: Port full `fixRestDays` implementation to `index.ts` (currently missing)
 
 - [ ] :red_square: **Step 6: Wire pipeline + test**
   - [ ] :red_square: Update pipeline order in `run-step3-blocks.js:380-390`: `fixTypes → fixBrickPairs → fixConsecutiveRepeats → fixDurationCaps → fixRestDays`
