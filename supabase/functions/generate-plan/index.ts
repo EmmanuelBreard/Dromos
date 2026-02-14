@@ -308,6 +308,56 @@ function buildSimplifiedLibrary(workoutLibrary: any): string {
   return "template_id | sport | type | duration\n" + lines.join("\n");
 }
 
+// Parse user profile into structured constraint objects for post-processing fixers.
+// Returns { dayCaps: { Monday: 60, ... }, sportEligibility: { Monday: ['swim','run'], ... } }
+function parseConstraints(user: any): {
+  dayCaps: Record<string, number>;
+  sportEligibility: Record<string, string[]>;
+} {
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const durationFields = ["mon_duration", "tue_duration", "wed_duration", "thu_duration", "fri_duration", "sat_duration", "sun_duration"];
+
+  const swimDays = new Set(user.swim_days || []);
+  const bikeDays = new Set(user.bike_days || []);
+  const runDays = new Set(user.run_days || []);
+
+  const dayCaps: Record<string, number> = {};
+  const sportEligibility: Record<string, string[]> = {};
+
+  for (let i = 0; i < dayNames.length; i++) {
+    const day = dayNames[i];
+    const duration = user[durationFields[i]];
+    dayCaps[day] = duration !== null && duration !== undefined ? duration : 0;
+
+    const eligible: string[] = [];
+    if (swimDays.has(day)) eligible.push("swim");
+    if (bikeDays.has(day)) eligible.push("bike");
+    if (runDays.has(day)) eligible.push("run");
+    sportEligibility[day] = eligible;
+  }
+
+  return { dayCaps, sportEligibility };
+}
+
+// Compute session priority for eviction ordering.
+// Intervals(3) > Tempo(2) > Easy(1), +0.5 if is_brick.
+function sessionPriority(session: any): number {
+  const typeScores: Record<string, number> = { Intervals: 3, Tempo: 2, Easy: 1 };
+  return (typeScores[session.type] || 1) + (session.is_brick ? 0.5 : 0);
+}
+
+// Build template_id → duration_minutes lookup from workout library.
+// e.g. { SWIM_Easy_01: 40, BIKE_Tempo_01: 45, ... }
+function buildTemplateDurationMap(lib: any): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const sport of ["swim", "bike", "run"]) {
+    for (const tmpl of lib[sport] || []) {
+      map[tmpl.template_id] = tmpl.duration_minutes;
+    }
+  }
+  return map;
+}
+
 // Extract last-used templates from a block result
 function extractLastUsed(blockResult: any): any[] {
   const lastUsed: Record<string, any> = {};
