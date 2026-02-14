@@ -29,7 +29,7 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 - Follow the periodization model from the training philosophy (Base → Build → Peak → Taper)
 - Week 1 volume should start near the athlete's current training volume and build progressively toward the weekly hours ceiling
 - Progressive overload: ~5-10% load increase per loading week
-- Session types must match the training phase (more Easy in Base, more Intervals in Build/Peak)
+- Session types must match the training phase — see Intensity by phase below
 - Taper in final 1-2 weeks before race
 
 ### Recovery (CRITICAL)
@@ -37,9 +37,26 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 - Recovery weeks: drop volume 30-50% from the previous week, keep frequency, reduce intensity
 - NEVER have more than 4 consecutive non-Recovery weeks
 
+### Intensity by phase (CRITICAL — scales with weekly hours)
+The number of high-intensity slots (Tempo or Intervals) for bike and run depends on the weekly hour budget:
+- ≤5h/week: 1 Tempo session/week — pick bike or run, alternate each week
+- 5-8h/week: 2 intensity slots/week — one sport gets Intervals, the other gets Tempo. Alternate which gets which between blocks.
+- 8-12h/week: 3-4 slots/week — can have Intervals + Tempo in the same sport, or spread across both
+- >12h/week: up to 4 slots/week — Intervals AND Tempo in both bike and run simultaneously is fine
+
+Apply these slots per phase:
+- **Base**: primarily Easy, but MUST include at least 1 Tempo session/week in bike or run starting W2. These are moderate efforts — the goal is aerobic threshold, not pure slow distance.
+- **Build**: increase intensity slots to the budget maximum. Alternate which sport gets Intervals vs Tempo between blocks (e.g., block 1: bike Intervals + run Tempo; block 2: run Intervals + bike Tempo).
+- **Peak**: highest intensity density — use Intervals and Race-pace. Every sport should have intensity work.
+- **Taper/Recovery**: drop back to mostly Easy, with at most 1 short Tempo to stay sharp.
+
+Swim intensity: swim MUST include Tempo or Intervals in Build and Peak phases (at least 1/week). In Base, swim can remain Easy-only.
+
 ### Intensity distribution
 - No back-to-back high-intensity days in the same sport
 - Max 2 high-intensity sessions (Intervals or Tempo) per sport per week
+- Never have one sport at 100% Easy throughout Build/Peak
+- Intensity session duration cap (HARD CONSTRAINT): Tempo and Intervals sessions MUST be ≤60min — no exceptions. A 90min Tempo does not exist; split it into 60min Tempo + 30min Easy instead. If more volume is needed in a sport, add Easy sessions. Before outputting each week, verify every Tempo/Intervals session is ≤60min.
 
 ### Limiter strategy (CRITICAL)
 - The athlete's limiters MUST drive sport-hour distribution

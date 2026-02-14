@@ -23,7 +23,7 @@ You MUST schedule every session according to these 7 rules in priority order:
 
 2. **Sport eligibility** — Only schedule a sport on days where it's explicitly eligible according to Daily Availability. If a day says "swim, bike only", you CANNOT schedule run sessions on that day.
 
-3. **Duration caps** — The total duration of all sessions on a day MUST NOT exceed the available minutes for that day from Daily Availability. For example, if Tuesday shows "60min available", the sum of all session durations on Tuesday must be ≤ 60 minutes.
+3. **Duration caps (ABSOLUTE — no exceptions)** — The total duration of all sessions on a day MUST NOT exceed the available minutes for that day. Before placing ANY session on a day, compute: (sum of sessions already on that day) + (this session's template duration) ≤ day cap. If it doesn't fit, pick a shorter template or use a different day. Example: Saturday has 90min available. You place swim 40min (remaining: 50min). Next bike template must be ≤ 50min — do NOT pick BIKE_Easy_02 (55min).
 
 4. **Session spread** — Distribute sessions across available days. Prefer no more than 2 sessions per day (unless it's a brick pair bike+run). Avoid leaving eligible days empty if sessions remain unscheduled.
 
@@ -42,18 +42,21 @@ You MUST schedule every session according to these 7 rules in priority order:
    - `Race-pace` → use *_Tempo_* templates, output `"type": "Tempo"` (race-pace is tempo effort)
    - `Brick` (as a session type) → use RUN_Easy_* or RUN_Tempo_* templates, output the actual type (`"type": "Easy"` or `"type": "Tempo"`). The `is_brick` flag handles the brick aspect separately.
    - Any other non-standard type → map to the closest valid type (Easy/Tempo/Intervals)
-4. **Duration** — pick a template whose duration range fits the planned duration_minutes. If no exact match, pick the closest.
+4. **Duration flexibility (±20%)** — pick a template within ±20% of the planned duration. For a planned 60min session, any template from 48-72min is valid. The `duration_minutes` in your output MUST equal the template's actual duration from the library, NOT the planned duration. **IMPORTANT: the day's duration cap (rule 3 above) is absolute. If picking a longer template within the ±20% range would cause the day total to exceed the cap, you MUST pick a shorter template instead — even if it's outside the ±20% range. The day cap always wins.**
 
-### Variety (CRITICAL — this is non-negotiable)
-The library has multiple templates per sport/type. You MUST rotate through them:
-- BIKE_Easy has 6 templates (01-06), RUN_Easy has 6 (01-06), SWIM_Easy has 5 (01-05)
-- Each Tempo category has 10 templates, each Intervals category has 10 templates
+### Variety
+The library has multiple templates per sport/type. Variety rules differ by type:
 
-**Rules:**
-- NEVER use the same template_id in two consecutive weeks for the same sport/type slot
+**Tempo & Intervals (strict rotation — 10 templates each):**
+- NEVER use the same template_id in two consecutive weeks for the same sport/type
 - Over this 4-week block, use at least 3 different templates per sport/type
 - Check the "Previously Used Templates" list — do NOT start this block with the same template that ended the previous block for the same sport/type
 - Cycle through ALL available templates in the category before repeating any
+
+**Easy (duration-fit only — no rotation required):**
+- Pick the Easy template whose duration best fits the planned session AND the day's remaining available minutes
+- Repeating the same Easy template across weeks is fine — the workout structure doesn't vary, only duration matters
+- Do NOT sacrifice duration-cap compliance for Easy variety
 
 ### Phase-appropriate difficulty
 - **Base phase**: prefer lower-numbered templates (simpler structure, longer intervals)
@@ -68,11 +71,11 @@ The library has multiple templates per sport/type. You MUST rotate through them:
 - **"Brick" is NOT a session type.** The `type` field must still match the template_id type (e.g., `"type": "Easy"` with `RUN_Easy_01`, not `"type": "Brick"`). The `is_brick` flag is the only indicator.
 - If the notes don't mention brick, no sessions should have `is_brick`
 
-### Final Validation (MANDATORY)
-Before outputting your JSON, verify EVERY session against these checks. Fix any violations:
-1. Is this sport eligible on this day? Check Daily Availability. If not → move to nearest eligible day with remaining capacity, or drop if no day fits.
-2. Does the total duration on this day exceed the available minutes? If yes → reduce the longest session on that day to fit within the cap.
-3. Are there available days with no sessions scheduled? If yes and the week's total hours are below target → add Easy sessions to unused eligible days.
+### Final Validation (MANDATORY — do this for EVERY day in EVERY week)
+Before outputting your JSON, verify EVERY day against these checks. Fix any violations:
+1. **Sport check** — Is this sport eligible on this day? Check Daily Availability. If not → move to nearest eligible day with remaining capacity, or drop if no day fits.
+2. **Duration cap check (CRITICAL)** — For each day, SUM the `duration_minutes` of all sessions on that day. Compare to the day's available minutes from Daily Availability. If the sum exceeds the cap → swap the largest session for a shorter template from the library (using ±20% flexibility), or move a session to another day with remaining capacity. Example: if Wednesday has 60min available and you scheduled a 45min bike + 30min run = 75min total → this VIOLATES the 60min cap. Fix it.
+3. **Fill gaps** — Are there available days with no sessions scheduled? If yes and the week's total hours are below target → add Easy sessions to unused eligible days.
 
 ## Workout Library (reference table — pick template_ids from here)
 {{workout_library}}

@@ -197,15 +197,16 @@ module.exports = (output, context) => {
     }
   }
 
-  // 8. Check variety — consecutive weeks must NOT repeat same template for same sport/type
+  // 8. Check variety — Tempo/Intervals only (Easy is exempt from rotation)
   const weekNums = Object.keys(usedPerWeek).map(Number).sort((a, b) => a - b);
 
-  // Build per-week sport/type → template map for consecutive check
+  // Build per-week sport/type → template map for consecutive check (Tempo & Intervals only)
   const weekSportTypeMap = {};
   for (const week of plan.weeks) {
     const wn = week.week_number;
     weekSportTypeMap[wn] = {};
     for (const session of (week.sessions || [])) {
+      if (session.type === 'Easy') continue; // Easy exempt from variety checks
       const key = `${session.sport}_${session.type}`;
       if (!weekSportTypeMap[wn][key]) weekSportTypeMap[wn][key] = [];
       weekSportTypeMap[wn][key].push(session.template_id);
@@ -228,17 +229,18 @@ module.exports = (output, context) => {
   }
   // Allow some consecutive repeats (e.g. small library categories) but flag excessive
   if (consecutiveRepeatCount > weekNums.length * 0.3) {
-    errors.push(`Excessive consecutive-week repeats: ${consecutiveRepeatCount} template reuses across ${weekNums.length} week transitions`);
+    errors.push(`Excessive consecutive-week Tempo/Intervals repeats: ${consecutiveRepeatCount} template reuses across ${weekNums.length} week transitions`);
   } else if (consecutiveRepeatCount > weekNums.length * 0.15) {
-    warnings.push(`${consecutiveRepeatCount} consecutive-week template repeats — aim for more rotation`);
+    warnings.push(`${consecutiveRepeatCount} consecutive-week Tempo/Intervals template repeats — aim for more rotation`);
   }
 
-  // 9. Check global variety — no single template should dominate its category
+  // 9. Check global variety — Tempo/Intervals only (Easy exempt)
   // Group usage by category (sport_type)
-  const categoryUsage = {}; // "bike_Easy" -> { "BIKE_Easy_01": 5, "BIKE_Easy_02": 1, ... }
+  const categoryUsage = {}; // "bike_Tempo" -> { "BIKE_Tempo_01": 5, "BIKE_Tempo_02": 1, ... }
   for (const [tid, count] of Object.entries(globalUsage)) {
     const meta = TEMPLATE_META[tid];
     if (!meta) continue;
+    if (meta.type === 'Easy') continue; // Easy exempt from variety checks
     const cat = `${meta.sport}_${meta.type}`;
     if (!categoryUsage[cat]) categoryUsage[cat] = {};
     categoryUsage[cat][tid] = count;

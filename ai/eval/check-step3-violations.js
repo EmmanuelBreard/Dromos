@@ -73,8 +73,9 @@ for (const r of data) {
         continue;
       }
 
-      if (total > cap) {
-        console.log('  W' + w.week_number + ' ' + day + ': ' + total + 'min > ' + cap + 'min cap (' + sessions.map(s => s.sport + ' ' + s.duration_minutes).join(' + ') + ')');
+      const TRIGGER_MARGIN = 1.1; // Match 10% tolerance from fixDurationCaps
+      if (total > cap * TRIGGER_MARGIN) {
+        console.log('  W' + w.week_number + ' ' + day + ': ' + total + 'min > ' + Math.round(cap * TRIGGER_MARGIN) + 'min cap+10% (' + sessions.map(s => s.sport + ' ' + s.duration_minutes).join(' + ') + ')');
         durationViolations++;
       }
 

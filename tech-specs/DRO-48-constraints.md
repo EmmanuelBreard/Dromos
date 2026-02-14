@@ -1,6 +1,6 @@
 # DRO-48: Inject Daily Availability & Duration Caps into Plan Generation
 
-**Overall Progress:** `70%`
+**Overall Progress:** `80%`
 
 ## TLDR
 The `generate-plan` edge function hardcodes `{{constraints}}: "none"` so the LLM never sees per-day duration limits or sport-day availability. This causes sessions on wrong days, blown duration caps, and wasted weekly budget. Fix: build a constraint string from user profile data and inject it into the Step 3 prompt. Add session sizing hints and sport day availability to Step 1 so it generates appropriately-sized and correctly-distributed sessions. Rest days are derived post-Step 3 from actual sessions.
@@ -60,13 +60,26 @@ The `generate-plan` edge function hardcodes `{{constraints}}: "none"` so the LLM
   - [x] 🟩 Verify weekly volume approaches budget → ❌ ~10-11h of 13h, Monday unused
   - [x] 🟩 Improvement confirmed: no more 120min weekday sessions, volume up from ~8h
 
-- [ ] 🟥 **Phase 4: Sport availability in Step 1 + Step 3 self-validation** (DRO-59)
-  - [ ] 🟥 Add Sport Day Availability section to Step 1 prompt (per-sport weekday/weekend counts)
-  - [ ] 🟥 Compute sport day counts in `buildStep1Prompt()` in `index.ts`
-  - [ ] 🟥 Add Final Validation (MANDATORY) section to Step 3 prompt
-  - [ ] 🟥 Sync `.ts` and `.txt` for both Step 1 and Step 3
+- [x] 🟩 **Phase 4: Sport availability in Step 1 + Step 3 self-validation** (DRO-59 — merged)
+  - [x] 🟩 Add Sport Day Availability section to Step 1 prompt (per-sport weekday/weekend counts)
+  - [x] 🟩 Compute sport day counts in `buildStep1Prompt()` in `index.ts`
+  - [x] 🟩 Add Final Validation (MANDATORY) section to Step 3 prompt
+  - [x] 🟩 Sync `.ts` and `.txt` for both Step 1 and Step 3
 
-- [ ] 🟥 **Phase 5: Re-eval after Phase 4** (DRO-56 — rerun)
+- [x] 🟨 **Phase 4b: Re-eval after Phase 4** (DRO-56 — rerun, partial)
+  - [x] 🟩 Verify sport-day eligibility compliance → ❌ swim on Thursday still
+  - [x] 🟩 Verify duration cap compliance → ❌ WORSE (90-150min single sessions on 60min days)
+  - [x] 🟩 Verify volume → ✅ Improved to 10-12.5h (closer to 13h)
+  - [x] 🟩 Root cause identified: 80K char workout library drowns out constraint rules (GPT-4o "lost in the middle")
+
+- [ ] 🟥 **Phase 5: Simplify workout library + reorder Step 3 prompt** (DRO-62)
+  - [ ] 🟥 New `buildSimplifiedLibrary()` function in `index.ts` — strips segments, keeps template_id/sport/type/duration
+  - [ ] 🟥 New `computeSegmentDuration()` and `computeSegmentDistance()` helpers for recursive duration calc
+  - [ ] 🟥 Inject simplified library instead of full 80K JSON into Step 3
+  - [ ] 🟥 Reorder Step 3 prompt: Daily Availability first, library last (now tiny reference table)
+  - [ ] 🟥 Sync `.ts` and `.txt` for Step 3
+
+- [ ] 🟥 **Phase 6: Re-eval after Phase 5** (DRO-56 — rerun)
   - [ ] 🟥 Verify sport-day eligibility compliance
   - [ ] 🟥 Verify duration cap compliance
   - [ ] 🟥 Verify volume closer to 13h budget

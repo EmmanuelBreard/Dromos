@@ -143,8 +143,10 @@ struct HomeView: View {
     /// Empty state when no plan is available.
     private var emptyStateView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "figure.run")
-                .font(.system(size: 60))
+            Image("DromosLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 48)
                 .foregroundStyle(.tint)
             Text("No Training Plan")
                 .font(.title2)
@@ -180,7 +182,7 @@ struct HomeView: View {
             Button(action: {
                 Task {
                     if let userId = authService.currentUserId {
-                        await planService.retryFetchPlan(userId: userId)
+                        try? await planService.fetchFullPlan(userId: userId)
                     }
                 }
             }) {

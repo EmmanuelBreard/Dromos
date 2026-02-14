@@ -138,7 +138,7 @@ struct CalendarPlanView: View {
             Button(action: {
                 Task {
                     if let userId = authService.currentUserId {
-                        await planService.retryFetchPlan(userId: userId)
+                        try? await planService.fetchFullPlan(userId: userId)
                     }
                 }
             }) {
