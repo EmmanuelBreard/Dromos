@@ -24,10 +24,10 @@ struct SignUpView: View {
             // Header
             VStack(spacing: 8) {
                 Image("DromosLogo")
+                    .renderingMode(.original)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 80, height: 48)
-                    .foregroundStyle(.tint)
                 Text("Create account")
                     .font(.title)
                     .fontWeight(.bold)

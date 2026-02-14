@@ -80,10 +80,10 @@ struct PlanGenerationView: View {
         VStack(spacing: 24) {
             // Icon
             Image("DromosLogo")
+                .renderingMode(.original)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 100, height: 60)
-                .foregroundStyle(.tint)
 
             // Headline
             VStack(spacing: 8) {

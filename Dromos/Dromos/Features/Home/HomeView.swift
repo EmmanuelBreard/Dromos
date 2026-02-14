@@ -144,10 +144,10 @@ struct HomeView: View {
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image("DromosLogo")
+                .renderingMode(.original)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 80, height: 48)
-                .foregroundStyle(.tint)
             Text("No Training Plan")
                 .font(.title2)
                 .fontWeight(.bold)
