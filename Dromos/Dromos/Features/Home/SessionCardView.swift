@@ -138,6 +138,44 @@ struct RestDayCardView: View {
     }
 }
 
+// MARK: - Race Day Card
+
+/// Celebratory card for race days.
+/// Shows trophy icon with "Race Day" label and optional race objective (e.g., "Olympic", "Ironman 70.3").
+struct RaceDayCardView: View {
+    let raceObjective: String?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Trophy icon
+            Image(systemName: "trophy.fill")
+                .font(.title2)
+                .foregroundColor(.orange)
+                .frame(width: 40, height: 40)
+                .background(Color.orange.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Race Day")
+                    .font(.headline)
+                    .foregroundColor(.orange)
+
+                // Optional race objective subtitle
+                if let objective = raceObjective {
+                    Text(objective)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(16)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
 // MARK: - Previews
 
 #Preview("Session Card - Swim") {
@@ -196,6 +234,16 @@ struct RestDayCardView: View {
 
 #Preview("Rest Day Card") {
     RestDayCardView()
+        .padding()
+}
+
+#Preview("Race Day Card - With Objective") {
+    RaceDayCardView(raceObjective: "Ironman 70.3")
+        .padding()
+}
+
+#Preview("Race Day Card - No Objective") {
+    RaceDayCardView(raceObjective: nil)
         .padding()
 }
 
