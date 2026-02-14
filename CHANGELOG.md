@@ -7,6 +7,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Rich session card data foundation** — Workout segment flattening and step summary generation with sport-specific formatting (DRO-82)
+  - ProfileService shared from MainTabView for athlete metrics (FTP, VMA, CSS)
+  - FlatSegment model for graph rendering (expands nested repeats into individual segments)
+  - StepSummary model for text display (bike: watts, run: speed/pace, swim: distance/label)
+- **Workout steps and intensity graph** — Session cards now display step-by-step workout breakdown with intensity-colored dots and a visual bar chart (DRO-83)
+  - WorkoutStepsView: compact step list with green→red intensity dots and sport-specific metrics
+  - WorkoutGraphView: horizontal bar chart with proportional widths, normalized heights, and 15-min time axis
+  - IntensityColorHelper: shared HSL gradient function for consistent color across dots and bars
+  - Simple swims show distance only; complex workouts show full steps + graph
+- **Tap-to-reveal graph popovers** — Tap any intensity bar to see sport-specific segment details (DRO-84)
+  - Bike: duration + label + watts (e.g., "15 min warmup — 156 W")
+  - Run: duration + label + speed/pace (e.g., "10 min tempo — 12.0 km/h (5:00/km)")
+  - Swim: distance + pace label (e.g., "100m — medium pace")
+  - Adaptive time axis intervals (15/30/60 min based on workout duration)
+  - Smooth show/dismiss animation with tap-outside-to-close
+
+### Changed
+- **Sport emojis** — Session cards use 🏊‍♂️🚴‍♂️🏃‍♂️ emojis instead of SF Symbol icons (DRO-81)
+- **Type-based badge colors** — Easy=green, Tempo=orange, Intervals=red across all sports (DRO-81)
+- **Brighter intensity colors** — Graph bars and step dots use lighter, more vibrant HSB palette (DRO-81)
+- **Swim graph height** — Swim bar heights now derived from pace label (easy→short, hard→tall) instead of flat minimum (DRO-81)
+- **Easy session steps** — Single-segment workouts now show a step description above the graph (DRO-81)
+- **Home tab background inversion** — Gray background with white session cards for better visual hierarchy (DRO-82)
+- **Shared ProfileService** — Profile data now shared between Home and Profile tabs, keeping athlete metrics in sync (DRO-82)
+
 - **Rolling weeks Home dashboard** — Home tab now shows current + next week with progressive "Show next week" CTA to reveal future weeks (DRO-74)
   - Week section headers with "Current Week" / "Next Week" labels, date ranges with ordinal suffixes, and phase badges
   - Race Day indicator card shown on the race date with trophy icon and race objective

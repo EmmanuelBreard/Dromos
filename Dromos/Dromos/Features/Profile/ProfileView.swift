@@ -15,7 +15,8 @@ import SwiftUI
 /// 3. Settings - Personal information (demographics, name, email)
 struct ProfileView: View {
     @ObservedObject var authService: AuthService
-    @StateObject private var profileService = ProfileService()
+    // FIX #6: Receive shared ProfileService instead of creating a new instance
+    @ObservedObject var profileService: ProfileService
 
     /// Local copy of user for immediate UI updates during editing.
     /// Separate from profileService.user to avoid race conditions during save.
@@ -642,6 +643,7 @@ struct ProfileView: View {
     }
 }
 
+// FIX #6: Update preview to create and pass ProfileService
 #Preview {
-    ProfileView(authService: AuthService())
+    ProfileView(authService: AuthService(), profileService: ProfileService())
 }

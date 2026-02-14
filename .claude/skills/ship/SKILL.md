@@ -120,6 +120,10 @@ Reply: "QA pass" to continue, or describe what's wrong.
 
 **If user reports QA issues:**
 
+> **MANDATORY SEQUENCE — Do NOT skip any step:**
+> Fix → Code Review → Merge → THEN re-halt for QA.
+> Never present QA re-test to the user without completing code review first.
+
 #### 3a. Fix
 
 1. Dispatch a sonnet sub-agent to fix the reported issues on the feature branch. Include the user's exact feedback verbatim.

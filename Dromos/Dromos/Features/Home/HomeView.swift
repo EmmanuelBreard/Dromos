@@ -13,6 +13,8 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var planService: PlanService
+    /// Shared profile service — provides athlete metrics (FTP, VMA, CSS) for session card details in Phase 2.
+    @ObservedObject var profileService: ProfileService
     /// Toggled by MainTabView each time the Home tab is re-selected.
     /// Using @Binding ensures the change propagates via Combine even when the tab is inactive.
     @Binding var scrollReset: Bool
@@ -113,6 +115,7 @@ struct HomeView: View {
                     }
                 }
             }
+            .background(Color(.systemGroupedBackground))
             .onAppear {
                 // Initial load: reset to current + next week and scroll to today
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
@@ -192,7 +195,11 @@ struct HomeView: View {
                 ForEach(dayInfo.sessions) { session in
                     SessionCardView(
                         session: session,
-                        swimDistance: swimDistance(for: session)
+                        swimDistance: swimDistance(for: session),
+                        template: workoutLibrary.template(for: session.templateId),
+                        ftp: profileService.user?.ftp,
+                        vma: profileService.user?.vma,
+                        css: profileService.user?.cssSecondsPer100m
                     )
                 }
             }
@@ -360,5 +367,10 @@ struct HomeView: View {
 }
 
 #Preview("Home - Content") {
-    HomeView(authService: AuthService(), planService: PlanService(), scrollReset: .constant(false))
+    HomeView(
+        authService: AuthService(),
+        planService: PlanService(),
+        profileService: ProfileService(),
+        scrollReset: .constant(false)
+    )
 }

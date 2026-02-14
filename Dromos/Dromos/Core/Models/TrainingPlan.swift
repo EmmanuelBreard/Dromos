@@ -139,6 +139,26 @@ struct PlanSession: Codable, Identifiable {
         }
     }
 
+    /// Color based on workout type (Easy=green, Tempo=orange, Intervals=red).
+    var typeColor: Color {
+        switch type.lowercased() {
+        case "easy": return .green
+        case "tempo": return .orange
+        case "intervals": return .red
+        default: return .gray
+        }
+    }
+
+    /// Emoji for the sport.
+    var sportEmoji: String {
+        switch sport.lowercased() {
+        case "swim": return "🏊‍♂️"
+        case "bike": return "🚴‍♂️"
+        case "run": return "🏃‍♂️"
+        default: return "🏃‍♂️"
+        }
+    }
+
     /// Formatted duration string (e.g., "60 min", "1h 30 min").
     var formattedDuration: String {
         let hours = durationMinutes / 60

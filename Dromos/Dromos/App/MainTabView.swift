@@ -14,13 +14,17 @@ enum AppTab: Hashable {
 
 /// Main tab navigation for authenticated users.
 /// Provides access to Home, Calendar, and Profile sections.
-/// Owns the PlanService and shares it between Home and Calendar tabs.
+/// Owns the PlanService and ProfileService, sharing them between tabs.
 struct MainTabView: View {
     @ObservedObject var authService: AuthService
 
     /// Shared plan service for fetching and caching training plan data.
     /// Owned here so both Home and Calendar tabs share the same data.
     @StateObject private var planService = PlanService()
+    
+    /// Shared profile service for fetching and caching user profile data.
+    /// Owned here so tabs can access athlete metrics (FTP, VMA, CSS).
+    @StateObject private var profileService = ProfileService()
 
     /// Tracks the currently selected tab for scroll-reset on Home re-selection.
     @State private var selectedTab: AppTab = .home
@@ -32,7 +36,12 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Home", systemImage: "house", value: .home) {
-                HomeView(authService: authService, planService: planService, scrollReset: $homeScrollReset)
+                HomeView(
+                    authService: authService,
+                    planService: planService,
+                    profileService: profileService,
+                    scrollReset: $homeScrollReset
+                )
             }
 
             Tab("Calendar", systemImage: "calendar", value: .calendar) {
@@ -40,7 +49,8 @@ struct MainTabView: View {
             }
 
             Tab("Profile", systemImage: "person", value: .profile) {
-                ProfileView(authService: authService)
+                // FIX #6: Pass shared profileService to ProfileView
+                ProfileView(authService: authService, profileService: profileService)
             }
         }
         .onChange(of: selectedTab) { _, newValue in
@@ -49,20 +59,38 @@ struct MainTabView: View {
             }
         }
         .task {
-            await loadPlan()
+            await loadData()
         }
     }
     
     // MARK: - Private Methods
     
-    /// Loads the training plan if user is authenticated.
-    private func loadPlan() async {
+    /// Loads both training plan and user profile if user is authenticated.
+    private func loadData() async {
         guard let userId = authService.currentUserId else { return }
         
+        // Load plan and profile in parallel
+        async let planLoad: () = loadPlan(userId: userId)
+        async let profileLoad: () = loadProfile(userId: userId)
+        
+        _ = await (planLoad, profileLoad)
+    }
+    
+    /// Loads the training plan.
+    private func loadPlan(userId: UUID) async {
         do {
             try await planService.fetchFullPlan(userId: userId)
         } catch {
             // Error is already captured in planService.errorMessage
+        }
+    }
+    
+    /// Loads the user profile.
+    private func loadProfile(userId: UUID) async {
+        do {
+            try await profileService.fetchProfile(userId: userId)
+        } catch {
+            // Error is already captured in profileService.errorMessage
         }
     }
 }
