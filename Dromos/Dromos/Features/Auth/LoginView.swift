@@ -23,10 +23,10 @@ struct LoginView: View {
             // Header
             VStack(spacing: 8) {
                 Image("DromosLogo")
+                    .renderingMode(.original)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 80, height: 48)
-                    .foregroundStyle(.tint)
                 Text("Welcome back")
                     .font(.title)
                     .fontWeight(.bold)

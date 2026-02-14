@@ -45,3 +45,5 @@ ai/eval/results/
 
 # Design mockups
 *.png
+# Allow app icon PNGs
+!Dromos/Dromos/Assets.xcassets/AppIcon.appiconset/*.png
