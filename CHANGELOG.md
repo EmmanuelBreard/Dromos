@@ -43,6 +43,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Shared post-processing helpers: `parseConstraints()`, `sessionPriority()`, `buildTemplateDurationMap()` in eval and production (DRO-70)
 
 ### Fixed
+- Improved plan generation accuracy: Step 3 workout selection now enforces ±20% duration flexibility, exempts Easy sessions from forced rotation, and includes violation examples for the AI (DRO-64)
 - Transition directions now slide naturally (forward→right to left, back→left to right)
 - Users no longer stuck on onboarding after successful save
 - Race objective picker now defaults to Sprint correctly
@@ -55,6 +56,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `fixRestDays` ported to production (was missing from `index.ts`, only ran 3 of 4 fixers) (DRO-71)
 
 ### Changed
+- Workout library and prompt files consolidated to single source of truth with automated sync scripts (DRO-64)
 - Database: `birth_date` and `race_date` converted from DATE to TIMESTAMPTZ for ISO-8601 compatibility
 - Database: `time_objective_hours` + `time_objective_minutes` consolidated into single `time_objective_minutes` INT; `css_minutes` + `css_seconds` consolidated into `css_seconds_per100m` (DRO-24)
 - Navigation: RootView now handles 3-way routing (auth → onboarding → main)
