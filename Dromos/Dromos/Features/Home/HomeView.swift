@@ -328,9 +328,10 @@ struct HomeView: View {
         let currentWeek = plan.planWeeks[currentWeekIndex]
         let days = plan.daysForWeek(currentWeek)
 
-        // Find today's weekday in the current week
+        // Find today's weekday in the current week.
+        // Delay allows view to re-render after lastVisibleWeekIndex reset.
         if let todayInfo = days.first(where: { calendar.isDateInToday($0.date) }) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     proxy.scrollTo("\(currentWeek.weekNumber)-\(todayInfo.weekday)", anchor: .top)
                 }
