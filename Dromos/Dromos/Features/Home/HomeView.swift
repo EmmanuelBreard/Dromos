@@ -13,6 +13,9 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var planService: PlanService
+    /// Toggled by MainTabView each time the Home tab is re-selected.
+    /// Using @Binding ensures the change propagates via Combine even when the tab is inactive.
+    @Binding var scrollReset: Bool
 
     /// Reference to the workout library for swim distance lookups.
     private let workoutLibrary = WorkoutLibraryService.shared
@@ -79,6 +82,9 @@ struct HomeView: View {
         return ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
+                    // Stable anchor for programmatic scroll-to-top on tab return
+                    Color.clear.frame(height: 0).id("scrollTop")
+
                     // Multi-week sections (current week through lastVisibleWeekIndex)
                     ForEach(Array(visibleWeeks.enumerated()), id: \.element.id) { offset, week in
                         let weekIndex = currentWeekIndex + offset
@@ -108,10 +114,16 @@ struct HomeView: View {
                 }
             }
             .onAppear {
-                // Reset to current + next week (fresh view on each tab switch)
+                // Initial load: reset to current + next week and scroll to today
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
-                // Auto-scroll to today
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
+            }
+            .onChange(of: scrollReset) { _, _ in
+                // Tab re-selection: reset weeks and scroll to top immediately
+                lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    proxy.scrollTo("scrollTop", anchor: .top)
+                }
             }
         }
     }
@@ -348,5 +360,5 @@ struct HomeView: View {
 }
 
 #Preview("Home - Content") {
-    HomeView(authService: AuthService(), planService: PlanService())
+    HomeView(authService: AuthService(), planService: PlanService(), scrollReset: .constant(false))
 }
