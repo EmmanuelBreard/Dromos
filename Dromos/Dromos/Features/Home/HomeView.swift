@@ -34,8 +34,8 @@ struct HomeView: View {
         return f
     }()
 
-    /// Last visible week index (controls progressive disclosure). Nil until initialized.
-    @State private var lastVisibleWeekIndex: Int? = nil
+    /// Last visible week index (controls progressive disclosure).
+    @State private var lastVisibleWeekIndex: Int = 0
     
     var body: some View {
         NavigationStack {
@@ -72,7 +72,7 @@ struct HomeView: View {
     /// Main content view with multi-week scrollable sections.
     private func contentView(plan: TrainingPlan) -> some View {
         let currentWeekIndex = plan.currentWeekIndex()
-        let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex ?? currentWeekIndex)
+        let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex)
         let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
         let visibleWeeks = Array(plan.planWeeks[currentWeekIndex...endIndex])
 
@@ -108,10 +108,8 @@ struct HomeView: View {
                 }
             }
             .onAppear {
-                // Only initialize on first appearance (preserve user's progressive disclosure)
-                if lastVisibleWeekIndex == nil {
-                    lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
-                }
+                // Reset to current + next week (fresh view on each tab switch)
+                lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
                 // Auto-scroll to today
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
             }
@@ -262,13 +260,17 @@ struct HomeView: View {
     private var showNextWeekButton: some View {
         Button {
             withAnimation(.easeInOut(duration: 0.3)) {
-                lastVisibleWeekIndex = (lastVisibleWeekIndex ?? 0) + 1
+                lastVisibleWeekIndex += 1
             }
         } label: {
-            Text("Show next week")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
+            HStack(spacing: 6) {
+                Text("Show next week")
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+            }
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .foregroundColor(.blue)
         }
         .padding(.vertical, 24)
     }
