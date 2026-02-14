@@ -2090,6 +2090,305 @@
       ]
     },
     {
+      "template_id": "RUN_Tempo_11",
+      "name": "Viktor Röthlin",
+      "duration_minutes": 222,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "duration_minutes": 191,
+          "mas_pct": 70
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 120
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 1000,
+              "mas_pct": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_seconds": 120,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_12",
+      "name": "Pierre Morath",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 3000,
+              "mas_pct": 90
+            },
+            {
+              "label": "rest",
+              "rest_seconds": 90
+            },
+            {
+              "label": "work",
+              "distance_meters": 1000,
+              "mas_pct": 95
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 4,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_13",
+      "name": "Progressive Marathon",
+      "duration_minutes": 145,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "distance_meters": 5000,
+          "mas_pct": 70
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 120
+        },
+        {
+          "label": "work",
+          "distance_meters": 4000,
+          "mas_pct": 75
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 120
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 3000,
+              "mas_pct": 82
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_seconds": 120,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 120
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 2000,
+              "mas_pct": 90
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_seconds": 120,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 120
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 1000,
+              "mas_pct": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_seconds": 120,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_14",
+      "name": "Endurance Kényane",
+      "duration_minutes": 45,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "duration_minutes": 5,
+          "mas_pct": 70
+        },
+        {
+          "label": "work",
+          "duration_minutes": 5,
+          "mas_pct": 75
+        },
+        {
+          "label": "work",
+          "duration_minutes": 5,
+          "mas_pct": 80
+        },
+        {
+          "label": "work",
+          "duration_minutes": 5,
+          "mas_pct": 85
+        },
+        {
+          "label": "work",
+          "duration_minutes": 5,
+          "mas_pct": 90
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_15",
+      "name": "10 Miles",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "distance_meters": 10000,
+          "mas_pct": 82
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_16",
+      "name": "3x3",
+      "duration_minutes": 63,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 3000,
+              "mas_pct": 85
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 4,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_17",
+      "name": "Demi-10K",
+      "duration_minutes": 36,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "distance_meters": 5000,
+          "mas_pct": 90
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
       "template_id": "RUN_Intervals_01",
       "duration_minutes": 53,
       "segments": [
@@ -2500,6 +2799,336 @@
           "label": "cooldown",
           "duration_minutes": 12,
           "mas_pct": 70
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_11",
+      "name": "Bernard Brun",
+      "duration_minutes": 39,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 1000,
+              "mas_pct": 100
+            },
+            {
+              "label": "rest",
+              "rest_seconds": 60
+            },
+            {
+              "label": "work",
+              "distance_meters": 500,
+              "mas_pct": 105
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_12",
+      "name": "Pyramide",
+      "duration_minutes": 35,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [
+            {
+              "label": "work",
+              "duration_seconds": 15,
+              "mas_pct": 100
+            },
+            {
+              "label": "rest",
+              "rest_seconds": 35
+            },
+            {
+              "label": "work",
+              "duration_seconds": 30,
+              "mas_pct": 100
+            },
+            {
+              "label": "rest",
+              "rest_seconds": 35
+            },
+            {
+              "label": "work",
+              "duration_seconds": 45,
+              "mas_pct": 100
+            },
+            {
+              "label": "rest",
+              "rest_seconds": 35
+            },
+            {
+              "label": "work",
+              "duration_seconds": 60,
+              "mas_pct": 100
+            },
+            {
+              "label": "rest",
+              "rest_seconds": 35
+            },
+            {
+              "label": "work",
+              "duration_seconds": 45,
+              "mas_pct": 100
+            },
+            {
+              "label": "rest",
+              "rest_seconds": 35
+            },
+            {
+              "label": "work",
+              "duration_seconds": 30,
+              "mas_pct": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_13",
+      "name": "Billat",
+      "duration_minutes": 42,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 3,
+              "mas_pct": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_14",
+      "name": "Super-10K",
+      "duration_minutes": 51,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 200,
+              "mas_pct": 112
+            },
+            {
+              "label": "work",
+              "distance_meters": 600,
+              "mas_pct": 105
+            },
+            {
+              "label": "work",
+              "distance_meters": 1600,
+              "mas_pct": 90
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 4,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_15",
+      "name": "Fartlek",
+      "duration_minutes": 40,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            {
+              "label": "work",
+              "duration_seconds": 90,
+              "mas_pct": 95
+            },
+            {
+              "label": "recovery",
+              "duration_seconds": 90,
+              "mas_pct": 70
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_16",
+      "name": "1000",
+      "duration_minutes": 45,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 1000,
+              "mas_pct": 95
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_seconds": 120,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_17",
+      "name": "Colline",
+      "duration_minutes": 35,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 10,
+          "segments": [
+            {
+              "label": "work",
+              "duration_seconds": 30,
+              "mas_pct": 105,
+              "terrain": "uphill"
+            },
+            {
+              "label": "recovery",
+              "duration_seconds": 90,
+              "mas_pct": 65,
+              "terrain": "downhill"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_18",
+      "name": "Zatopek",
+      "duration_minutes": 65,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 65
+        },
+        {
+          "label": "repeat",
+          "repeats": 20,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 400,
+              "mas_pct": 95
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_seconds": 75,
+            "mas_pct": 65
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 5,
+          "mas_pct": 65
         }
       ]
     },
