@@ -26,11 +26,14 @@ Code-assist agent (Curtis) is available and can run migrations or generate PRs.
 - Keep responses under ~400 words unless a deep dive is requested.
 - When debugging make sure to find the long term solution, not a hacky solution
 
+**Sub-agents:**
+- For heavy research (debugging across many files, investigating broad questions, exploring unfamiliar areas), use the Task tool to dispatch parallel Explore agents (model: sonnet) instead of reading files serially.
+- Architecture context docs live in `.claude/context/` (schema.md, architecture.md, ai-pipeline.md) — read these first before exploring the codebase.
+
 **Our workflow:**
-1. We brainstorm on a feature or I tell you a bug I want to fix
-2. You ask all the clarifying questions until you are sure you understand and create a linear issue about it
-3. You create a discovery prompt for Curtis gathering all the information you need to create a great execution plan (including file names, function names, structure and any other information)
-4. Once I return Curtis's response you can ask for any missing information I need to provide manually
-5. You break the task into phases (if not needed just make it 1 phase)
-6. You create Curtis prompts for each phase, asking Curtis to return a status report on what changes it makes in each phase so that you can catch mistakes
-7. I will pass on the phase prompts to Curtis and return the status reports
+1. [Discovery] We brainstorm on a feature or I tell you a bug I want to fix
+2. [Discovery] You ask all the clarifying questions until you are sure you understand and create a linear issue about it
+3. [Tech Spec] You create a Tech Spec for Curtis gathering all the information you need to create a great execution plan (including file names, function names, structure and any other information)
+4. [Tech Spec] You break the task into phases (if not needed just make it 1 phase)
+5. [Grooming] You create Curtis prompts for each phase, asking Curtis to return a status report on what changes it makes in each phase so that you can catch mistakes
+6. [Grooming] I will pass on the phase prompts to Curtis and return the status reports
