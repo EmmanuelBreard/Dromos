@@ -1,6 +1,6 @@
 # DRO-68: Add fixDurationCaps() Post-Processor
 
-**Overall Progress:** `45%`
+**Overall Progress:** `100%`
 
 ## TLDR
 Add a deterministic `fixDurationCaps()` post-processor to Step 3 that swaps overlong templates when the total session duration on a day exceeds the athlete's available minutes. Also upgrade `fixConsecutiveRepeats` to be duration-aware, make `fixRestDays` cap-aware, and port `fixRestDays` to production (currently missing).
@@ -41,22 +41,21 @@ fixTypes → fixBrickPairs → fixConsecutiveRepeats (duration-aware) → fixDur
   - [x] :white_check_mark: Needs workout library duration lookup (build `templateDurationMap` from library: `{SWIM_Easy_01: 40, ...}`)
   - [x] :white_check_mark: Mirror in `index.ts:379-427`
 
-- [ ] :red_square: **Step 4: Implement `fixDurationCaps()`**
-  - [ ] :red_square: For each week, for each day: sum session durations, compare to `dayCaps[day]`
-  - [ ] :red_square: If over cap: pick longest session on day, find shorter template (same sport/type, `duration <= remaining_cap * 1.2`), prefer closest-duration match
-  - [ ] :red_square: If no template fits: move session to nearest eligible day with remaining capacity (check sport eligibility + cap)
-  - [ ] :red_square: If no eligible day fits: use priority system — scan week for lowest-priority session, evict it if current session outranks
-  - [ ] :red_square: Last resort: drop lowest-priority session, log warning
-  - [ ] :red_square: Implement in `run-step3-blocks.js`, mirror in `index.ts`
+- [x] :white_check_mark: **Step 4: Implement `fixDurationCaps()`**
+  - [x] :white_check_mark: For each week, for each day: sum session durations, compare to `dayCaps[day]`
+  - [x] :white_check_mark: If over cap: pick longest session on day, find shorter template (same sport/type, `duration <= remaining_cap * 1.2`), prefer closest-duration match
+  - [x] :white_check_mark: If no template fits: move session to nearest eligible day with remaining capacity (check sport eligibility + cap)
+  - [x] :white_check_mark: If no eligible day fits: use priority system — scan week for lowest-priority session, evict it if current session outranks
+  - [x] :white_check_mark: Last resort: drop lowest-priority session, log warning
+  - [x] :white_check_mark: Implement in `run-step3-blocks.js`, mirror in `index.ts`
 
 - [x] :white_check_mark: **Step 5: Upgrade `fixRestDays` to be cap-aware + port to production**
   - [x] :white_check_mark: In `run-step3-blocks.js:285-319`: when choosing target day, filter by `session.duration_minutes <= dayCaps[day] - usedMinutes[day]` and sport eligibility
   - [x] :white_check_mark: Use priority system for eviction when no day has capacity
   - [x] :white_check_mark: Port full `fixRestDays` implementation to `index.ts` (currently missing)
 
-- [ ] :red_square: **Step 6: Wire pipeline + test**
-  - [ ] :red_square: Update pipeline order in `run-step3-blocks.js:380-390`: `fixTypes → fixBrickPairs → fixConsecutiveRepeats → fixDurationCaps → fixRestDays`
-  - [ ] :red_square: Update pipeline in `index.ts:664-666` to match (add `fixDurationCaps` + `fixRestDays`)
-  - [ ] :red_square: Run `node ai/eval/run-step3-blocks.js` for all 3 athletes
-  - [ ] :red_square: Run `node ai/eval/check-step3-violations.js` and verify 0 duration violations
-  - [ ] :red_square: Compare pre/post violation counts in console output
+- [x] :white_check_mark: **Step 6: Wire pipeline + test**
+  - [x] :white_check_mark: Update pipeline order in `run-step3-blocks.js`: `fixTypes → fixBrickPairs → fixConsecutiveRepeats → fixDurationCaps → fixRestDays`
+  - [x] :white_check_mark: Update pipeline in `index.ts` to match (add `fixDurationCaps`)
+  - [x] :white_check_mark: Run `check-step3-violations.js` — **0 duration violations** across all 3 athletes (down from 42)
+  - [x] :white_check_mark: No regressions: 0 sport eligibility violations, 0 rest day violations
