@@ -71,27 +71,13 @@ Each agent prompt must include:
 
 Wait for all agents in the batch to complete before proceeding.
 
-#### 2b. Code Review (for each sub-PR in the batch)
+#### 2b. Code Review + Fix + Merge
 
 For each PR created by the execute step:
-1. Read `.claude/commands/code-review.md` and follow its review process.
-2. Dispatch the 3 parallel review sub-agents (correctness, type safety, architecture) as specified in `code-review.md`.
-3. ALL issues are blockers — zero tolerance for tech debt.
+1. Run the **full process** defined in `.claude/commands/code-review.md` — this includes review (3 parallel agents), fix loop (max 3 iterations), and post-merge checklist (context docs, prune, changelog, Linear status).
+2. If `code-review.md` escalates after 3 failed fix iterations: **HALT and present issues to user.**
 
-#### 2c. Fix Loop (max 3 iterations per phase)
-
-If code review finds issues:
-1. Dispatch a sonnet sub-agent to fix the issues. Provide the exact issue list with file paths, line numbers, severity, and suggested fixes.
-2. Re-run code review (Step 2b) on the updated PR.
-3. Repeat up to **3 times**.
-4. After 3 failed iterations: **HALT and escalate.** Present all unresolved issues to the user and ask how to proceed.
-
-If code review finds zero issues:
-1. Merge the sub-PR.
-2. Update CHANGELOG.md under `[Unreleased]`.
-3. Mark the Linear task as Done.
-
-#### 2d. Next Batch
+#### 2c. Next Batch
 
 Once all phases in the current batch are merged, unlock the next batch and repeat from Step 2a.
 
@@ -133,11 +119,21 @@ Reply: "QA pass" to continue, or describe what's wrong.
 **Important:** QA instructions must be specific and actionable. NEVER write vague instructions like "verify it works" or "check the UI." Every instruction must say exactly what to tap, what to look for, and what the expected result is.
 
 **If user reports QA issues:**
-1. Create a fix sub-PR on the feature branch.
-2. Code review it (same 3-agent process from Step 2b).
-3. Merge the fix.
-4. **HALT again** for QA re-verification — present updated QA instructions.
-5. Repeat until user says "QA pass."
+
+#### 3a. Fix
+
+1. Dispatch a sonnet sub-agent to fix the reported issues on the feature branch. Include the user's exact feedback verbatim.
+2. The agent must create a fix sub-PR against the feature branch.
+
+#### 3b. Code Review + Fix + Merge (mandatory before re-test)
+
+1. Run the **full process** defined in `.claude/commands/code-review.md` on the fix sub-PR — this includes review (3 parallel agents), fix loop (max 3 iterations), and post-merge checklist (context docs, prune, changelog).
+2. If `code-review.md` escalates after 3 failed fix iterations: **HALT and present issues to user.**
+
+#### 3c. QA Re-verification
+
+1. **HALT again** for QA re-verification — present updated QA instructions using the same format above.
+2. Repeat from Step 3a until user says "QA pass."
 
 ---
 
@@ -145,7 +141,13 @@ Reply: "QA pass" to continue, or describe what's wrong.
 
 Once all phases are merged and QA passes:
 
-1. Report completion:
+1. **Verify context docs are up to date.** Check whether the feature introduced:
+   - New/changed tables or columns → `schema.md` must reflect them
+   - New files, folders, services, or patterns → `architecture.md` must reflect them
+   - New/changed prompts, eval scripts, or pipeline logic → `ai-pipeline.md` must reflect them
+   If any context doc is stale, update it now before proceeding.
+
+2. Report completion:
 ```
 ## Ship Complete — <Feature Name>
 
@@ -168,8 +170,8 @@ Once all phases are merged and QA passes:
 - <Any follow-up tasks, if none say "None">
 ```
 
-2. Update the tech spec markdown: set all task statuses to 🟩 and progress to 100%.
-3. Update the parent Linear issue status to "Done".
+3. Update the tech spec markdown: set all task statuses to 🟩 and progress to 100%.
+4. Update the parent Linear issue status to "Done".
 
 ---
 

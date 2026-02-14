@@ -74,18 +74,27 @@ For reference, the complete checklist distributed across sub-agents:
 - **LOW** - Style, minor improvements
 
 ## Issue Policy
-**ALL issues are blockers.** Any issue found (regardless of severity) blocks the PR from merging. When issues are found:
-1. List all issues clearly with suggested fixes
-2. Request a rework from Curtis — provide the issues as a rework prompt they can act on directly
-3. Do NOT merge the PR or mark the task as Done
+**ALL issues are blockers.** Any issue found (regardless of severity) blocks the PR from merging.
+
+## Fix Loop (max 3 iterations)
+
+When issues are found:
+1. List all issues clearly with suggested fixes.
+2. Dispatch a sonnet sub-agent to fix the issues. Provide the exact issue list with file paths, line numbers, severity, and suggested fixes. **Include in the prompt:** "After fixing, verify that `.claude/context/` docs (schema.md, architecture.md, ai-pipeline.md) still match the final implementation. Update any that are now stale due to the rework."
+3. Re-run the full review process (Step 1 → Step 2 → Step 3) on the updated PR.
+4. Repeat up to **3 times**.
+5. After 3 failed iterations: **HALT and escalate.** Present all unresolved issues to the user and ask how to proceed.
 
 ## End of Review
-- Once there are **zero issues** (no CRITICAL, no HIGH, no MEDIUM, no LOW):
-1. Confirm that the main branch is up to date and no PR is pending/not merged (otherwise stop here and inform me),
-2. Merge the PR,
-3. Update `CHANGELOG.md` under the `[Unreleased]` section:
+
+Once there are **zero issues** (no CRITICAL, no HIGH, no MEDIUM, no LOW):
+1. Confirm that the main branch is up to date and no PR is pending/not merged (otherwise stop here and inform me).
+2. **Verify context docs match final code.** If the PR went through fix iterations, check that `.claude/context/` docs (schema.md, architecture.md, ai-pipeline.md) reflect the *post-fix* state — not the original implementation. Update any that are stale.
+3. Merge the PR.
+4. Run `git remote prune origin` to clean up stale remote refs.
+5. Update `CHANGELOG.md` under the `[Unreleased]` section:
    - Use categories: Added, Changed, Fixed, Security, Removed, Database Migrations
    - Concise, user-facing language (describe impact, not implementation)
    - For backend-only changes: describe the user-visible improvement (e.g., "Improved plan generation accuracy" not "Added fixDurationCaps post-processor")
    - Everything stays in `[Unreleased]` until a git tag
-4. Change the linear task status to `Done`.
+6. Change the linear task status to `Done`.

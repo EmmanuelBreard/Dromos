@@ -1,6 +1,6 @@
 # DRO-74: Rolling Weeks on Home Page
 
-**Overall Progress:** `0%`
+**Overall Progress:** `100%`
 
 ## TLDR
 Replace the single-week HomeView with a scrollable multi-week view. Default shows current + next week. A "Show next week" CTA progressively reveals more weeks. Race Day indicator on the last day. Forward-only, no backward navigation.
@@ -22,40 +22,40 @@ Replace the single-week HomeView with a scrollable multi-week view. Default show
 
 ## Tasks
 
-- [ ] :red_square: **Step 1: Add RaceDayCardView**
-  - [ ] :red_square: Add `RaceDayCardView` in `SessionCardView.swift` below `RestDayCardView`
-  - [ ] :red_square: Design: flag/trophy icon + "Race Day" label + race objective (e.g., "Olympic") if available. Same card style as `RestDayCardView` but with accent color
-  - [ ] :red_square: Add SwiftUI preview
+- [x] :green_square: **Step 1: Add RaceDayCardView**
+  - [x] :green_square: Add `RaceDayCardView` in `SessionCardView.swift` below `RestDayCardView`
+  - [x] :green_square: Design: flag/trophy icon + "Race Day" label + race objective (e.g., "Olympic") if available. Same card style as `RestDayCardView` but with accent color
+  - [x] :green_square: Add SwiftUI preview
 
-- [ ] :red_square: **Step 2: Refactor HomeView to render multiple weeks**
-  - [ ] :red_square: Add `@State private var lastVisibleWeekIndex: Int = 0` state
-  - [ ] :red_square: Initialize in `.onAppear`: `lastVisibleWeekIndex = min(plan.currentWeekIndex() + 1, plan.planWeeks.count - 1)`
-  - [ ] :red_square: Replace single-week rendering with a `ForEach` over `plan.planWeeks[currentWeekIndex...lastVisibleWeekIndex]`
-  - [ ] :red_square: Each week section: header + `LazyVStack` of `daySectionView` (reuse existing)
+- [x] :green_square: **Step 2: Refactor HomeView to render multiple weeks**
+  - [x] :green_square: Add `@State private var lastVisibleWeekIndex: Int = 0` state
+  - [x] :green_square: Initialize in `.onAppear`: `lastVisibleWeekIndex = min(plan.currentWeekIndex() + 1, plan.planWeeks.count - 1)`
+  - [x] :green_square: Replace single-week rendering with a `ForEach` over `plan.planWeeks[currentWeekIndex...lastVisibleWeekIndex]`
+  - [x] :green_square: Each week section: header + `LazyVStack` of `daySectionView` (reuse existing)
 
-- [ ] :red_square: **Step 3: New week section headers**
-  - [ ] :red_square: Replace `weekHeader(week:)` with `weekSectionHeader(week:plan:currentWeekIndex:)` that returns:
+- [x] :green_square: **Step 3: New week section headers**
+  - [x] :green_square: Replace `weekHeader(week:)` with `weekSectionHeader(week:plan:currentWeekIndex:)` that returns:
     - Current week index → **"Current Week"** (bold) + date range subtitle (e.g., "Feb 16th - Feb 22nd")
     - Current + 1 → **"Next Week"** (bold) + date range subtitle
     - All others → **date range only** as title (e.g., "Feb 23rd - Mar 1st")
-  - [ ] :red_square: Keep phase badge on all headers
-  - [ ] :red_square: Add helper `weekDateRange(week:)` → formats "MMM dth - MMM dth" with ordinal suffixes
+  - [x] :green_square: Keep phase badge on all headers
+  - [x] :green_square: Add helper `weekDateRange(week:)` → formats "MMM dth - MMM dth" with ordinal suffixes
 
-- [ ] :red_square: **Step 4: "Show next week" CTA**
-  - [ ] :red_square: Add CTA button below the last visible week's day sections
-  - [ ] :red_square: Only show when `lastVisibleWeekIndex < plan.planWeeks.count - 1`
-  - [ ] :red_square: On tap: `lastVisibleWeekIndex += 1`
-  - [ ] :red_square: Style: simple text button, secondary color, centered
+- [x] :green_square: **Step 4: "Show next week" CTA**
+  - [x] :green_square: Add CTA button below the last visible week's day sections
+  - [x] :green_square: Only show when `lastVisibleWeekIndex < plan.planWeeks.count - 1`
+  - [x] :green_square: On tap: `lastVisibleWeekIndex += 1`
+  - [x] :green_square: Style: simple text button, secondary color, centered
 
-- [ ] :red_square: **Step 5: Race Day indicator**
-  - [ ] :red_square: In `daySectionView`, check if `dayInfo.date` matches `plan.raceDateAsDate` (using `Calendar.isDate(_:inSameDayAs:)`)
-  - [ ] :red_square: If match, render `RaceDayCardView` below that day's sessions (or as the only card if rest day)
-  - [ ] :red_square: On last week, no CTA shown (already handled by Step 4 condition)
+- [x] :green_square: **Step 5: Race Day indicator**
+  - [x] :green_square: In `daySectionView`, check if `dayInfo.date` matches `plan.raceDateAsDate` (using `Calendar.isDate(_:inSameDayAs:)`)
+  - [x] :green_square: If match, render `RaceDayCardView` below that day's sessions (or as the only card if rest day)
+  - [x] :green_square: On last week, no CTA shown (already handled by Step 4 condition)
 
-- [ ] :red_square: **Step 6: Fix auto-scroll to today**
-  - [ ] :red_square: Change `.id(dayInfo.weekday)` to `.id("\(week.weekNumber)-\(dayInfo.weekday)")` on each day section
-  - [ ] :red_square: Update `scrollToToday()` to find today across all visible weeks and use the composite ID
-  - [ ] :red_square: Pass the current week's days (not all visible days) to find today — today is guaranteed to be in the current week
+- [x] :green_square: **Step 6: Fix auto-scroll to today**
+  - [x] :green_square: Change `.id(dayInfo.weekday)` to `.id("\(week.weekNumber)-\(dayInfo.weekday)")` on each day section
+  - [x] :green_square: Update `scrollToToday()` to find today across all visible weeks and use the composite ID
+  - [x] :green_square: Pass the current week's days (not all visible days) to find today — today is guaranteed to be in the current week
 
-- [ ] :red_square: **Step 7: Update context docs**
-  - [ ] :red_square: Update `architecture.md` Home section to describe multi-week view + RaceDayCardView
+- [x] :green_square: **Step 7: Update context docs**
+  - [x] :green_square: Update `architecture.md` Home section to describe multi-week view + RaceDayCardView

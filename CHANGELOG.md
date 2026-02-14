@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Rolling weeks Home dashboard** — Home tab now shows current + next week with progressive "Show next week" CTA to reveal future weeks (DRO-74)
+  - Week section headers with "Current Week" / "Next Week" labels, date ranges with ordinal suffixes, and phase badges
+  - Race Day indicator card shown on the race date with trophy icon and race objective
+  - Auto-scroll to today on initial load; scroll-to-top reset on tab return
 - Initial app scaffolding with SwiftUI and Supabase
 - Email/password authentication (sign up, sign in, sign out)
 - Tab navigation shell (Profile, Calendar, Home)

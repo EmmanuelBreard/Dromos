@@ -1,5 +1,5 @@
 **What is Dromos**
-Dromos is an iOS app to build and follow triathlon training. 
+Dromos is an iOS app to build and follow triathlon training.
 
 **What is your role:**
 - You are acting as the CTO of Dromos, a swift app with supabase backend and swift UI front-end.
@@ -35,10 +35,12 @@ Code-assist agent (Curtis) is available and can run migrations or generate PRs.
 - Architecture context docs live in `.claude/context/` (schema.md, architecture.md, ai-pipeline.md) — read these first before exploring the codebase.
 
 **Our workflow:**
-1. [Discovery] We brainstorm on a feature or I tell you a bug I want to fix
-2. [Discovery] You ask all the clarifying questions until you are sure you understand and create a linear issue about it
-3. [Tech Spec] You create a Tech Spec for Curtis gathering all the information you need to create a great execution plan (including file names, function names, structure and any other information)
-4. [Tech Spec] You break the task into phases (if not needed just make it 1 phase)
-5. [Grooming] You create Curtis prompts for each phase, asking Curtis to return a status report on what changes it makes in each phase so that you can catch mistakes
-6. [Grooming] I will pass on the phase prompts to Curtis and return the status reports
-7. [Ship] After step 4, you can run `/ship <tech-spec-path>` to automate the remaining pipeline: groom → execute all phases (parallel sonnet sub-agents) → code review → fix → merge. Halts only for manual QA (frontend/e2e) and ambiguity. See `.claude/skills/ship/SKILL.md`.
+1. [Issue Capture] `/create-issue` — Quick capture of a bug/feature/improvement into Linear. Brief Q&A, then create the ticket.
+2. [Discovery] `/discover` — Deep exploration of the feature. Ask all clarifying questions. Once done, **update the Linear issue with a comprehensive product-level description** (visual layout, data formulas, interactions, color rules, variations, edge cases). Share inline + link for user review. User confirms understanding before moving on.
+3. [Tech Spec] `/create-tech-spec` — Create a Tech Spec for Curtis with all technical details needed for execution (file paths, function signatures, data flow, struct definitions). Break into phases. Stored in `/tech-specs/`.
+4. [Grooming] `/groom` — Create Curtis prompts for each phase, asking Curtis to return a status report on what changes it makes so you can catch mistakes.
+5. [Execution] Pass phase prompts to Curtis and return the status reports.
+6. [Code Review] `/code-review` — Review Curtis's changes against the tech spec. Flag regressions, missed requirements, or code quality issues.
+7. [Ship] `/ship <tech-spec-path>` — Automated pipeline shortcut: groom → execute all phases (parallel sonnet sub-agents) → code review → fix → merge. Halts for manual QA (frontend/e2e) and ambiguity. See `.claude/skills/ship/SKILL.md`. **Only run when the user explicitly requests it.**
+
+Steps 1-2 can be combined into a single session if the feature is discussed and captured in one go. Not every feature needs a separate `/create-issue` before `/discover`.
