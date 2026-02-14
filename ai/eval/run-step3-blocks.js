@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const BLOCK_SIZE = 4;
@@ -17,9 +18,121 @@ const MAX_TOKENS = 4096; // Much smaller per block — only 4 weeks
 const promptTemplate = fs.readFileSync(
   path.join(__dirname, '..', 'prompts', 'step3-workout-block.txt'), 'utf8'
 );
-const workoutLibrary = fs.readFileSync(
+const workoutLibraryRaw = fs.readFileSync(
   path.join(__dirname, '..', 'context', 'workout-library.json'), 'utf8'
 );
+const workoutLibrary = JSON.parse(workoutLibraryRaw);
+
+// Build simplified library string (matches production buildSimplifiedLibrary)
+function buildSimplifiedLibrary(lib) {
+  const lines = [];
+  for (const sport of ['swim', 'bike', 'run']) {
+    for (const tmpl of lib[sport] || []) {
+      const tid = tmpl.template_id;
+      const type = tid.split('_')[1];
+      lines.push(`${tid} | ${sport} | ${type} | ${tmpl.duration_minutes}min`);
+    }
+  }
+  return 'template_id | sport | type | duration\n' + lines.join('\n');
+}
+
+const simplifiedLibrary = buildSimplifiedLibrary(workoutLibrary);
+
+// Load athletes.yaml for per-day availability
+const athletesRaw = fs.readFileSync(path.join(__dirname, 'vars', 'athletes.yaml'), 'utf8');
+const athleteProfiles = yaml.load(athletesRaw);
+
+// Build per-day constraint string from athlete profile (matches production buildConstraintString)
+function buildConstraintString(vars) {
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const durationFields = ['mon_duration', 'tue_duration', 'wed_duration', 'thu_duration', 'fri_duration', 'sat_duration', 'sun_duration'];
+
+  // Parse sport days from comma-separated string
+  const parseDays = (s) => new Set((s || '').split(',').map(d => d.trim()).filter(Boolean));
+  const swimDays = parseDays(vars.swim_days);
+  const bikeDays = parseDays(vars.bike_days);
+  const runDays = parseDays(vars.run_days);
+
+  const lines = [];
+  for (let i = 0; i < dayNames.length; i++) {
+    const day = dayNames[i];
+    const duration = parseInt(vars[durationFields[i]] || '0', 10);
+
+    if (!duration) {
+      lines.push(`${day}: REST`);
+    } else {
+      const eligible = [];
+      if (swimDays.has(day)) eligible.push('swim');
+      if (bikeDays.has(day)) eligible.push('bike');
+      if (runDays.has(day)) eligible.push('run');
+
+      if (eligible.length === 0) {
+        lines.push(`${day}: ${duration}min available (no sports eligible)`);
+      } else if (eligible.length === 3) {
+        lines.push(`${day}: ${duration}min available (all sports)`);
+      } else {
+        lines.push(`${day}: ${duration}min available (${eligible.join(', ')} only)`);
+      }
+    }
+  }
+  return lines.join('\n');
+}
+
+// Parse athlete profile into structured constraint objects for post-processing fixers.
+// Returns { dayCaps: { Monday: 60, ... }, sportEligibility: { Monday: ['swim','run'], ... } }
+function parseConstraints(vars) {
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const durationFields = ['mon_duration', 'tue_duration', 'wed_duration', 'thu_duration', 'fri_duration', 'sat_duration', 'sun_duration'];
+
+  const parseDays = (s) => new Set((s || '').split(',').map(d => d.trim()).filter(Boolean));
+  const swimDays = parseDays(vars.swim_days);
+  const bikeDays = parseDays(vars.bike_days);
+  const runDays = parseDays(vars.run_days);
+
+  const dayCaps = {};
+  const sportEligibility = {};
+
+  for (let i = 0; i < dayNames.length; i++) {
+    const day = dayNames[i];
+    const duration = parseInt(vars[durationFields[i]] || '0', 10);
+    dayCaps[day] = duration;
+
+    const eligible = [];
+    if (swimDays.has(day)) eligible.push('swim');
+    if (bikeDays.has(day)) eligible.push('bike');
+    if (runDays.has(day)) eligible.push('run');
+    sportEligibility[day] = eligible;
+  }
+
+  return { dayCaps, sportEligibility };
+}
+
+// Compute session priority for eviction ordering.
+// Intervals(3) > Tempo(2) > Easy(1), +0.5 if is_brick.
+function sessionPriority(session) {
+  const typeScores = { Intervals: 3, Tempo: 2, Easy: 1 };
+  return (typeScores[session.type] || 1) + (session.is_brick ? 0.5 : 0);
+}
+
+// Build template_id → duration_minutes lookup from workout library.
+// e.g. { SWIM_Easy_01: 40, BIKE_Tempo_01: 45, ... }
+function buildTemplateDurationMap(lib) {
+  const map = {};
+  for (const sport of ['swim', 'bike', 'run']) {
+    for (const tmpl of lib[sport] || []) {
+      map[tmpl.template_id] = tmpl.duration_minutes;
+    }
+  }
+  return map;
+}
+
+const templateDurationMap = buildTemplateDurationMap(workoutLibrary);
+
+// Build constraint map: athlete_name -> constraint string
+const constraintMap = {};
+for (const a of athleteProfiles) {
+  constraintMap[a.vars.athlete_name] = buildConstraintString(a.vars);
+}
 
 const step2ResultsPath = path.join(__dirname, 'results', 'step2.json');
 const step1ResultsPath = path.join(__dirname, 'results', 'step1.json');
@@ -87,7 +200,7 @@ async function callOpenAI(prompt) {
 
 function buildPrompt(blockWeeks, athleteName, limiters, constraints, previouslyUsed) {
   let prompt = promptTemplate;
-  prompt = prompt.replace('{{workout_library}}', workoutLibrary);
+  prompt = prompt.replace('{{workout_library}}', simplifiedLibrary);
   prompt = prompt.replace('{{block_weeks_json}}', JSON.stringify(blockWeeks, null, 2));
   prompt = prompt.replace('{{athlete_name}}', athleteName);
   prompt = prompt.replace('{{limiters}}', limiters);
@@ -171,7 +284,7 @@ function fixBrickPairs(planWeeks) {
 
 function fixConsecutiveRepeats(planWeeks) {
   // Build catalog of available templates per category from the library
-  const lib = JSON.parse(workoutLibrary);
+  const lib = workoutLibrary;
   const catalog = {}; // "swim_Easy" -> ["SWIM_Easy_01", "SWIM_Easy_02", ...]
   for (const sport of ['swim', 'bike', 'run']) {
     if (lib[sport]) {
@@ -276,8 +389,8 @@ async function main() {
     // Carry forward athlete context
     const step1Vars = step1Results[i]?.vars || {};
     const athleteName = r.vars?.athlete_name || step1Vars.athlete_name || `athlete_${i + 1}`;
-    const limiters = step1Vars.limiters || 'none specified';
-    const constraints = step1Vars.constraints || 'none';
+    const limiters = step1Vars.limiters || 'none';
+    const constraints = constraintMap[athleteName] || 'none';
 
     console.log(`\n=== ${athleteName} (${macroPlan.weeks.length} weeks) ===`);
 
