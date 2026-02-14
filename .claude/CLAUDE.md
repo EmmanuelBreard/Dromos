@@ -26,6 +26,10 @@ Code-assist agent (Curtis) is available and can run migrations or generate PRs.
 - Keep responses under ~400 words unless a deep dive is requested.
 - When debugging make sure to find the long term solution, not a hacky solution
 
+**MCP Tools (Linear, Supabase):**
+- ALWAYS use `ToolSearch` to load an MCP tool before calling it — never guess parameter shapes.
+- On `-32602` errors, re-read the schema and retry with corrected types. Never retry same args.
+
 **Sub-agents:**
 - For heavy research (debugging across many files, investigating broad questions, exploring unfamiliar areas), use the Task tool to dispatch parallel Explore agents (model: sonnet) instead of reading files serially.
 - Architecture context docs live in `.claude/context/` (schema.md, architecture.md, ai-pipeline.md) — read these first before exploring the codebase.
@@ -37,3 +41,4 @@ Code-assist agent (Curtis) is available and can run migrations or generate PRs.
 4. [Tech Spec] You break the task into phases (if not needed just make it 1 phase)
 5. [Grooming] You create Curtis prompts for each phase, asking Curtis to return a status report on what changes it makes in each phase so that you can catch mistakes
 6. [Grooming] I will pass on the phase prompts to Curtis and return the status reports
+7. [Ship] After step 4, you can run `/ship <tech-spec-path>` to automate the remaining pipeline: groom → execute all phases (parallel sonnet sub-agents) → code review → fix → merge. Halts only for manual QA (frontend/e2e) and ambiguity. See `.claude/skills/ship/SKILL.md`.
