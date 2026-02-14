@@ -79,8 +79,10 @@ struct PlanGenerationView: View {
     private var idleView: some View {
         VStack(spacing: 24) {
             // Icon
-            Image(systemName: "figure.run.circle")
-                .font(.system(size: 80))
+            Image("DromosLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, height: 60)
                 .foregroundStyle(.tint)
 
             // Headline

@@ -2,8 +2,14 @@
 
 - vars:
     athlete_name: "Alex - Beginner Olympic"
-    limiters: "weak swimmer, low bike endurance"
-    constraints: "none"
+    limiters: "none"
+    constraints: "Monday: 60min available (swim, run only)
+Tuesday: REST
+Wednesday: 60min available (swim, run only)
+Thursday: 60min available (bike, run only)
+Friday: REST
+Saturday: 120min available (swim, bike only)
+Sunday: 90min available (bike, run only)"
     macro_plan_json: |
       {
         "plan_summary": {
@@ -11,10 +17,10 @@
           "race": "Olympic",
           "race_date": "2026-06-28",
           "phases": [
-            {"name": "Base", "weeks": "W1-W8"},
-            {"name": "Build", "weeks": "W9-W13"},
-            {"name": "Peak", "weeks": "W14-W16"},
-            {"name": "Taper", "weeks": "W17-W18"}
+            {"name": "Base", "weeks": "1-8"},
+            {"name": "Build", "weeks": "9-14"},
+            {"name": "Peak", "weeks": "15-17"},
+            {"name": "Taper", "weeks": "18-19"}
           ]
         },
         "weeks": [
@@ -22,512 +28,7 @@
             "week_number": 1,
             "start_date": "2026-02-16",
             "phase": "Base",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Focus on form and technique, especially in swimming."
-          },
-          {
-            "week_number": 2,
-            "start_date": "2026-02-23",
-            "phase": "Base",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Maintain easy pace, focus on endurance building."
-          },
-          {
-            "week_number": 3,
-            "start_date": "2026-03-02",
-            "phase": "Base",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Consistency is key, keep sessions relaxed."
-          },
-          {
-            "week_number": 4,
-            "start_date": "2026-03-09",
-            "phase": "Recovery",
-            "total_hours": 5,
-            "swim": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "bike": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "run": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Reduce volume, maintain frequency."
-          },
-          {
-            "week_number": 5,
-            "start_date": "2026-03-16",
-            "phase": "Base",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Reintroduce full volume, focus on swimming technique."
-          },
-          {
-            "week_number": 6,
-            "start_date": "2026-03-23",
-            "phase": "Base",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Maintain steady effort, focus on aerobic base."
-          },
-          {
-            "week_number": 7,
-            "start_date": "2026-03-30",
-            "phase": "Base",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Keep sessions easy, prioritize recovery."
-          },
-          {
-            "week_number": 8,
-            "start_date": "2026-04-06",
-            "phase": "Recovery",
-            "total_hours": 5,
-            "swim": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "bike": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "run": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Reduce volume and intensity, focus on recovery."
-          },
-          {
-            "week_number": 9,
-            "start_date": "2026-04-13",
-            "phase": "Build",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Introduce intensity, focus on bike intervals."
-          },
-          {
-            "week_number": 10,
-            "start_date": "2026-04-20",
-            "phase": "Build",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Maintain intensity, focus on run tempo."
-          },
-          {
-            "week_number": 11,
-            "start_date": "2026-04-27",
-            "phase": "Build",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Consistent effort, focus on maintaining intensity."
-          },
-          {
-            "week_number": 12,
-            "start_date": "2026-05-04",
-            "phase": "Recovery",
-            "total_hours": 5,
-            "swim": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "bike": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "run": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Recovery focus, reduce volume and intensity."
-          },
-          {
-            "week_number": 13,
-            "start_date": "2026-05-11",
-            "phase": "Build",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Final build week, focus on quality sessions."
-          },
-          {
-            "week_number": 14,
-            "start_date": "2026-05-18",
-            "phase": "Peak",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Peak intensity, focus on race pace efforts."
-          },
-          {
-            "week_number": 15,
-            "start_date": "2026-05-25",
-            "phase": "Peak",
-            "total_hours": 8,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Maintain peak intensity, simulate race conditions."
-          },
-          {
-            "week_number": 16,
-            "start_date": "2026-06-01",
-            "phase": "Recovery",
-            "total_hours": 5,
-            "swim": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "bike": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "run": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Recovery focus, prepare for taper."
-          },
-          {
-            "week_number": 17,
-            "start_date": "2026-06-08",
-            "phase": "Taper",
-            "total_hours": 6,
-            "swim": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "bike": {
-              "hours": 2.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 75},
-                {"type": "Easy", "duration_minutes": 75}
-              ]
-            },
-            "run": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Sunday"],
-            "notes": "Reduce volume, maintain intensity."
-          },
-          {
-            "week_number": 18,
-            "start_date": "2026-06-15",
-            "phase": "Taper",
-            "total_hours": 4,
+            "total_hours": 3.5,
             "swim": {
               "hours": 1,
               "sessions": [
@@ -536,10 +37,9 @@
               ]
             },
             "bike": {
-              "hours": 1.5,
+              "hours": 1,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
@@ -549,13 +49,67 @@
                 {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Final taper week, focus on freshness."
+            "notes": "Start with low intensity to build base"
           },
           {
-            "week_number": 19,
-            "start_date": "2026-06-22",
-            "phase": "Race Week",
+            "week_number": 2,
+            "start_date": "2026-02-23",
+            "phase": "Base",
+            "total_hours": 3.8,
+            "swim": {
+              "hours": 1.2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 40},
+                {"type": "Easy", "duration_minutes": 40}
+              ]
+            },
+            "bike": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 1.6,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Introduce Tempo in run"
+          },
+          {
+            "week_number": 3,
+            "start_date": "2026-03-02",
+            "phase": "Base",
+            "total_hours": 4.2,
+            "swim": {
+              "hours": 1.2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 40},
+                {"type": "Easy", "duration_minutes": 40}
+              ]
+            },
+            "bike": {
+              "hours": 1.2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 15}
+              ]
+            },
+            "run": {
+              "hours": 1.8,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Gradual volume increase"
+          },
+          {
+            "week_number": 4,
+            "start_date": "2026-03-09",
+            "phase": "Recovery",
             "total_hours": 3,
             "swim": {
               "hours": 1,
@@ -567,8 +121,7 @@
             "bike": {
               "hours": 1,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
@@ -578,34 +131,713 @@
                 {"type": "Easy", "duration_minutes": 30}
               ]
             },
-            "rest_days": ["Friday", "Saturday"],
-            "notes": "Race on Sunday, stay relaxed and focused."
+            "notes": "Recovery week, reduced volume"
+          },
+          {
+            "week_number": 5,
+            "start_date": "2026-03-16",
+            "phase": "Base",
+            "total_hours": 4.5,
+            "swim": {
+              "hours": 1.2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 40},
+                {"type": "Easy", "duration_minutes": 40}
+              ]
+            },
+            "bike": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "run": {
+              "hours": 1.8,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Resume progression"
+          },
+          {
+            "week_number": 6,
+            "start_date": "2026-03-23",
+            "phase": "Base",
+            "total_hours": 5,
+            "swim": {
+              "hours": 1.2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 40},
+                {"type": "Easy", "duration_minutes": 40}
+              ]
+            },
+            "bike": {
+              "hours": 1.8,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "run": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Increase bike volume"
+          },
+          {
+            "week_number": 7,
+            "start_date": "2026-03-30",
+            "phase": "Base",
+            "total_hours": 5.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Maintain intensity balance"
+          },
+          {
+            "week_number": 8,
+            "start_date": "2026-04-06",
+            "phase": "Recovery",
+            "total_hours": 3.5,
+            "swim": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "bike": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "notes": "Recovery week, reduce load"
+          },
+          {
+            "week_number": 9,
+            "start_date": "2026-04-13",
+            "phase": "Build",
+            "total_hours": 5.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Introduce bike intervals"
+          },
+          {
+            "week_number": 10,
+            "start_date": "2026-04-20",
+            "phase": "Build",
+            "total_hours": 6,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Increase bike intensity"
+          },
+          {
+            "week_number": 11,
+            "start_date": "2026-04-27",
+            "phase": "Build",
+            "total_hours": 6.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Max weekly volume"
+          },
+          {
+            "week_number": 12,
+            "start_date": "2026-05-04",
+            "phase": "Recovery",
+            "total_hours": 4,
+            "swim": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "bike": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "run": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "notes": "Recovery week, reduce intensity"
+          },
+          {
+            "week_number": 13,
+            "start_date": "2026-05-11",
+            "phase": "Build",
+            "total_hours": 6.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Shift focus to run intervals"
+          },
+          {
+            "week_number": 14,
+            "start_date": "2026-05-18",
+            "phase": "Build",
+            "total_hours": 6.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Maintain intensity"
+          },
+          {
+            "week_number": 15,
+            "start_date": "2026-05-25",
+            "phase": "Peak",
+            "total_hours": 6.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Race-pace", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Focus on race-pace efforts"
+          },
+          {
+            "week_number": 16,
+            "start_date": "2026-06-01",
+            "phase": "Peak",
+            "total_hours": 6.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Race-pace", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Maintain peak intensity"
+          },
+          {
+            "week_number": 17,
+            "start_date": "2026-06-08",
+            "phase": "Peak",
+            "total_hours": 6.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Race-pace", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Final peak week"
+          },
+          {
+            "week_number": 18,
+            "start_date": "2026-06-15",
+            "phase": "Taper",
+            "total_hours": 4.5,
+            "swim": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "bike": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "notes": "Reduce volume, maintain intensity"
+          },
+          {
+            "week_number": 19,
+            "start_date": "2026-06-22",
+            "phase": "Taper",
+            "total_hours": 3.5,
+            "swim": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "bike": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "run": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Race week, stay fresh"
           }
         ]
       }
 
 - vars:
     athlete_name: "Jordan - Experienced Half-Ironman"
-    limiters: "run off the bike is weak"
-    constraints: "mild knee tendinitis — avoid consecutive hard run days"
+    limiters: "none"
+    constraints: "Monday: 90min available (bike, run only)
+Tuesday: 60min available (swim, run only)
+Wednesday: 90min available (bike, run only)
+Thursday: 60min available (swim, run only)
+Friday: REST
+Saturday: 180min available (swim, bike only)
+Sunday: 150min available (bike, run only)"
     macro_plan_json: |
       {
         "plan_summary": {
-          "total_weeks": 24,
+          "total_weeks": 23,
           "race": "Half-Ironman",
           "race_date": "2026-09-13",
           "phases": [
             {"name": "Base", "weeks": "1-10"},
             {"name": "Build", "weeks": "11-16"},
-            {"name": "Peak", "weeks": "17-19"},
-            {"name": "Taper", "weeks": "20-21"},
-            {"name": "Recovery", "weeks": "22"}
+            {"name": "Peak", "weeks": "17-20"},
+            {"name": "Taper", "weeks": "21-22"},
+            {"name": "Recovery", "weeks": "23"}
           ]
         },
         "weeks": [
           {
             "week_number": 1,
             "start_date": "2026-04-06",
+            "phase": "Base",
+            "total_hours": 7,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 3,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 90},
+                {"type": "Easy", "duration_minutes": 90}
+              ]
+            },
+            "run": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Start near current volume"
+          },
+          {
+            "week_number": 2,
+            "start_date": "2026-04-13",
+            "phase": "Base",
+            "total_hours": 7.5,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 3,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 90},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Introduce Tempo sessions"
+          },
+          {
+            "week_number": 3,
+            "start_date": "2026-04-20",
+            "phase": "Base",
+            "total_hours": 8,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 3.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 90},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Increase bike volume"
+          },
+          {
+            "week_number": 4,
+            "start_date": "2026-04-27",
+            "phase": "Recovery",
+            "total_hours": 5.5,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Recovery week, reduce volume"
+          },
+          {
+            "week_number": 5,
+            "start_date": "2026-05-04",
+            "phase": "Base",
+            "total_hours": 8.5,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 4,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 90},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Restart progression"
+          },
+          {
+            "week_number": 6,
+            "start_date": "2026-05-11",
+            "phase": "Base",
+            "total_hours": 9,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 4,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 90},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 3,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Increase run volume"
+          },
+          {
+            "week_number": 7,
+            "start_date": "2026-05-18",
+            "phase": "Base",
+            "total_hours": 9.5,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 4,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 90},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 3.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Longest week of block"
+          },
+          {
+            "week_number": 8,
+            "start_date": "2026-05-25",
+            "phase": "Recovery",
+            "total_hours": 6,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
+              ]
+            },
+            "bike": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 2.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Recovery week, reduce volume"
+          },
+          {
+            "week_number": 9,
+            "start_date": "2026-06-01",
+            "phase": "Base",
+            "total_hours": 9.5,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 4,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 90},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 3.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Restart progression"
+          },
+          {
+            "week_number": 10,
+            "start_date": "2026-06-08",
             "phase": "Base",
             "total_hours": 10,
             "swim": {
@@ -616,89 +848,116 @@
               ]
             },
             "bike": {
-              "hours": 5,
+              "hours": 4.5,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 120}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Focus on aerobic base"
-          },
-          {
-            "week_number": 2,
-            "start_date": "2026-04-13",
-            "phase": "Base",
-            "total_hours": 10.5,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 5.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 150}
-              ]
-            },
-            "run": {
-              "hours": 3,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Increase bike volume"
-          },
-          {
-            "week_number": 3,
-            "start_date": "2026-04-20",
-            "phase": "Base",
-            "total_hours": 11,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 5.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 150}
               ]
             },
             "run": {
               "hours": 3.5,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 90}
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon"],
-            "notes": "Introduce tempo run"
+            "notes": "Final base week"
           },
           {
-            "week_number": 4,
-            "start_date": "2026-04-27",
+            "week_number": 11,
+            "start_date": "2026-06-15",
+            "phase": "Build",
+            "total_hours": 10.5,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 4.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 4,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Transition to Build phase"
+          },
+          {
+            "week_number": 12,
+            "start_date": "2026-06-22",
+            "phase": "Build",
+            "total_hours": 10.5,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 4.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 4,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Maintain intensity"
+          },
+          {
+            "week_number": 13,
+            "start_date": "2026-06-29",
+            "phase": "Build",
+            "total_hours": 10.5,
+            "swim": {
+              "hours": 2,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 4.5,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 4,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Consistent high intensity"
+          },
+          {
+            "week_number": 14,
+            "start_date": "2026-07-06",
             "phase": "Recovery",
             "total_hours": 7,
             "swim": {
@@ -709,346 +968,39 @@
               ]
             },
             "bike": {
-              "hours": 3.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 2,
+              "hours": 3,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon", "Fri"],
-            "notes": "Reduce volume for recovery"
-          },
-          {
-            "week_number": 5,
-            "start_date": "2026-05-04",
-            "phase": "Base",
-            "total_hours": 11.5,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 3.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 90}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Long bike session"
-          },
-          {
-            "week_number": 6,
-            "start_date": "2026-05-11",
-            "phase": "Base",
-            "total_hours": 12,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 4,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 120}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Increase run volume"
-          },
-          {
-            "week_number": 7,
-            "start_date": "2026-05-18",
-            "phase": "Base",
-            "total_hours": 12,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 4,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 120}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Maintain volume"
-          },
-          {
-            "week_number": 8,
-            "start_date": "2026-05-25",
-            "phase": "Recovery",
-            "total_hours": 7.5,
-            "swim": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "bike": {
-              "hours": 3.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 90}
               ]
             },
             "run": {
               "hours": 2.5,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "rest_days": ["Mon", "Fri"],
-            "notes": "Recovery focus"
-          },
-          {
-            "week_number": 9,
-            "start_date": "2026-06-01",
-            "phase": "Base",
-            "total_hours": 12,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 4,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 120}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Maintain base volume"
-          },
-          {
-            "week_number": 10,
-            "start_date": "2026-06-08",
-            "phase": "Base",
-            "total_hours": 12,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 4,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 120}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Final base week"
-          },
-          {
-            "week_number": 11,
-            "start_date": "2026-06-15",
-            "phase": "Build",
-            "total_hours": 12,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 4,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Introduce intervals and brick session"
-          },
-          {
-            "week_number": 12,
-            "start_date": "2026-06-22",
-            "phase": "Build",
-            "total_hours": 12,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 4,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Maintain intensity"
-          },
-          {
-            "week_number": 13,
-            "start_date": "2026-06-29",
-            "phase": "Recovery",
-            "total_hours": 7.5,
-            "swim": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
-              ]
-            },
-            "bike": {
-              "hours": 3.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "run": {
-              "hours": 2.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 90}
-              ]
-            },
-            "rest_days": ["Mon", "Fri"],
-            "notes": "Recovery focus"
-          },
-          {
-            "week_number": 14,
-            "start_date": "2026-07-06",
-            "phase": "Build",
-            "total_hours": 12,
-            "swim": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "bike": {
-              "hours": 6,
-              "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
-              ]
-            },
-            "run": {
-              "hours": 4,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon"],
-            "notes": "Increase intensity"
+            "notes": "Recovery week, reduce volume"
           },
           {
             "week_number": 15,
             "start_date": "2026-07-13",
             "phase": "Build",
-            "total_hours": 12,
+            "total_hours": 10.5,
             "swim": {
               "hours": 2,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "bike": {
-              "hours": 6,
+              "hours": 4.5,
               "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
@@ -1056,30 +1008,29 @@
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
                 {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon"],
-            "notes": "Maintain intensity"
+            "notes": "Restart progression"
           },
           {
             "week_number": 16,
             "start_date": "2026-07-20",
             "phase": "Build",
-            "total_hours": 12,
+            "total_hours": 10.5,
             "swim": {
               "hours": 2,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "bike": {
-              "hours": 6,
+              "hours": 4.5,
               "sessions": [
-                {"type": "Intervals", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
@@ -1087,30 +1038,29 @@
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
                 {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon"],
             "notes": "Final build week"
           },
           {
             "week_number": 17,
             "start_date": "2026-07-27",
             "phase": "Peak",
-            "total_hours": 12,
+            "total_hours": 10.5,
             "swim": {
               "hours": 2,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Intervals", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "bike": {
-              "hours": 6,
+              "hours": 4.5,
               "sessions": [
-                {"type": "Race-pace", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
@@ -1118,30 +1068,29 @@
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
                 {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon"],
-            "notes": "Race-pace focus"
+            "notes": "Peak phase begins"
           },
           {
             "week_number": 18,
             "start_date": "2026-08-03",
             "phase": "Peak",
-            "total_hours": 12,
+            "total_hours": 10.5,
             "swim": {
               "hours": 2,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Intervals", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "bike": {
-              "hours": 6,
+              "hours": 4.5,
               "sessions": [
-                {"type": "Race-pace", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
@@ -1149,30 +1098,29 @@
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
                 {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon"],
-            "notes": "Maintain race-pace"
+            "notes": "Maintain peak intensity"
           },
           {
             "week_number": 19,
             "start_date": "2026-08-10",
             "phase": "Peak",
-            "total_hours": 12,
+            "total_hours": 10.5,
             "swim": {
               "hours": 2,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Intervals", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "bike": {
-              "hours": 6,
+              "hours": 4.5,
               "sessions": [
-                {"type": "Race-pace", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 90},
-                {"type": "Easy", "duration_minutes": 180}
+                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
@@ -1180,17 +1128,16 @@
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
                 {"type": "Tempo", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon"],
-            "notes": "Final peak week"
+            "notes": "Consistent high intensity"
           },
           {
             "week_number": 20,
             "start_date": "2026-08-17",
-            "phase": "Taper",
-            "total_hours": 8,
+            "phase": "Recovery",
+            "total_hours": 7,
             "swim": {
               "hours": 1.5,
               "sessions": [
@@ -1199,111 +1146,82 @@
               ]
             },
             "bike": {
-              "hours": 4,
+              "hours": 3,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 120}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
               "hours": 2.5,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 90}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon", "Fri"],
-            "notes": "Begin taper"
+            "notes": "Recovery week, reduce volume"
           },
           {
             "week_number": 21,
             "start_date": "2026-08-24",
             "phase": "Taper",
-            "total_hours": 6,
+            "total_hours": 8.5,
             "swim": {
-              "hours": 1,
+              "hours": 2,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "bike": {
+              "hours": 3.5,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 60},
+                {"type": "Easy", "duration_minutes": 60}
+              ]
+            },
+            "run": {
+              "hours": 3,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
+                {"type": "Tempo", "duration_minutes": 60}
+              ]
+            },
+            "notes": "Begin taper, maintain intensity"
+          },
+          {
+            "week_number": 22,
+            "start_date": "2026-08-31",
+            "phase": "Taper",
+            "total_hours": 7,
+            "swim": {
+              "hours": 1.5,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
               ]
             },
             "bike": {
               "hours": 3,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 120}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
-              "hours": 2,
+              "hours": 2.5,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 60},
-                {"type": "Brick", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon", "Fri"],
             "notes": "Final taper week"
-          },
-          {
-            "week_number": 22,
-            "start_date": "2026-08-31",
-            "phase": "Recovery",
-            "total_hours": 4,
-            "swim": {
-              "hours": 1,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
-              ]
-            },
-            "bike": {
-              "hours": 2,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "run": {
-              "hours": 1,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon", "Fri", "Sun"],
-            "notes": "Full recovery week"
           },
           {
             "week_number": 23,
             "start_date": "2026-09-07",
-            "phase": "Race Week",
-            "total_hours": 3,
-            "swim": {
-              "hours": 0.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 30}
-              ]
-            },
-            "bike": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 30}
-              ]
-            },
-            "run": {
-              "hours": 1,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "rest_days": ["Mon", "Fri", "Sat"],
-            "notes": "Race on Sunday"
-          },
-          {
-            "week_number": 24,
-            "start_date": "2026-09-14",
             "phase": "Recovery",
-            "total_hours": 3,
+            "total_hours": 5,
             "swim": {
               "hours": 1,
               "sessions": [
@@ -1312,27 +1230,34 @@
               ]
             },
             "bike": {
-              "hours": 1,
+              "hours": 2,
               "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
-              "hours": 1,
+              "hours": 2,
               "sessions": [
+                {"type": "Easy", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
-            "rest_days": ["Mon", "Fri", "Sun"],
-            "notes": "Post-race recovery"
+            "notes": "Race week, full recovery"
           }
         ]
       }
 
 - vars:
     athlete_name: "Sam - Time-Crunched Sprint"
-    limiters: "very limited swim experience"
-    constraints: "only available to train weekdays before work (max 60min) and weekends"
+    limiters: "none"
+    constraints: "Monday: 60min available (bike, run only)
+Tuesday: 45min available (swim only)
+Wednesday: 60min available (bike, run only)
+Thursday: 45min available (swim, run only)
+Friday: REST
+Saturday: 90min available (swim, bike only)
+Sunday: 75min available (run only)"
     macro_plan_json: |
       {
         "plan_summary": {
@@ -1353,10 +1278,11 @@
             "phase": "Base",
             "total_hours": 5,
             "swim": {
-              "hours": 2,
+              "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
@@ -1367,281 +1293,286 @@
               ]
             },
             "run": {
-              "hours": 1.5,
+              "hours": 2,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Focus on swim technique"
+            "notes": "Start with current volume, focus on aerobic base"
           },
           {
             "week_number": 2,
             "start_date": "2026-03-09",
             "phase": "Base",
-            "total_hours": 5,
+            "total_hours": 5.5,
             "swim": {
-              "hours": 2,
+              "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
-              "hours": 1.5,
+              "hours": 2,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Tempo", "duration_minutes": 45}
               ]
             },
             "run": {
-              "hours": 1.5,
+              "hours": 2,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Maintain swim focus"
+            "notes": "Introduce Tempo on bike"
           },
           {
             "week_number": 3,
             "start_date": "2026-03-16",
             "phase": "Base",
-            "total_hours": 5,
+            "total_hours": 6,
             "swim": {
-              "hours": 2,
+              "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
-              "hours": 1.5,
+              "hours": 2.25,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Tempo", "duration_minutes": 60}
               ]
             },
             "run": {
-              "hours": 1.5,
+              "hours": 2.25,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Tempo", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Continue swim development"
+            "notes": "Increase run intensity with Tempo"
           },
           {
             "week_number": 4,
             "start_date": "2026-03-23",
             "phase": "Recovery",
-            "total_hours": 3.5,
+            "total_hours": 4,
             "swim": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "bike": {
               "hours": 1.5,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
                 {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "bike": {
-              "hours": 1,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
-              ]
-            },
             "run": {
-              "hours": 1,
+              "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Recovery week, reduced volume"
+            "notes": "Recovery week, reduce volume and intensity"
           },
           {
             "week_number": 5,
             "start_date": "2026-03-30",
             "phase": "Build",
-            "total_hours": 5,
+            "total_hours": 5.5,
             "swim": {
               "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Tempo", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
               "hours": 2,
               "sessions": [
-                {"type": "Intervals", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
               ]
             },
             "run": {
-              "hours": 1.5,
+              "hours": 2,
               "sessions": [
                 {"type": "Tempo", "duration_minutes": 45},
                 {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Introduce intensity, focus on bike intervals"
+            "notes": "Start Build phase, introduce swim intensity"
           },
           {
             "week_number": 6,
             "start_date": "2026-04-06",
             "phase": "Build",
-            "total_hours": 5,
+            "total_hours": 6,
             "swim": {
               "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Tempo", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
-              "hours": 2,
+              "hours": 2.25,
               "sessions": [
                 {"type": "Intervals", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "run": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 45},
                 {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Maintain intensity, brick session: bike→run"
+            "run": {
+              "hours": 2.25,
+              "sessions": [
+                {"type": "Tempo", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Increase bike intensity, maintain run intensity"
           },
           {
             "week_number": 7,
             "start_date": "2026-04-13",
             "phase": "Recovery",
-            "total_hours": 3.5,
+            "total_hours": 4.5,
             "swim": {
+              "hours": 1,
+              "sessions": [
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "bike": {
               "hours": 1.5,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
                 {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "bike": {
-              "hours": 1,
-              "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
-              ]
-            },
             "run": {
-              "hours": 1,
+              "hours": 2,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45},
                 {"type": "Easy", "duration_minutes": 30}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Recovery week, reduced volume"
+            "notes": "Recovery week, maintain frequency"
           },
           {
             "week_number": 8,
             "start_date": "2026-04-20",
             "phase": "Peak",
-            "total_hours": 5,
+            "total_hours": 6,
             "swim": {
               "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Intervals", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
-              "hours": 2,
+              "hours": 2.25,
               "sessions": [
-                {"type": "Intervals", "duration_minutes": 60},
-                {"type": "Easy", "duration_minutes": 60}
-              ]
-            },
-            "run": {
-              "hours": 1.5,
-              "sessions": [
-                {"type": "Tempo", "duration_minutes": 45},
+                {"type": "Race-pace", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Increase race-specific intensity"
+            "run": {
+              "hours": 2.25,
+              "sessions": [
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 30}
+              ]
+            },
+            "notes": "Peak phase, introduce race-pace work"
           },
           {
             "week_number": 9,
             "start_date": "2026-04-27",
             "phase": "Peak",
-            "total_hours": 5,
+            "total_hours": 6.25,
             "swim": {
               "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Intervals", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
-              "hours": 2,
+              "hours": 2.5,
               "sessions": [
-                {"type": "Intervals", "duration_minutes": 60},
+                {"type": "Race-pace", "duration_minutes": 60},
                 {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
-              "hours": 1.5,
+              "hours": 2.25,
               "sessions": [
-                {"type": "Tempo", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 45}
+                {"type": "Intervals", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 30}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Final peak week, brick session: bike→run"
+            "notes": "Final peak week, maximize race-specific intensity"
           },
           {
             "week_number": 10,
             "start_date": "2026-05-04",
             "phase": "Taper",
-            "total_hours": 3.5,
+            "total_hours": 5,
             "swim": {
-              "hours": 1,
+              "hours": 1.5,
               "sessions": [
+                {"type": "Tempo", "duration_minutes": 30},
                 {"type": "Easy", "duration_minutes": 30},
                 {"type": "Easy", "duration_minutes": 30}
               ]
             },
             "bike": {
-              "hours": 1.25,
+              "hours": 1.75,
               "sessions": [
                 {"type": "Easy", "duration_minutes": 45},
-                {"type": "Easy", "duration_minutes": 30}
+                {"type": "Easy", "duration_minutes": 60}
               ]
             },
             "run": {
-              "hours": 1.25,
+              "hours": 1.75,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Tempo", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 30},
                 {"type": "Easy", "duration_minutes": 30}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Begin taper, reduce volume"
+            "notes": "Begin taper, maintain intensity, reduce volume"
           },
           {
             "week_number": 11,
             "start_date": "2026-05-11",
             "phase": "Taper",
-            "total_hours": 3,
+            "total_hours": 4,
             "swim": {
               "hours": 1,
               "sessions": [
@@ -1650,21 +1581,20 @@
               ]
             },
             "bike": {
-              "hours": 1,
+              "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
               ]
             },
             "run": {
-              "hours": 1,
+              "hours": 1.5,
               "sessions": [
-                {"type": "Easy", "duration_minutes": 30},
-                {"type": "Easy", "duration_minutes": 30}
+                {"type": "Easy", "duration_minutes": 45},
+                {"type": "Easy", "duration_minutes": 45}
               ]
             },
-            "rest_days": ["Sunday"],
-            "notes": "Final taper, race week preparation"
+            "notes": "Final taper week, focus on recovery and race readiness"
           }
         ]
       }

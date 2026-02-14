@@ -130,3 +130,9 @@ CREATE POLICY "Users can read own plan sessions"
 -- DROP TABLE IF EXISTS public.plan_weeks;
 -- DROP TABLE IF EXISTS public.training_plans;
 
+
+
+
+
+
+

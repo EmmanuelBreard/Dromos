@@ -1,5 +1,11 @@
 # Athlete test cases for training plan evaluation
 # Each row is a different athlete profile to test plan generation
+#
+# Fields map to:
+#   - DB fields: experience_years, race_objective, race_date, ftp, vma,
+#     css_seconds_per100m, current_weekly_hours, {day}_duration, {sport}_days
+#   - Calculated: experience_level, weekly_hours, max_weekday_minutes,
+#     max_weekend_minutes, {sport}_{weekday|weekend}_count, plan_start_date, total_weeks
 
 - vars:
     athlete_name: "Alex - Beginner Olympic"
@@ -7,11 +13,36 @@
     race_distance: "Olympic (1.5km swim / 40km bike / 10km run)"
     race_date: "2026-06-28"
     plan_start_date: "2026-02-16"
-    weekly_hours: "8"
+    total_weeks: "19"
+    # Availability per day (minutes)
+    mon_duration: "60"
+    tue_duration: "0"
+    wed_duration: "60"
+    thu_duration: "60"
+    fri_duration: "0"
+    sat_duration: "120"
+    sun_duration: "90"
+    # Derived from daily durations
+    weekly_hours: "6.5"
+    max_weekday_minutes: "60"
+    max_weekend_minutes: "120"
+    current_weekly_hours: "3"
+    # Sport-day availability
+    swim_days: "Monday, Wednesday, Saturday"
+    bike_days: "Thursday, Saturday, Sunday"
+    run_days: "Monday, Wednesday, Thursday, Sunday"
+    swim_weekday_count: "2"
+    swim_weekend_count: "1"
+    bike_weekday_count: "1"
+    bike_weekend_count: "2"
+    run_weekday_count: "3"
+    run_weekend_count: "1"
+    # Performance metrics
     ftp_watts: "180"
     mas_kmh: "14"
     swim_css: "2:10"
-    limiters: "weak swimmer, low bike endurance"
+    limiters: "none"
+    # Used by LLM rubric for evaluation context (not in prompt template)
     constraints: "none"
 
 - vars:
@@ -20,12 +51,36 @@
     race_distance: "Half-Ironman (1.9km swim / 90km bike / 21.1km run)"
     race_date: "2026-09-13"
     plan_start_date: "2026-04-06"
-    weekly_hours: "12"
+    total_weeks: "23"
+    # Availability per day (minutes)
+    mon_duration: "90"
+    tue_duration: "60"
+    wed_duration: "90"
+    thu_duration: "60"
+    fri_duration: "0"
+    sat_duration: "180"
+    sun_duration: "150"
+    # Derived from daily durations
+    weekly_hours: "10.5"
+    max_weekday_minutes: "90"
+    max_weekend_minutes: "180"
+    current_weekly_hours: "7"
+    # Sport-day availability
+    swim_days: "Tuesday, Thursday, Saturday"
+    bike_days: "Monday, Wednesday, Saturday, Sunday"
+    run_days: "Monday, Tuesday, Wednesday, Thursday, Sunday"
+    swim_weekday_count: "2"
+    swim_weekend_count: "1"
+    bike_weekday_count: "2"
+    bike_weekend_count: "2"
+    run_weekday_count: "4"
+    run_weekend_count: "1"
+    # Performance metrics
     ftp_watts: "240"
     mas_kmh: "16.5"
     swim_css: "1:45"
-    limiters: "run off the bike is weak"
-    constraints: "mild knee tendinitis — avoid consecutive hard run days"
+    limiters: "none"
+    constraints: "none"
 
 - vars:
     athlete_name: "Sam - Time-Crunched Sprint"
@@ -33,9 +88,33 @@
     race_distance: "Sprint (750m swim / 20km bike / 5km run)"
     race_date: "2026-05-17"
     plan_start_date: "2026-03-02"
-    weekly_hours: "5"
+    total_weeks: "11"
+    # Availability per day (minutes)
+    mon_duration: "60"
+    tue_duration: "45"
+    wed_duration: "60"
+    thu_duration: "45"
+    fri_duration: "0"
+    sat_duration: "90"
+    sun_duration: "75"
+    # Derived from daily durations
+    weekly_hours: "6.25"
+    max_weekday_minutes: "60"
+    max_weekend_minutes: "90"
+    current_weekly_hours: "5"
+    # Sport-day availability
+    swim_days: "Tuesday, Thursday, Saturday"
+    bike_days: "Monday, Wednesday, Saturday"
+    run_days: "Monday, Wednesday, Thursday, Sunday"
+    swim_weekday_count: "2"
+    swim_weekend_count: "1"
+    bike_weekday_count: "2"
+    bike_weekend_count: "1"
+    run_weekday_count: "3"
+    run_weekend_count: "1"
+    # Performance metrics
     ftp_watts: "200"
     mas_kmh: "17"
     swim_css: "2:00"
-    limiters: "very limited swim experience"
-    constraints: "only available to train weekdays before work (max 60min) and weekends"
+    limiters: "none"
+    constraints: "none"

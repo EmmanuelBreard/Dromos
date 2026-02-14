@@ -442,6 +442,7 @@ function fixDurationCaps(planWeeks, dayCaps, sportEligibility) {
   }
 
   const MARGIN = 1.2; // Accept templates within 20% of remaining cap
+  const TRIGGER_MARGIN = 1.1; // Only fix days exceeding 10% over cap
   let fixes = 0;
 
   for (const week of planWeeks) {
@@ -459,7 +460,7 @@ function fixDurationCaps(planWeeks, dayCaps, sportEligibility) {
       let iterations = 0;
       const MAX_ITER = 10; // Safety guard against infinite loops
 
-      while ((usedMinutes[day] || 0) > cap && iterations < MAX_ITER) {
+      while ((usedMinutes[day] || 0) > cap * TRIGGER_MARGIN && iterations < MAX_ITER) {
         iterations++;
         const daySessions = (week.sessions || []).filter(s => normDay(s.day) === day);
         if (daySessions.length === 0) break;

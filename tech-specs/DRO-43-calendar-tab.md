@@ -98,3 +98,9 @@ Replace the placeholder Calendar tab with a week-by-week training plan overview.
   - [x] 🟩 Update `MainTabView.swift`: replace `CalendarView()` with `CalendarPlanView(authService: authService)`
   - [x] 🟩 Delete `Dromos/Dromos/Features/Calendar/CalendarView.swift` (and remove the Calendar folder if empty)
 
+
+
+
+
+
+
