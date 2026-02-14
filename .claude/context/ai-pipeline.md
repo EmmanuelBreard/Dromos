@@ -1,0 +1,148 @@
+# AI Pipeline Reference
+
+> Last updated: 2026-02-14
+
+## Overview
+
+Dromos generates triathlon training plans via a 3-step LLM pipeline in a Supabase Edge Function. User profile → macro plan (markdown) → structured JSON → specific workout assignments.
+
+---
+
+## Pipeline Flow
+
+```
+iOS App → POST /functions/v1/generate-plan (JWT auth)
+    ↓
+Step 1 (gpt-4o): User profile → Markdown macro plan (periodized weeks)
+    ↓
+Step 2 (gpt-4o-mini): Markdown → Structured JSON
+    ↓
+Step 3 (gpt-4o): Per 4-week block → Template IDs + day assignments
+    ↓
+Post-processing: 5 sequential fixers (no LLM)
+    ↓
+DB writes: training_plans → plan_weeks → plan_sessions
+```
+
+**Typical duration:** ~50-65 seconds for a 19-week plan.
+**Edge Function timeout:** 150 seconds (Supabase limit). iOS client timeout set to 180s.
+**Reference implementation:** `ai/eval/run-step3-blocks.js` — source of truth for post-processing logic before porting to production.
+
+---
+
+## Step 1: Macro Plan Generation
+
+**Prompt:** `ai/prompts/step1-macro-plan.txt`
+**Production:** `supabase/functions/generate-plan/prompts/step1-macro-plan-prompt.ts`
+**Model:** gpt-4o | 16K tokens | temp 0.2
+
+**Input:** User profile (experience, race goal, availability, metrics)
+**Output:** Markdown plan with weeks, phases, session types, hours
+
+**Key constraints enforced:**
+- Weekly volume <= `weekly_hours` (hard ceiling)
+- Max intensity slots scale with hour budget (<=5h: 1/week, 5-8h: 2, 8-12h: 3-4)
+- Recovery weeks every 3-4 loading weeks (30-50% volume drop)
+- Session caps: weekday <= `max_weekday_minutes`, weekend <= `max_weekend_minutes`
+- All Tempo/Intervals sessions <= 60 minutes
+
+**Template variables:** `{{training_philosophy}}`, `{{experience_level}}`, `{{race_distance}}`, `{{race_date}}`, `{{weekly_hours}}`, `{{current_weekly_hours}}`, `{{ftp_watts}}`, `{{vma}}`, `{{swim_css}}`, `{{max_weekday_minutes}}`, `{{max_weekend_minutes}}`, sport day counts
+
+---
+
+## Step 2: Markdown to JSON
+
+**Prompt:** `ai/prompts/step2-md-to-json.txt`
+**Production:** `supabase/functions/generate-plan/prompts/step2-md-to-json-prompt.ts`
+**Model:** gpt-4o-mini | 16K tokens | temp 0 (JSON mode)
+
+**Input:** Markdown from Step 1
+**Output:** JSON with `plan_summary` + `weeks[]` (sessions per sport with type/duration)
+
+Pure conversion, no transformation.
+
+---
+
+## Step 3: Workout Template Selection
+
+**Prompt:** `ai/prompts/step3-workout-block.txt`
+**Production:** `supabase/functions/generate-plan/prompts/step3-workout-block-prompt.ts`
+**Model:** gpt-4o | 4K tokens | temp 0.2
+
+**Input:** 4-week block + user constraints + previously used templates + workout library
+**Output:** Template IDs + day/time assignments per session
+
+**Block processing:** Plan split into 4-week blocks, processed sequentially. `previouslyUsed` templates passed between blocks for variety.
+
+**Key constraints:**
+- REST days: no sessions on 0min availability days
+- Sport eligibility: only schedule sports available on each day
+- Duration caps: total session minutes/day <= available minutes
+- Brick placement: bike + run same day, both `is_brick: true`
+- Template variety: never same template 2 consecutive weeks (Tempo/Intervals)
+
+**Template variables:** `{{constraints}}` (per-day availability string), `{{block_weeks_json}}`, `{{previously_used}}`, `{{workout_library}}` (simplified format)
+
+---
+
+## Post-Processing Fixers
+
+Applied sequentially in Edge Function after Step 3 (no LLM):
+
+| Fixer | Purpose |
+|-------|---------|
+| `fixTypes()` | Extract type from template_id (source of truth) |
+| `fixBrickPairs()` | Ensure bike+run pairs both marked `is_brick` |
+| `fixConsecutiveRepeats()` | Swap templates if same used 2 consecutive weeks |
+| `fixDurationCaps()` | Enforce per-day duration limits (4-step cascade: swap shorter → move day → evict lower priority → drop) |
+| `fixRestDays()` | Move sessions off rest days to eligible days |
+
+---
+
+## File Locations
+
+### Development prompts
+| File | Purpose |
+|------|---------|
+| `ai/prompts/step1-macro-plan.txt` | Step 1 prompt (dev/eval version) |
+| `ai/prompts/step2-md-to-json.txt` | Step 2 prompt |
+| `ai/prompts/step3-workout-block.txt` | Step 3 prompt |
+
+### Production prompts (Edge Function)
+| File | Purpose |
+|------|---------|
+| `supabase/functions/generate-plan/prompts/step1-macro-plan-prompt.ts` | Step 1 prompt as TS export |
+| `supabase/functions/generate-plan/prompts/step2-md-to-json-prompt.ts` | Step 2 prompt as TS export |
+| `supabase/functions/generate-plan/prompts/step3-workout-block-prompt.ts` | Step 3 prompt as TS export |
+| `supabase/functions/generate-plan/context/training-philosophy-content.ts` | Training philosophy context |
+
+### Edge Function
+| File | Purpose |
+|------|---------|
+| `supabase/functions/generate-plan/index.ts` | Main pipeline orchestrator + all fixers |
+
+### Eval Framework
+| File | Purpose |
+|------|---------|
+| `ai/eval/vars/athletes.yaml` | 3 test athlete profiles (Alex, Jordan, Sam) |
+| `ai/eval/vars/step2-inputs.yaml` | Pre-computed Step 1 outputs for Step 2 testing |
+| `ai/eval/vars/step3-inputs.yaml` | Pre-computed Step 2 outputs for Step 3 testing |
+| `ai/eval/assertions/validate-macro-plan.js` | Step 1 output validation |
+| `ai/eval/assertions/validate-macro-plan-md.js` | Step 1 markdown format validation |
+| `ai/eval/assertions/validate-workout-selection.js` | Step 3 output validation |
+| `ai/eval/check-step3-violations.js` | Post-hoc constraint checking |
+| `ai/eval/run-step3-blocks.js` | Step 3 block orchestrator for eval |
+
+### Workout Library
+- **iOS:** Bundled `workout-library.json` loaded by `WorkoutLibraryService`
+- **Edge Function:** Fetched at runtime from Supabase Storage (`static-assets/workout-library.json`)
+
+---
+
+## Models Used
+
+| Step | Model | Max Tokens | Temperature | Why |
+|------|-------|-----------|-------------|-----|
+| Step 1 | gpt-4o | 16,384 | 0.2 | Complex planning requires strong reasoning |
+| Step 2 | gpt-4o-mini | 16,384 | 0 | Deterministic JSON conversion (cheap) |
+| Step 3 | gpt-4o | 4,096 | 0.2 | Template matching needs reasoning per block |
