@@ -425,8 +425,12 @@ function fixBrickPairs(planWeeks: any[]): number {
   return fixes;
 }
 
-// Post-processing: fix consecutive-week template repeats
-function fixConsecutiveRepeats(planWeeks: any[], workoutLibrary: any): number {
+// Post-processing: fix consecutive-week template repeats (duration-aware)
+function fixConsecutiveRepeats(
+  planWeeks: any[],
+  workoutLibrary: any,
+  durationMap: Record<string, number>
+): number {
   // Build catalog of available templates per category from the library
   const catalog: Record<string, string[]> = {};
   for (const sport of ["swim", "bike", "run"]) {
@@ -457,7 +461,7 @@ function fixConsecutiveRepeats(planWeeks: any[], workoutLibrary: any): number {
       prevMap[key].add(s.template_id);
     }
 
-    // Check current week for repeats and swap
+    // Check current week for repeats and swap with closest-duration alternative
     for (const session of currWeek.sessions || []) {
       const key = `${session.sport}_${session.type}`;
       if (prevMap[key] && prevMap[key].has(session.template_id)) {
@@ -465,11 +469,112 @@ function fixConsecutiveRepeats(planWeeks: any[], workoutLibrary: any): number {
           (t) => t !== session.template_id
         );
         if (options.length > 0) {
-          // Pick a random alternative to avoid always defaulting to the same swap
-          const alt = options[Math.floor(Math.random() * options.length)];
+          const originalDuration = durationMap[session.template_id] || 0;
+          // Sort by closest duration to avoid introducing cap violations downstream
+          options.sort(
+            (a, b) =>
+              Math.abs((durationMap[a] || 0) - originalDuration) -
+              Math.abs((durationMap[b] || 0) - originalDuration)
+          );
+          const alt = options[0];
           session.template_id = alt;
+          session.duration_minutes = durationMap[alt] || session.duration_minutes;
           fixes++;
         }
+      }
+    }
+  }
+  return fixes;
+}
+
+// Post-processing: fix rest day violations (cap-aware + sport-eligibility-aware)
+// Moves sessions off rest days to eligible days that have remaining capacity.
+// Falls back to priority-based eviction when no day has room.
+function fixRestDays(
+  planWeeks: any[],
+  macroWeeks: any[],
+  dayCaps: Record<string, number>,
+  sportEligibility: Record<string, string[]>
+): number {
+  let fixes = 0;
+  for (const week of planWeeks) {
+    const macroWeek = macroWeeks.find(
+      (w: any) => w.week_number === week.week_number
+    );
+    if (!macroWeek || !macroWeek.rest_days) continue;
+
+    const restDays = new Set(macroWeek.rest_days.map(normDay));
+    if (restDays.size === 0) continue;
+
+    // Track used minutes per day for cap checking
+    const usedMinutes: Record<string, number> = {};
+    for (const s of week.sessions || []) {
+      const d = normDay(s.day);
+      usedMinutes[d] = (usedMinutes[d] || 0) + (s.duration_minutes || 0);
+    }
+
+    // Snapshot sessions on rest days to avoid splice-during-iteration bugs
+    const restSessions = (week.sessions || []).filter(
+      (s: any) => restDays.has(normDay(s.day))
+    );
+
+    for (const session of restSessions) {
+      const d = normDay(session.day);
+      const dur = session.duration_minutes || 0;
+
+      // Find eligible days: not a rest day, sport is allowed, and has remaining capacity
+      const candidates = ALL_DAYS.filter((day) => {
+        if (restDays.has(day)) return false;
+        const eligible = sportEligibility[day] || [];
+        if (!eligible.includes(session.sport)) return false;
+        const remaining = (dayCaps[day] || 0) - (usedMinutes[day] || 0);
+        return remaining >= dur;
+      });
+
+      if (candidates.length > 0) {
+        // Pick the day with the most remaining capacity
+        candidates.sort(
+          (a, b) =>
+            ((dayCaps[b] || 0) - (usedMinutes[b] || 0)) -
+            ((dayCaps[a] || 0) - (usedMinutes[a] || 0))
+        );
+        const newDay = candidates[0];
+        usedMinutes[d] = (usedMinutes[d] || 0) - dur;
+        session.day = newDay;
+        usedMinutes[newDay] = (usedMinutes[newDay] || 0) + dur;
+        fixes++;
+      } else {
+        // No day has capacity — evict lowest-priority session in the week if current outranks
+        const currentPriority = sessionPriority(session);
+        let lowestSession: any = null;
+        let lowestPriority = Infinity;
+
+        for (const other of week.sessions || []) {
+          if (other === session) continue;
+          const otherDay = normDay(other.day);
+          if (restDays.has(otherDay)) continue; // skip sessions also on rest days
+          const p = sessionPriority(other);
+          if (p < lowestPriority) {
+            lowestPriority = p;
+            lowestSession = other;
+          }
+        }
+
+        if (lowestSession && currentPriority > lowestPriority) {
+          // Evict the lower-priority session and take its day
+          const evictDay = normDay(lowestSession.day);
+          const evictDur = lowestSession.duration_minutes || 0;
+          usedMinutes[evictDay] = (usedMinutes[evictDay] || 0) - evictDur;
+          usedMinutes[d] = (usedMinutes[d] || 0) - dur;
+          // Remove evicted session
+          const idx = week.sessions.indexOf(lowestSession);
+          if (idx >= 0) week.sessions.splice(idx, 1);
+          // Move current session to evicted day
+          session.day = evictDay;
+          usedMinutes[evictDay] = (usedMinutes[evictDay] || 0) + dur;
+          fixes++;
+        }
+        // If current session is lower priority, leave it (will be caught by fixDurationCaps later)
       }
     }
   }
@@ -711,9 +816,13 @@ Deno.serve(async (req) => {
     }
 
     // Post-processing
+    const templateDurationMap = buildTemplateDurationMap(workoutLibrary);
+    const { dayCaps, sportEligibility } = parseConstraints(userProfile);
+
     fixTypes(allBlockWeeks);
     fixBrickPairs(allBlockWeeks);
-    fixConsecutiveRepeats(allBlockWeeks, workoutLibrary);
+    fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
+    fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
 
     // Validate LLM output before DB writes
     const VALID_PHASES = ["Base", "Build", "Peak", "Taper", "Recovery"];

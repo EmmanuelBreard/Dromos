@@ -128,10 +128,13 @@ function buildTemplateDurationMap(lib) {
 
 const templateDurationMap = buildTemplateDurationMap(workoutLibrary);
 
-// Build constraint map: athlete_name -> constraint string
+// Build constraint map: athlete_name -> constraint string (for prompt)
 const constraintMap = {};
+// Build parsed constraints map: athlete_name -> { dayCaps, sportEligibility } (for fixers)
+const parsedConstraintsMap = {};
 for (const a of athleteProfiles) {
   constraintMap[a.vars.athlete_name] = buildConstraintString(a.vars);
+  parsedConstraintsMap[a.vars.athlete_name] = parseConstraints(a.vars);
 }
 
 const step2ResultsPath = path.join(__dirname, 'results', 'step2.json');
@@ -312,16 +315,22 @@ function fixConsecutiveRepeats(planWeeks) {
       prevMap[key].add(s.template_id);
     }
 
-    // Check current week for repeats and swap
+    // Check current week for repeats and swap with closest-duration alternative
     for (const session of (currWeek.sessions || [])) {
       const key = `${session.sport}_${session.type}`;
       if (prevMap[key] && prevMap[key].has(session.template_id)) {
         const options = (catalog[key] || []).filter(t => t !== session.template_id);
         if (options.length > 0) {
-          // Pick a random alternative to avoid always defaulting to the same swap
-          const alt = options[Math.floor(Math.random() * options.length)];
-          console.log(`  Fix: W${currWeek.week_number} ${session.template_id} → ${alt} (consecutive repeat)`);
+          const originalDuration = templateDurationMap[session.template_id] || 0;
+          // Sort by closest duration to avoid introducing cap violations downstream
+          options.sort((a, b) =>
+            Math.abs((templateDurationMap[a] || 0) - originalDuration) -
+            Math.abs((templateDurationMap[b] || 0) - originalDuration)
+          );
+          const alt = options[0];
+          console.log(`  Fix: W${currWeek.week_number} ${session.template_id} (${originalDuration}min) → ${alt} (${templateDurationMap[alt]}min) (consecutive repeat)`);
           session.template_id = alt;
+          session.duration_minutes = templateDurationMap[alt] || session.duration_minutes;
           fixes++;
         }
       }
@@ -330,9 +339,11 @@ function fixConsecutiveRepeats(planWeeks) {
   return fixes;
 }
 
-// ── Post-processing: fix rest day violations ─────────────────────────────────
+// ── Post-processing: fix rest day violations (cap-aware + sport-eligibility-aware) ──
+// Moves sessions off rest days to eligible days that have remaining capacity.
+// Falls back to priority-based eviction when no day has room.
 
-function fixRestDays(planWeeks, macroWeeks) {
+function fixRestDays(planWeeks, macroWeeks, dayCaps, sportEligibility) {
   let fixes = 0;
   for (const week of planWeeks) {
     const macroWeek = macroWeeks.find(w => w.week_number === week.week_number);
@@ -341,25 +352,68 @@ function fixRestDays(planWeeks, macroWeeks) {
     const restDays = new Set(macroWeek.rest_days.map(normDay));
     if (restDays.size === 0) continue;
 
-    // Find available days (not rest days)
-    const usedDays = {};
+    // Track used minutes per day for cap checking
+    const usedMinutes = {};
     for (const s of (week.sessions || [])) {
       const d = normDay(s.day);
-      usedDays[d] = (usedDays[d] || 0) + 1;
+      usedMinutes[d] = (usedMinutes[d] || 0) + (s.duration_minutes || 0);
     }
 
-    for (const session of (week.sessions || [])) {
+    // Snapshot sessions on rest days to avoid splice-during-iteration bugs
+    const restSessions = (week.sessions || []).filter(s => restDays.has(normDay(s.day)));
+
+    for (const session of restSessions) {
       const d = normDay(session.day);
-      if (restDays.has(d)) {
-        // Find the least-loaded available day
-        const available = ALL_DAYS.filter(day => !restDays.has(day));
-        available.sort((a, b) => (usedDays[a] || 0) - (usedDays[b] || 0));
-        const newDay = available[0];
-        if (newDay) {
-          console.log(`  Fix: W${week.week_number} ${session.template_id} ${d} → ${newDay} (rest day)`);
-          usedDays[d] = (usedDays[d] || 1) - 1;
-          session.day = newDay;
-          usedDays[newDay] = (usedDays[newDay] || 0) + 1;
+      const dur = session.duration_minutes || 0;
+
+      // Find eligible days: not a rest day, sport is allowed, and has remaining capacity
+      const candidates = ALL_DAYS.filter(day => {
+        if (restDays.has(day)) return false;
+        const eligible = sportEligibility[day] || [];
+        if (!eligible.includes(session.sport)) return false;
+        const remaining = (dayCaps[day] || 0) - (usedMinutes[day] || 0);
+        return remaining >= dur;
+      });
+
+      if (candidates.length > 0) {
+        // Pick the day with the most remaining capacity
+        candidates.sort((a, b) =>
+          ((dayCaps[b] || 0) - (usedMinutes[b] || 0)) -
+          ((dayCaps[a] || 0) - (usedMinutes[a] || 0))
+        );
+        const newDay = candidates[0];
+        console.log(`  Fix: W${week.week_number} ${session.template_id} ${d} → ${newDay} (rest day, ${dur}min fits)`);
+        usedMinutes[d] = (usedMinutes[d] || 0) - dur;
+        session.day = newDay;
+        usedMinutes[newDay] = (usedMinutes[newDay] || 0) + dur;
+        fixes++;
+      } else {
+        // No day has capacity — evict lowest-priority session in the week if current outranks
+        const currentPriority = sessionPriority(session);
+        let lowestSession = null;
+        let lowestPriority = Infinity;
+
+        for (const other of (week.sessions || [])) {
+          if (other === session) continue;
+          const otherDay = normDay(other.day);
+          if (restDays.has(otherDay)) continue;
+          const p = sessionPriority(other);
+          if (p < lowestPriority) {
+            lowestPriority = p;
+            lowestSession = other;
+          }
+        }
+
+        if (lowestSession && currentPriority > lowestPriority) {
+          const evictDay = normDay(lowestSession.day);
+          const evictDur = lowestSession.duration_minutes || 0;
+          console.log(`  Fix: W${week.week_number} evict ${lowestSession.template_id} (priority ${lowestPriority}) from ${evictDay}, move ${session.template_id} (priority ${currentPriority}) ${d} → ${evictDay}`);
+          usedMinutes[evictDay] = (usedMinutes[evictDay] || 0) - evictDur;
+          usedMinutes[d] = (usedMinutes[d] || 0) - dur;
+          const idx = week.sessions.indexOf(lowestSession);
+          if (idx >= 0) week.sessions.splice(idx, 1);
+          session.day = evictDay;
+          usedMinutes[evictDay] = (usedMinutes[evictDay] || 0) + dur;
           fixes++;
         }
       }
@@ -436,7 +490,8 @@ async function main() {
     const repeatFixes = fixConsecutiveRepeats(allBlockWeeks);
     if (repeatFixes > 0) console.log(`  Post-processing: fixed ${repeatFixes} consecutive repeats`);
 
-    const restFixes = fixRestDays(allBlockWeeks, weeks);
+    const athleteConstraints = parsedConstraintsMap[athleteName] || { dayCaps: {}, sportEligibility: {} };
+    const restFixes = fixRestDays(allBlockWeeks, weeks, athleteConstraints.dayCaps, athleteConstraints.sportEligibility);
     if (restFixes > 0) console.log(`  Post-processing: fixed ${restFixes} rest day violations`);
 
     const combinedPlan = { weeks: allBlockWeeks };
