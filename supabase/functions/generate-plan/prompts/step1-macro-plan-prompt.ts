@@ -1,3 +1,4 @@
+// AUTO-GENERATED from ai/prompts/step1-macro-plan.txt — do not edit directly. Run scripts/sync-prompts.sh
 export default `You are an expert triathlon coach building a multi-week training plan.
 
 ## Training Philosophy
@@ -89,4 +90,4 @@ Notes: <brief note>
 \`\`\`
 
 Valid session types: Easy, Tempo, Intervals
-Keep each week block to 5-6 lines maximum.`;
+Keep each week block to 5-6 lines maximum.`

@@ -40,7 +40,8 @@ Dromos/Dromos/
 │       └── ProfileView.swift         # User profile display/edit
 │
 └── Resources/
-    └── Assets.xcassets/              # Icons, colors
+    ├── Assets.xcassets/              # Icons, colors
+    └── workout-library.json          # Symlink → ai/context/workout-library.json
 ```
 
 ---

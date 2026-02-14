@@ -101,19 +101,17 @@ Applied sequentially in Edge Function after Step 3 (no LLM):
 
 ## File Locations
 
-### Development prompts
+### Prompts (canonical source: `ai/prompts/`)
 | File | Purpose |
 |------|---------|
-| `ai/prompts/step1-macro-plan.txt` | Step 1 prompt (dev/eval version) |
-| `ai/prompts/step2-md-to-json.txt` | Step 2 prompt |
-| `ai/prompts/step3-workout-block.txt` | Step 3 prompt |
+| `ai/prompts/step1-macro-plan.txt` | Step 1 prompt (canonical) |
+| `ai/prompts/step2-md-to-json.txt` | Step 2 prompt (canonical) |
+| `ai/prompts/step3-workout-block.txt` | Step 3 prompt (canonical) |
 
-### Production prompts (Edge Function)
+Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto-generated** — run `scripts/sync-prompts.sh` to regenerate from canonical `.txt` files, then deploy.
+
 | File | Purpose |
 |------|---------|
-| `supabase/functions/generate-plan/prompts/step1-macro-plan-prompt.ts` | Step 1 prompt as TS export |
-| `supabase/functions/generate-plan/prompts/step2-md-to-json-prompt.ts` | Step 2 prompt as TS export |
-| `supabase/functions/generate-plan/prompts/step3-workout-block-prompt.ts` | Step 3 prompt as TS export |
 | `supabase/functions/generate-plan/context/training-philosophy-content.ts` | Training philosophy context |
 
 ### Edge Function
@@ -134,8 +132,9 @@ Applied sequentially in Edge Function after Step 3 (no LLM):
 | `ai/eval/run-step3-blocks.js` | Step 3 block orchestrator for eval |
 
 ### Workout Library
-- **iOS:** Bundled `workout-library.json` loaded by `WorkoutLibraryService`
-- **Edge Function:** Fetched at runtime from Supabase Storage (`static-assets/workout-library.json`)
+- **Canonical file:** `ai/context/workout-library.json`
+- **iOS:** Symlink at `Dromos/Dromos/Resources/workout-library.json` → canonical file. Loaded by `WorkoutLibraryService`.
+- **Edge Function:** Fetched at runtime from Supabase Storage (`static-assets/workout-library.json`). Upload via `scripts/upload-static-assets.sh`.
 
 ---
 

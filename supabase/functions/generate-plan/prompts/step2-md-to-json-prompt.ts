@@ -1,3 +1,4 @@
+// AUTO-GENERATED from ai/prompts/step2-md-to-json.txt — do not edit directly. Run scripts/sync-prompts.sh
 export default `Convert the following triathlon training plan from markdown to JSON.
 
 ## Markdown Plan
@@ -40,4 +41,4 @@ Return ONLY valid JSON (no markdown fences, no explanation) matching this schema
       "notes": "<string>"
     }
   ]
-}`;
+}`
