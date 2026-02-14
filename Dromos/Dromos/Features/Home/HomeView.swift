@@ -17,8 +17,25 @@ struct HomeView: View {
     /// Reference to the workout library for swim distance lookups.
     private let workoutLibrary = WorkoutLibraryService.shared
 
-    /// Last visible week index (controls progressive disclosure)
-    @State private var lastVisibleWeekIndex: Int = 0
+    /// Cached calendar instance to avoid repeated allocations.
+    private let calendar = Calendar.current
+
+    /// Reusable date formatter for day headers (e.g., "1 February").
+    private static let dayDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMMM"
+        return f
+    }()
+
+    /// Reusable date formatter for month abbreviations (e.g., "Feb").
+    private static let monthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM"
+        return f
+    }()
+
+    /// Last visible week index (controls progressive disclosure). Nil until initialized.
+    @State private var lastVisibleWeekIndex: Int? = nil
     
     var body: some View {
         NavigationStack {
@@ -55,16 +72,21 @@ struct HomeView: View {
     /// Main content view with multi-week scrollable sections.
     private func contentView(plan: TrainingPlan) -> some View {
         let currentWeekIndex = plan.currentWeekIndex()
+        let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex ?? currentWeekIndex)
+        let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
+        let visibleWeeks = Array(plan.planWeeks[currentWeekIndex...endIndex])
 
         return ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
-                    // Multi-week ForEach (current week through lastVisibleWeekIndex)
-                    ForEach(Array(plan.planWeeks[currentWeekIndex...lastVisibleWeekIndex]), id: \.id) { week in
+                    // Multi-week sections (current week through lastVisibleWeekIndex)
+                    ForEach(Array(visibleWeeks.enumerated()), id: \.element.id) { offset, week in
+                        let weekIndex = currentWeekIndex + offset
+
                         // Week section header
-                        weekSectionHeader(week: week, plan: plan, currentWeekIndex: currentWeekIndex)
+                        weekSectionHeader(week: week, currentWeekIndex: currentWeekIndex, weekIndex: weekIndex)
                             .padding(.horizontal)
-                            .padding(.top, week.weekNumber == plan.planWeeks[currentWeekIndex].weekNumber ? 0 : 16)
+                            .padding(.top, offset == 0 ? 0 : 16)
                             .padding(.bottom, 8)
 
                         // Day sections for this week
@@ -79,15 +101,17 @@ struct HomeView: View {
                         .padding(.bottom, 20)
                     }
 
-                    // "Show next week" CTA or end
-                    if lastVisibleWeekIndex < plan.planWeeks.count - 1 {
+                    // "Show next week" CTA (only if more weeks remain)
+                    if endIndex < plan.planWeeks.count - 1 {
                         showNextWeekButton
                     }
                 }
             }
             .onAppear {
-                // Initialize lastVisibleWeekIndex to current + next week
-                lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
+                // Only initialize on first appearance (preserve user's progressive disclosure)
+                if lastVisibleWeekIndex == nil {
+                    lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
+                }
                 // Auto-scroll to today
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
             }
@@ -98,10 +122,8 @@ struct HomeView: View {
 
     /// Week section header with title, date range, and phase badge.
     /// Shows "Current Week" / "Next Week" for the first two weeks, then date range only.
-    private func weekSectionHeader(week: PlanWeek, plan: TrainingPlan, currentWeekIndex: Int) -> some View {
-        let weekIndex = plan.planWeeks.firstIndex(where: { $0.id == week.id }) ?? 0
-
-        return VStack(alignment: .leading, spacing: 8) {
+    private func weekSectionHeader(week: PlanWeek, currentWeekIndex: Int, weekIndex: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     // Title: "Current Week", "Next Week", or date range
@@ -167,7 +189,7 @@ struct HomeView: View {
 
             // Race Day card (if this day is the race date)
             if let raceDate = plan.raceDateAsDate,
-               Calendar.current.isDate(dayInfo.date, inSameDayAs: raceDate) {
+               calendar.isDate(dayInfo.date, inSameDayAs: raceDate) {
                 RaceDayCardView(raceObjective: plan.raceObjective)
             }
         }
@@ -240,7 +262,7 @@ struct HomeView: View {
     private var showNextWeekButton: some View {
         Button {
             withAnimation(.easeInOut(duration: 0.3)) {
-                lastVisibleWeekIndex += 1
+                lastVisibleWeekIndex = (lastVisibleWeekIndex ?? 0) + 1
             }
         } label: {
             Text("Show next week")
@@ -256,10 +278,7 @@ struct HomeView: View {
     /// Creates the day header label with relative prefix (Today/Tomorrow) + full date.
     /// Examples: "Today Saturday 1 February", "Tomorrow Sunday 2 February", "Monday 3 February"
     private func dayHeaderLabel(for date: Date, weekday: Weekday) -> String {
-        let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "d MMMM"
-        let dateString = dateFormatter.string(from: date)
+        let dateString = Self.dayDateFormatter.string(from: date)
 
         if calendar.isDateInToday(date) {
             return "Today \(weekday.fullName) \(dateString)"
@@ -273,21 +292,14 @@ struct HomeView: View {
     /// Formats a week's date range with ordinal suffixes.
     /// Examples: "Feb 10th - 16th", "Feb 28th - Mar 6th"
     private func weekDateRange(week: PlanWeek) -> String {
-        guard let startDate = week.startDateAsDate else { return "" }
-        let calendar = Calendar.current
+        guard let startDate = week.startDateAsDate else { return "Week \(week.weekNumber)" }
         let endDate = calendar.date(byAdding: .day, value: 6, to: startDate) ?? startDate
 
         let startDay = calendar.component(.day, from: startDate)
         let endDay = calendar.component(.day, from: endDate)
 
-        let startFormatter = DateFormatter()
-        let endFormatter = DateFormatter()
-
-        startFormatter.dateFormat = "MMM"
-        endFormatter.dateFormat = "MMM"
-
-        let startMonth = startFormatter.string(from: startDate)
-        let endMonth = endFormatter.string(from: endDate)
+        let startMonth = Self.monthFormatter.string(from: startDate)
+        let endMonth = Self.monthFormatter.string(from: endDate)
 
         if startMonth == endMonth {
             return "\(startMonth) \(ordinal(startDay)) - \(ordinal(endDay))"
@@ -310,7 +322,7 @@ struct HomeView: View {
 
     /// Scrolls to today's section if it exists (using composite week-day IDs).
     private func scrollToToday(proxy: ScrollViewProxy, plan: TrainingPlan, currentWeekIndex: Int) {
-        let calendar = Calendar.current
+        guard currentWeekIndex < plan.planWeeks.count else { return }
         let currentWeek = plan.planWeeks[currentWeekIndex]
         let days = plan.daysForWeek(currentWeek)
 
