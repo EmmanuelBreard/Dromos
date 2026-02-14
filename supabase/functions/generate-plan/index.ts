@@ -513,10 +513,13 @@ function fixRestDays(
       usedMinutes[d] = (usedMinutes[d] || 0) + (s.duration_minutes || 0);
     }
 
-    for (const session of week.sessions || []) {
-      const d = normDay(session.day);
-      if (!restDays.has(d)) continue;
+    // Snapshot sessions on rest days to avoid splice-during-iteration bugs
+    const restSessions = (week.sessions || []).filter(
+      (s: any) => restDays.has(normDay(s.day))
+    );
 
+    for (const session of restSessions) {
+      const d = normDay(session.day);
       const dur = session.duration_minutes || 0;
 
       // Find eligible days: not a rest day, sport is allowed, and has remaining capacity
