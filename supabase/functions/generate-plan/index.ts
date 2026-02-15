@@ -848,7 +848,6 @@ function fixSportClustering(
 function fixMissingBricks(
   planWeeks: any[],
   workoutLibrary: any,
-  templateDurationMap: Record<string, number>,
   dayCaps: Record<string, number>,
   sportEligibility: Record<string, string[]>
 ): number {
@@ -860,7 +859,7 @@ function fixMissingBricks(
     const phase = week.phase;
     // Skip Taper and Recovery weeks
     if (phase === 'Taper' || phase === 'Recovery') continue;
-    // Base: biweekly bricks (odd weeks only)
+    // Base: biweekly bricks (even-numbered weeks only)
     if (phase === 'Base' && week.week_number % 2 === 1) continue;
     // Check if week already has brick sessions
     if ((week.sessions || []).some((s: any) => s.is_brick)) continue;
@@ -902,10 +901,15 @@ function fixMissingBricks(
         (s: any) => s.sport === 'bike' && !s.is_brick
       );
       for (const bike of allBikes) {
-        if ((bike.duration_minutes || 0) <= (dayCaps[brickDay] || 0)) {
+        const brickDayUsed = (byDay[brickDay] || []).reduce(
+          (sum: number, s: any) => sum + (s.duration_minutes || 0), 0
+        );
+        const brickDayRemaining = (dayCaps[brickDay] || 0) - brickDayUsed;
+        if ((bike.duration_minutes || 0) <= brickDayRemaining) {
           // Move bike to brickDay
-          if (byDay[bike.day]) {
-            byDay[bike.day] = byDay[bike.day].filter((s: any) => s !== bike);
+          const bikeOrigDay = normDay(bike.day);
+          if (byDay[bikeOrigDay]) {
+            byDay[bikeOrigDay] = byDay[bikeOrigDay].filter((s: any) => s !== bike);
           }
           bike.day = brickDay;
           byDay[brickDay] = byDay[brickDay] || [];
@@ -941,8 +945,9 @@ function fixMissingBricks(
     for (const run of allRuns) {
       if ((run.duration_minutes || 0) <= remaining) {
         // Move run to brickDay
-        if (byDay[run.day]) {
-          byDay[run.day] = byDay[run.day].filter((s: any) => s !== run);
+        const runOrigDay = normDay(run.day);
+        if (byDay[runOrigDay]) {
+          byDay[runOrigDay] = byDay[runOrigDay].filter((s: any) => s !== run);
         }
         run.day = brickDay;
         byDay[brickDay] = byDay[brickDay] || [];
@@ -963,8 +968,9 @@ function fixMissingBricks(
 
         if (shortTemplates.length > 0) {
           // Move run to brickDay with shorter template
-          if (byDay[run.day]) {
-            byDay[run.day] = byDay[run.day].filter((s: any) => s !== run);
+          const runOrigDay = normDay(run.day);
+          if (byDay[runOrigDay]) {
+            byDay[runOrigDay] = byDay[runOrigDay].filter((s: any) => s !== run);
           }
           run.template_id = shortTemplates[0].template_id;
           run.duration_minutes = shortTemplates[0].duration_minutes;
@@ -988,7 +994,6 @@ function fixMissingBricks(
 function fixLongRun(
   planWeeks: any[],
   workoutLibrary: any,
-  templateDurationMap: Record<string, number>,
   dayCaps: Record<string, number>
 ): number {
   const MIN_LONG_RUN = 75;
@@ -999,7 +1004,7 @@ function fixLongRun(
     // Skip Taper and Recovery weeks
     if (phase === 'Taper' || phase === 'Recovery') continue;
 
-    const runSessions = (week.sessions || []).filter((s: any) => s.sport === 'run');
+    const runSessions = (week.sessions || []).filter((s: any) => s.sport === 'run' && !s.is_brick);
     if (runSessions.length === 0) continue;
     // Check if any run is already >= MIN_LONG_RUN
     if (runSessions.some((s: any) => (s.duration_minutes || 0) >= MIN_LONG_RUN)) continue;
@@ -1306,8 +1311,8 @@ Deno.serve(async (req) => {
     fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
     fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
-    fixMissingBricks(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
-    fixLongRun(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps);
+    fixMissingBricks(allBlockWeeks, workoutLibrary, dayCaps, sportEligibility);
+    fixLongRun(allBlockWeeks, workoutLibrary, dayCaps);
     fixSportClustering(allBlockWeeks, dayCaps, sportEligibility);
     // Re-run duration caps after brick/long-run/clustering changes to catch any new violations
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);

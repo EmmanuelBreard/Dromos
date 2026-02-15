@@ -10,7 +10,6 @@ const athletesRaw = fs.readFileSync(path.join(__dirname, 'vars', 'athletes.yaml'
 const athleteProfiles = yaml.load(athletesRaw);
 
 const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const SINGLE_SESSION_CAP = 75; // Days with ≤75min are single-session; enforce sport alternation
 
 function parseConstraintsFromVars(vars) {
   const durationFields = ['mon_duration', 'tue_duration', 'wed_duration', 'thu_duration', 'fri_duration', 'sat_duration', 'sun_duration'];
@@ -93,11 +92,14 @@ for (const r of data) {
       }
     }
 
-    // Check for brick sessions in Build/Peak weeks
-    if (w.phase === 'Build' || w.phase === 'Peak') {
+    // Check for brick sessions in Build/Peak weeks and even-numbered Base weeks
+    const expectsBrick =
+      w.phase === 'Build' || w.phase === 'Peak' ||
+      (w.phase === 'Base' && w.week_number % 2 === 0);
+    if (expectsBrick) {
       const hasBrick = (w.sessions || []).some(s => s.is_brick);
       if (!hasBrick) {
-        console.log('  W' + w.week_number + ' (' + w.phase + '): NO BRICK SESSION (expected in Build/Peak)');
+        console.log('  W' + w.week_number + ' (' + w.phase + '): NO BRICK SESSION (expected in Build/Peak/Base-even)');
         missingBricks++;
       }
     }
