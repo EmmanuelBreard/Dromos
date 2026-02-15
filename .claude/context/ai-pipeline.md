@@ -19,7 +19,7 @@ Step 2 (gpt-4o-mini): Markdown → Structured JSON
     ↓
 Step 3 (gpt-4o): Per 4-week block → Template IDs + day assignments
     ↓
-Post-processing: 6 sequential fixers (no LLM)
+Post-processing: 8 sequential fixers (no LLM)
     ↓
 DB writes: training_plans → plan_weeks → plan_sessions
 ```
@@ -46,6 +46,7 @@ DB writes: training_plans → plan_weeks → plan_sessions
 - Session caps: weekday <= `max_weekday_minutes`, weekend <= `max_weekend_minutes`
 - All Tempo/Intervals sessions <= 60 minutes
 - Brick sessions mandatory for all athletes (Base: biweekly, Build/Peak: weekly)
+- Long run: ≥75min per week
 
 **Template variables:** `{{training_philosophy}}`, `{{experience_level}}`, `{{race_distance}}`, `{{race_date}}`, `{{weekly_hours}}`, `{{current_weekly_hours}}`, `{{ftp_watts}}`, `{{vma}}`, `{{swim_css}}`, `{{max_weekday_minutes}}`, `{{max_weekend_minutes}}`, sport day counts
 
@@ -81,7 +82,7 @@ Pure conversion, no transformation.
 - Duration caps: total session minutes/day <= available minutes
 - Brick placement: bike + run same day, both `is_brick: true`
 - Template variety: never same template 2 consecutive weeks (Tempo/Intervals)
-- Sport alternation: avoid same sport on consecutive single-session days (≤75min)
+- Sport alternation: avoid same sport on consecutive single-session days
 
 **Template variables:** `{{constraints}}` (per-day availability string), `{{block_weeks_json}}`, `{{previously_used}}`, `{{workout_library}}` (simplified format)
 
@@ -96,10 +97,12 @@ Applied sequentially in Edge Function after Step 3 (no LLM):
 | `fixTypes()` | Extract type from template_id (source of truth) |
 | `fixBrickPairs()` | Ensure bike+run pairs both marked `is_brick` |
 | `fixConsecutiveRepeats()` | Swap templates if same used 2 consecutive weeks |
-| `fixDurationCaps()` | Enforce per-day duration limits (4-step cascade: swap shorter → move day → evict lower priority → drop) |
+| `fixDurationCaps()` | Enforce per-day duration limits (4-step cascade) |
 | `fixRestDays()` | Move sessions off rest days to eligible days |
-| `fixSportClustering()` | Swap same-sport sessions off consecutive single-session days (≤75min) |
-| `fixDurationCaps()` *(re-run)* | Safety pass — catches any cap violations introduced by `fixSportClustering` swaps |
+| `fixMissingBricks()` | Create bike+run brick pairs in Build/Peak (weekly) and Base (biweekly) |
+| `fixLongRun()` | Ensure at least one run ≥75min per non-Recovery/Taper week |
+| `fixSportClustering()` | Swap same-sport sessions off consecutive single-session days |
+| `fixDurationCaps()` *(re-run)* | Safety pass — catches cap violations from brick/long-run/clustering changes |
 
 ---
 

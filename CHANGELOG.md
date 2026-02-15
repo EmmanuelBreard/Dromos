@@ -7,8 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Changed
-- **Improved training plan sport distribution** — Plans now alternate sports across consecutive single-session days (≤75min) instead of clustering same-sport sessions back-to-back (DRO-85)
-- **Brick sessions in all plans** — Bike-to-run transition sessions now included for all athletes: every 2 weeks in Base, weekly in Build/Peak phases (DRO-85)
+- **Improved training plan sport distribution** — Plans now alternate sports across consecutive single-session days instead of clustering same-sport sessions back-to-back (DRO-85)
+- **Brick sessions guaranteed** — Bike-to-run transition sessions now guaranteed by post-processing fixer for all athletes: every 2 weeks in Base, weekly in Build/Peak phases (DRO-85)
+- **Guaranteed long run** — Every non-recovery week now includes at least one run ≥75min via post-processing fixer (DRO-85)
 
 ### Added
 - **Rich session card data foundation** — Workout segment flattening and step summary generation with sport-specific formatting (DRO-82)

@@ -59,6 +59,12 @@ Swim intensity: swim MUST include Tempo or Intervals in Build and Peak phases (a
 - Never have one sport at 100% Easy throughout Build/Peak
 - Intensity session duration cap (HARD CONSTRAINT): Tempo and Intervals sessions MUST be ≤60min — no exceptions. A 90min Tempo does not exist; split it into 60min Tempo + 30min Easy instead. If more volume is needed in a sport, add Easy sessions. Before outputting each week, verify every Tempo/Intervals session is ≤60min.
 
+### Long Run (CRITICAL)
+- Every week MUST include at least one run session ≥ 75min (the "long run")
+- Schedule the long run on a weekend day when possible (more time available)
+- Long runs are predominantly Easy-paced; Tempo long runs are allowed in Build/Peak
+- The long run counts toward the weekly hours budget — do not add extra hours for it
+
 ### Brick Sessions (CRITICAL — applies to ALL athletes)
 Brick sessions (bike immediately followed by run) are essential triathlon training:
 - **Base**: 1x every 2 weeks IF a weekend day has ≥ 90min. Short easy run (15-20min).

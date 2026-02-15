@@ -57,6 +57,7 @@ for (const r of data) {
   let restViolations = 0;
   let missingBricks = 0;
   let clusterViolations = 0;
+  let longRunViolations = 0;
 
   console.log('\n=== ' + name + ' ===');
 
@@ -105,7 +106,7 @@ for (const r of data) {
     const singleSessionDays = dayNames.filter(day => {
       const cap = caps[day] || 0;
       const daySessions = byDay[day] || [];
-      return cap > 0 && cap <= SINGLE_SESSION_CAP && daySessions.length === 1;
+      return cap > 0 && daySessions.length === 1;
     });
 
     // Check consecutive single-session days for same sport
@@ -123,6 +124,18 @@ for (const r of data) {
         }
       }
     }
+
+    // Check for long run presence
+    const MIN_LONG_RUN = 75;
+    if (w.phase !== 'Recovery' && w.phase !== 'Taper') {
+      const runSessions = (w.sessions || []).filter(s => s.sport === 'run');
+      const hasLongRun = runSessions.some(s => s.duration_minutes >= MIN_LONG_RUN);
+      if (!hasLongRun && runSessions.length > 0) {
+        const maxRun = Math.max(...runSessions.map(s => s.duration_minutes));
+        console.log('  W' + w.week_number + ' (' + w.phase + '): NO LONG RUN (longest: ' + maxRun + 'min, need >=' + MIN_LONG_RUN + 'min)');
+        longRunViolations++;
+      }
+    }
   }
-  console.log('  TOTAL: ' + durationViolations + ' duration cap, ' + sportViolations + ' sport eligibility, ' + restViolations + ' rest day, ' + missingBricks + ' missing brick, ' + clusterViolations + ' sport clustering violations');
+  console.log('  TOTAL: ' + durationViolations + ' duration cap, ' + sportViolations + ' sport eligibility, ' + restViolations + ' rest day, ' + missingBricks + ' missing brick, ' + clusterViolations + ' sport clustering, ' + longRunViolations + ' long run violations');
 }

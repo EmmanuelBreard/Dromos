@@ -730,13 +730,12 @@ function fixRestDays(
 }
 
 // Post-processing: fix sport clustering on single-session days
-// When consecutive single-session days (≤75min) have the same sport, spread them apart
+// When consecutive single-session days have the same sport, spread them apart
 function fixSportClustering(
   planWeeks: any[],
   dayCaps: Record<string, number>,
   sportEligibility: Record<string, string[]>
 ): number {
-  const SINGLE_SESSION_CAP = 75;
   let fixes = 0;
 
   for (const week of planWeeks) {
@@ -753,7 +752,7 @@ function fixSportClustering(
     for (const day of ALL_DAYS) {
       const cap = dayCaps[day] || 0;
       const sessions = byDay[day] || [];
-      if (cap > 0 && cap <= SINGLE_SESSION_CAP && sessions.length === 1) {
+      if (cap > 0 && sessions.length === 1) {
         singleSessionDays.push(day);
       }
     }
@@ -839,6 +838,215 @@ function fixSportClustering(
         }
       }
     }
+  }
+
+  return fixes;
+}
+
+// Post-processing: ensure brick sessions in Build/Peak weeks
+// Creates bike+run brick pairs when missing (weekly in Build/Peak, biweekly in Base)
+function fixMissingBricks(
+  planWeeks: any[],
+  workoutLibrary: any,
+  templateDurationMap: Record<string, number>,
+  dayCaps: Record<string, number>,
+  sportEligibility: Record<string, string[]>
+): number {
+  // Preferred brick days - weekends first
+  const BRICK_PREFERRED_DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  let fixes = 0;
+
+  for (const week of planWeeks) {
+    const phase = week.phase;
+    // Skip Taper and Recovery weeks
+    if (phase === 'Taper' || phase === 'Recovery') continue;
+    // Base: biweekly bricks (odd weeks only)
+    if (phase === 'Base' && week.week_number % 2 === 1) continue;
+    // Check if week already has brick sessions
+    if ((week.sessions || []).some((s: any) => s.is_brick)) continue;
+
+    // Group sessions by day
+    const byDay: Record<string, any[]> = {};
+    for (const session of week.sessions || []) {
+      const d = normDay(session.day);
+      byDay[d] = byDay[d] || [];
+      byDay[d].push(session);
+    }
+
+    // Find brick-eligible day
+    let brickDay: string | null = null;
+    for (const day of BRICK_PREFERRED_DAYS) {
+      const eligible = sportEligibility[day] || [];
+      if (!eligible.includes('bike') || !eligible.includes('run')) continue;
+      if ((dayCaps[day] || 0) < 90) continue; // need enough capacity for bike+run
+
+      // Prefer day that already has a bike session
+      if ((byDay[day] || []).some((s: any) => s.sport === 'bike')) {
+        brickDay = day;
+        break;
+      }
+
+      // Otherwise take first eligible day
+      if (brickDay === null) {
+        brickDay = day;
+      }
+    }
+
+    if (brickDay === null) continue;
+
+    // Ensure a bike session is on brickDay
+    let bikeSession = (byDay[brickDay] || []).find((s: any) => s.sport === 'bike');
+    if (!bikeSession) {
+      // Find a bike from another day and move it
+      const allBikes = (week.sessions || []).filter(
+        (s: any) => s.sport === 'bike' && !s.is_brick
+      );
+      for (const bike of allBikes) {
+        if ((bike.duration_minutes || 0) <= (dayCaps[brickDay] || 0)) {
+          // Move bike to brickDay
+          if (byDay[bike.day]) {
+            byDay[bike.day] = byDay[bike.day].filter((s: any) => s !== bike);
+          }
+          bike.day = brickDay;
+          byDay[brickDay] = byDay[brickDay] || [];
+          byDay[brickDay].push(bike);
+          bikeSession = bike;
+          break;
+        }
+      }
+    }
+
+    if (!bikeSession) continue;
+
+    // Check if there's already a run on brickDay
+    let runSession = (byDay[brickDay] || []).find((s: any) => s.sport === 'run');
+    if (runSession) {
+      bikeSession.is_brick = true;
+      runSession.is_brick = true;
+      fixes++;
+      continue;
+    }
+
+    // Find a run from elsewhere in the week and move it
+    const dayUsed = (byDay[brickDay] || []).reduce(
+      (sum: number, s: any) => sum + (s.duration_minutes || 0),
+      0
+    );
+    const remaining = (dayCaps[brickDay] || 0) - dayUsed;
+
+    const allRuns = (week.sessions || [])
+      .filter((s: any) => s.sport === 'run' && !s.is_brick)
+      .sort((a: any, b: any) => (a.duration_minutes || 0) - (b.duration_minutes || 0));
+
+    for (const run of allRuns) {
+      if ((run.duration_minutes || 0) <= remaining) {
+        // Move run to brickDay
+        if (byDay[run.day]) {
+          byDay[run.day] = byDay[run.day].filter((s: any) => s !== run);
+        }
+        run.day = brickDay;
+        byDay[brickDay] = byDay[brickDay] || [];
+        byDay[brickDay].push(run);
+        run.is_brick = true;
+        bikeSession.is_brick = true;
+        fixes++;
+        break;
+      } else {
+        // Swap for a shorter RUN_Easy template that fits
+        const shortTemplates = (workoutLibrary.run || [])
+          .filter(
+            (t: any) =>
+              t.template_id.includes('Easy') &&
+              (t.duration_minutes || 0) <= remaining
+          )
+          .sort((a: any, b: any) => (b.duration_minutes || 0) - (a.duration_minutes || 0)); // longest that fits
+
+        if (shortTemplates.length > 0) {
+          // Move run to brickDay with shorter template
+          if (byDay[run.day]) {
+            byDay[run.day] = byDay[run.day].filter((s: any) => s !== run);
+          }
+          run.template_id = shortTemplates[0].template_id;
+          run.duration_minutes = shortTemplates[0].duration_minutes;
+          run.type = 'Easy';
+          run.day = brickDay;
+          byDay[brickDay] = byDay[brickDay] || [];
+          byDay[brickDay].push(run);
+          run.is_brick = true;
+          bikeSession.is_brick = true;
+          fixes++;
+          break;
+        }
+      }
+    }
+  }
+
+  return fixes;
+}
+
+// Post-processing: ensure at least one long run (≥75min) per non-Recovery/Taper week
+function fixLongRun(
+  planWeeks: any[],
+  workoutLibrary: any,
+  templateDurationMap: Record<string, number>,
+  dayCaps: Record<string, number>
+): number {
+  const MIN_LONG_RUN = 75;
+  let fixes = 0;
+
+  for (const week of planWeeks) {
+    const phase = week.phase;
+    // Skip Taper and Recovery weeks
+    if (phase === 'Taper' || phase === 'Recovery') continue;
+
+    const runSessions = (week.sessions || []).filter((s: any) => s.sport === 'run');
+    if (runSessions.length === 0) continue;
+    // Check if any run is already >= MIN_LONG_RUN
+    if (runSessions.some((s: any) => (s.duration_minutes || 0) >= MIN_LONG_RUN)) continue;
+
+    // Group sessions by day to compute remaining capacity
+    const byDay: Record<string, any[]> = {};
+    for (const session of week.sessions || []) {
+      const d = normDay(session.day);
+      byDay[d] = byDay[d] || [];
+      byDay[d].push(session);
+    }
+
+    // Find best candidate: run on highest-cap day with enough remaining capacity
+    const candidates = runSessions
+      .map((s: any) => {
+        const day = normDay(s.day);
+        const daySessions = byDay[day] || [];
+        const otherSessionsTotal = daySessions
+          .filter((x: any) => x !== s)
+          .reduce((sum: number, x: any) => sum + (x.duration_minutes || 0), 0);
+        const remaining = (dayCaps[day] || 0) - otherSessionsTotal;
+        return { session: s, remaining };
+      })
+      .filter((c: any) => c.remaining >= MIN_LONG_RUN)
+      .sort((a: any, b: any) => b.remaining - a.remaining); // most capacity first
+
+    if (candidates.length === 0) continue;
+
+    const candidate = candidates[0];
+
+    // Find longest RUN_Easy template that fits
+    const longTemplates = (workoutLibrary.run || [])
+      .filter(
+        (t: any) =>
+          t.template_id.startsWith('RUN_Easy') &&
+          (t.duration_minutes || 0) >= MIN_LONG_RUN &&
+          (t.duration_minutes || 0) <= candidate.remaining
+      )
+      .sort((a: any, b: any) => (b.duration_minutes || 0) - (a.duration_minutes || 0));
+
+    if (longTemplates.length === 0) continue;
+
+    // Swap template
+    candidate.session.template_id = longTemplates[0].template_id;
+    candidate.session.duration_minutes = longTemplates[0].duration_minutes;
+    candidate.session.type = 'Easy';
+    fixes++;
   }
 
   return fixes;
@@ -1098,8 +1306,10 @@ Deno.serve(async (req) => {
     fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
     fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
+    fixMissingBricks(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
+    fixLongRun(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps);
     fixSportClustering(allBlockWeeks, dayCaps, sportEligibility);
-    // Re-run duration caps after sport clustering swaps to catch any new violations
+    // Re-run duration caps after brick/long-run/clustering changes to catch any new violations
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
 
     // Validate LLM output before DB writes
