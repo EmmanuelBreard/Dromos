@@ -99,10 +99,13 @@ Applied sequentially in Edge Function after Step 3 (no LLM):
 | `fixConsecutiveRepeats()` | Swap templates if same used 2 consecutive weeks |
 | `fixDurationCaps()` | Enforce per-day duration limits (4-step cascade) |
 | `fixRestDays()` | Move sessions off rest days to eligible days |
-| `fixMissingBricks()` | Create bike+run brick pairs in Build/Peak (weekly) and Base (biweekly) |
-| `fixLongRun()` | Ensure at least one run ≥75min per non-Recovery/Taper week |
-| `fixSportClustering()` | Swap same-sport sessions off consecutive single-session days |
-| `fixDurationCaps()` *(re-run)* | Safety pass — catches cap violations from brick/long-run/clustering changes |
+| `fixMissingBricks()` | Create bike+run brick pairs (Build/Peak weekly, Base biweekly). Clears brick day to exactly 2 sessions (bike + RUN_Easy_01 30min run), moves other sessions to empty eligible days |
+| `fixLongRun()` | Ensure at least one run ≥75min per non-Recovery/Taper week. Phase-aware cap: Base/Peak max 90min, Build max 120min |
+| `fixIntensitySpread()` | Swap hard sessions (Tempo/Intervals) off consecutive days by swapping with Easy sessions from non-adjacent days (≥2 days apart) |
+| `fixSportClustering()` | Swap same-sport sessions off consecutive single-session days. Tries same-sport+type first, falls back to cross-sport swaps if needed (checks neighbor clustering prevention) |
+| `fixDurationCaps()` *(re-run)* | Safety pass — catches cap violations from brick/long-run/intensity/clustering changes |
+
+**Total unique fixers:** 9 (fixDurationCaps runs twice)
 
 ---
 

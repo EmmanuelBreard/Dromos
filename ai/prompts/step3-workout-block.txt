@@ -29,9 +29,9 @@ You MUST schedule every session according to these 8 rules in priority order:
 
 5. **Sport alternation** — When a day has capacity for only one session (available minutes ≤ 75min), avoid scheduling the same sport on consecutive training days. Spread same-sport sessions as far apart as possible (e.g., run Tuesday + run Saturday, NOT run Tuesday + run Wednesday). This rule does NOT apply to days with ≥ 90min available where doubles are feasible.
 
-6. **Intensity placement** — Place high-intensity sessions (Intervals) on fresh days. Do not schedule Intervals immediately after another Intervals session in the same sport. Separate hard days with Easy days when possible.
+6. **Intensity spread (CRITICAL)** — Never schedule Tempo or Intervals sessions on consecutive days. Space hard sessions with at least 1 Easy or rest day between them. Example: if swim Intervals is on Monday, the next hard session should be Wednesday at earliest, NOT Tuesday.
 
-7. **Brick placement** — If the week notes indicate a brick session, schedule the bike and run on the SAME day, both marked `"is_brick": true`. Prefer weekend days (Saturday/Sunday) if they are available (not REST days). Brick runs are typically shorter (15-30min).
+7. **Brick placement** — If the week notes indicate a brick session, schedule the bike and run on the SAME day, both marked `"is_brick": true`. Prefer weekend days (Saturday/Sunday) if they are available (not REST days). Brick run MUST be ≤30min — always use RUN_Easy_01 (30min). Brick day should have exactly 2 sessions: the bike and the transition run.
 
 8. **Volume maximization** — Use available time efficiently. If a day has 120min available and only 60min scheduled, consider whether additional Easy sessions could fit the macro plan's target hours for that week.
 
