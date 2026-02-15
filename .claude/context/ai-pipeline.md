@@ -19,7 +19,7 @@ Step 2 (gpt-4o-mini): Markdown → Structured JSON
     ↓
 Step 3 (gpt-4o): Per 4-week block → Template IDs + day assignments
     ↓
-Post-processing: 8 sequential fixers (no LLM)
+Post-processing: 10 sequential fixer passes (no LLM)
     ↓
 DB writes: training_plans → plan_weeks → plan_sessions
 ```

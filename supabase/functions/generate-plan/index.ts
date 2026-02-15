@@ -776,10 +776,13 @@ function fixIntensitySpread(
 
       for (const candidateDay of ALL_DAYS) {
         const candIdx = ALL_DAYS.indexOf(candidateDay);
-        // Must be ≥2 days away from day1 (not adjacent)
-        if (Math.abs(candIdx - day1Idx) <= 1) continue;
-        // Don't swap to another hard day
-        if (hardDays.includes(candidateDay)) continue;
+
+        // Must not be adjacent to ANY hard day
+        const adjacentToHard = hardDays.some((hd: string) => {
+          const hdIdx = ALL_DAYS.indexOf(hd);
+          return Math.abs(candIdx - hdIdx) <= 1;
+        });
+        if (adjacentToHard) continue;
 
         const candidateSessions = byDay[normDay(candidateDay)] || [];
         for (const candidate of candidateSessions) {
@@ -819,6 +822,19 @@ function fixIntensitySpread(
           break;
         }
         if (swapped) break;
+      }
+
+      if (swapped) {
+        // Rebuild hardDays after swap
+        hardDays.length = 0;
+        for (const d of ALL_DAYS) {
+          const sess = byDay[normDay(d)] || [];
+          if (sess.some((s: any) => HARD_TYPES.includes(s.type))) {
+            hardDays.push(d);
+          }
+        }
+        i = -1; // Restart from beginning (will increment to 0)
+        continue;
       }
     }
   }
@@ -981,6 +997,10 @@ function fixSportClustering(
               const day2Neighbors = getNeighborSingleSessionSports(byDay, day2, ALL_DAYS);
               if (day2Neighbors.includes(candidate.sport)) continue;
 
+              // Also check that session2 doesn't cluster on candidateDay
+              const candNeighbors = getNeighborSingleSessionSports(byDay, candidateDay, ALL_DAYS);
+              if (candNeighbors.includes(session2.sport)) continue;
+
               swapCandidate = candidate;
               swapCandidateDay = candidateDay;
               break;
@@ -1061,7 +1081,7 @@ function fixMissingBricks(
     if (brickDay === null) continue;
 
     // STEP 1: Clear non-bike sessions off brickDay BEFORE placing brick pair
-    const brickDaySessions = byDay[normDay(brickDay)] || [];
+    const brickDaySessions = [...(byDay[normDay(brickDay)] || [])];
     for (const session of brickDaySessions) {
       if (session.sport === 'bike') continue; // keep bikes
 
@@ -1099,7 +1119,6 @@ function fixMissingBricks(
       });
 
       // Find first candidate with enough room
-      let moved = false;
       for (const newDay of candidates) {
         const newDaySessions = byDay[normDay(newDay)] || [];
         const newDayUsed = newDaySessions.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0);
@@ -1112,7 +1131,6 @@ function fixMissingBricks(
           session.day = newDay;
           byDay[normDay(newDay)] = byDay[normDay(newDay)] || [];
           byDay[normDay(newDay)].push(session);
-          moved = true;
           break;
         }
       }
@@ -1163,9 +1181,15 @@ function fixMissingBricks(
 
     // Find any run in the week (non-brick) and move it to brickDay with RUN_Easy_01 template
     const allRuns = (week.sessions || []).filter((s: any) => s.sport === 'run' && !s.is_brick);
+    // Prefer shortest Easy run to minimize disruption to quality workouts
+    allRuns.sort((a: any, b: any) => {
+      if (a.type === 'Easy' && b.type !== 'Easy') return -1;
+      if (a.type !== 'Easy' && b.type === 'Easy') return 1;
+      return (a.duration_minutes || 0) - (b.duration_minutes || 0);
+    });
 
     if (allRuns.length > 0) {
-      const run = allRuns[0]; // Take any run
+      const run = allRuns[0];
       const runOrigDay = normDay(run.day);
       byDay[runOrigDay] = (byDay[runOrigDay] || []).filter((s: any) => s !== run);
 
@@ -1179,6 +1203,22 @@ function fixMissingBricks(
       byDay[normDay(brickDay)] = byDay[normDay(brickDay)] || [];
       byDay[normDay(brickDay)].push(run);
 
+      bikeSession.is_brick = true;
+      fixes++;
+    } else {
+      // No existing run to repurpose — create a new brick run
+      const newRun: any = {
+        sport: 'run',
+        type: 'Easy',
+        template_id: brickRunTemplate.template_id,
+        duration_minutes: brickRunTemplate.duration_minutes,
+        day: brickDay,
+        is_brick: true,
+      };
+      week.sessions = week.sessions || [];
+      week.sessions.push(newRun);
+      byDay[normDay(brickDay)] = byDay[normDay(brickDay)] || [];
+      byDay[normDay(brickDay)].push(newRun);
       bikeSession.is_brick = true;
       fixes++;
     }
