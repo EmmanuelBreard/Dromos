@@ -57,6 +57,7 @@ for (const r of data) {
   let missingBricks = 0;
   let clusterViolations = 0;
   let longRunViolations = 0;
+  let intensityViolations = 0;
 
   console.log('\n=== ' + name + ' ===');
 
@@ -138,6 +139,21 @@ for (const r of data) {
         longRunViolations++;
       }
     }
+
+    // Check for consecutive hard days (Tempo/Intervals)
+    const HARD_TYPES = ['Tempo', 'Intervals'];
+    const hardDays = dayNames.filter(day => {
+      const sessions = byDay[day] || [];
+      return sessions.some(s => HARD_TYPES.includes(s.type));
+    });
+    for (let j = 0; j < hardDays.length - 1; j++) {
+      const d1 = hardDays[j];
+      const d2 = hardDays[j + 1];
+      if (dayNames.indexOf(d2) === dayNames.indexOf(d1) + 1) {
+        console.log('  W' + w.week_number + ' ' + d1 + '→' + d2 + ': INTENSITY CLUSTERING (consecutive hard days)');
+        intensityViolations++;
+      }
+    }
   }
-  console.log('  TOTAL: ' + durationViolations + ' duration cap, ' + sportViolations + ' sport eligibility, ' + restViolations + ' rest day, ' + missingBricks + ' missing brick, ' + clusterViolations + ' sport clustering, ' + longRunViolations + ' long run violations');
+  console.log('  TOTAL: ' + durationViolations + ' duration cap, ' + sportViolations + ' sport eligibility, ' + restViolations + ' rest day, ' + missingBricks + ' missing brick, ' + clusterViolations + ' sport clustering, ' + longRunViolations + ' long run, ' + intensityViolations + ' intensity violations');
 }
