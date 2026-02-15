@@ -1,6 +1,6 @@
 # AI Pipeline Reference
 
-> Last updated: 2026-02-14
+> Last updated: 2026-02-15
 
 ## Overview
 
@@ -19,7 +19,7 @@ Step 2 (gpt-4o-mini): Markdown → Structured JSON
     ↓
 Step 3 (gpt-4o): Per 4-week block → Template IDs + day assignments
     ↓
-Post-processing: 10 sequential fixer passes (no LLM)
+Post-processing: 15 sequential fixer passes (no LLM)
     ↓
 DB writes: training_plans → plan_weeks → plan_sessions
 ```
@@ -76,13 +76,17 @@ Pure conversion, no transformation.
 
 **Block processing:** Plan split into 4-week blocks, processed sequentially. `previouslyUsed` templates passed between blocks for variety.
 
-**Key constraints:**
+**Key constraints (11 rules in prompt):**
 - REST days: no sessions on 0min availability days
 - Sport eligibility: only schedule sports available on each day
 - Duration caps: total session minutes/day <= available minutes
-- Brick placement: bike + run same day, both `is_brick: true`
-- Template variety: never same template 2 consecutive weeks (Tempo/Intervals)
+- Session spread: fill every non-REST day before doubling up
 - Sport alternation: avoid same sport on consecutive single-session days
+- Intensity spread: no Tempo/Intervals on consecutive days
+- Brick placement: bike + run same day, both `is_brick: true`, bike first
+- No same-sport doubling: max 1 bike + 1 run per day (swim exempt)
+- No dual hard same day: no two Tempo/Intervals bike/run on same day
+- Template variety: never same template 2 consecutive weeks (Tempo/Intervals)
 
 **Template variables:** `{{constraints}}` (per-day availability string), `{{block_weeks_json}}`, `{{previously_used}}`, `{{workout_library}}` (simplified format)
 
@@ -90,22 +94,27 @@ Pure conversion, no transformation.
 
 ## Post-Processing Fixers
 
-Applied sequentially in Edge Function after Step 3 (no LLM):
+Applied sequentially in Edge Function after Step 3 (no LLM). Eval source of truth: `ai/eval/run-step3-blocks.js`.
 
-| Fixer | Purpose |
-|-------|---------|
-| `fixTypes()` | Extract type from template_id (source of truth) |
-| `fixBrickPairs()` | Ensure bike+run pairs both marked `is_brick` |
-| `fixConsecutiveRepeats()` | Swap templates if same used 2 consecutive weeks |
-| `fixDurationCaps()` | Enforce per-day duration limits (4-step cascade) |
-| `fixRestDays()` | Move sessions off rest days to eligible days |
-| `fixMissingBricks()` | Create bike+run brick pairs (Build/Peak weekly, Base biweekly). Clears brick day to exactly 2 sessions (bike + RUN_Easy_01 30min run), moves other sessions to empty eligible days |
-| `fixLongRun()` | Ensure at least one run ≥75min per non-Recovery/Taper week. Phase-aware cap: Base/Peak max 90min, Build max 120min |
-| `fixIntensitySpread()` | Swap hard sessions (Tempo/Intervals) off consecutive days by swapping with Easy sessions from non-adjacent days (≥2 days apart) |
-| `fixSportClustering()` | Swap same-sport sessions off consecutive single-session days. Tries same-sport+type first, falls back to cross-sport swaps if needed (checks neighbor clustering prevention) |
-| `fixDurationCaps()` *(re-run)* | Safety pass — catches cap violations from brick/long-run/intensity/clustering changes |
+| # | Fixer | Purpose |
+|---|-------|---------|
+| 1 | `fixTypes()` | Extract type from template_id (source of truth) |
+| 2 | `fixBrickPairs()` | Ensure bike+run pairs both marked `is_brick` |
+| 3 | `fixConsecutiveRepeats()` | Swap templates if same used 2 consecutive weeks |
+| 4 | `fixDurationCaps()` | Enforce per-day duration limits (4-step cascade) |
+| 5 | `fixRestDays()` | Move sessions off rest days to eligible days |
+| 6 | `fixMissingBricks()` | Create bike+run brick pairs (Build/Peak weekly, Base biweekly). Clears brick day, moves other sessions to empty eligible days |
+| 7 | `fixBrickRunDuration()` | Enforce RUN_Easy_01 (30min) on all brick runs. Catches informal bricks (bike+run same day without `is_brick`) |
+| 8 | `fixBrickOrder()` | Ensure bike before run in sessions array for brick pairs |
+| 9 | `fixSameDayHardConflicts()` | Max 1 bike + 1 run per day (brick counts). No dual hard bike/run same day. Uses `tryRelocateSession` (3 strategies: direct move, cross-sport swap, downsize+move) |
+| 10 | `fixIntensitySpread()` | Spread consecutive hard (Tempo/Intervals) bike/run days. Tries both days of pair, post-swap adjacency simulation, same-sport conflict checks. Swim excluded |
+| 11 | `fixSportClustering()` | Swap same-sport sessions off consecutive single-session days. Skipped for ≥8h/week athletes. Cross-sport fallback with neighbor check |
+| 12 | `fixVolumeGaps()` | Fill empty available days with Easy sessions based on macro plan sport targets. Skips Recovery/Taper. Prefers non-clustering sports |
+| 13 | `fixDurationCaps()` *(re-run)* | Safety pass — catches cap violations from all prior changes |
+| 14 | `fixSameDayHardConflicts()` *(re-run)* | Catches same-day conflicts introduced by volume gaps or cap fixes |
+| 15 | `fixBrickOrder()` *(re-run)* | Final brick ordering pass |
 
-**Total unique fixers:** 9 (fixDurationCaps runs twice)
+**Total unique fixers:** 12 (3 run twice = 15 passes). Validated via batch eval: 5/5 runs, 0 violations across all 8 metrics.
 
 ---
 
@@ -132,14 +141,15 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 ### Eval Framework
 | File | Purpose |
 |------|---------|
-| `ai/eval/vars/athletes.yaml` | 3 test athlete profiles (Alex, Jordan, Sam) |
+| `ai/eval/vars/athletes.yaml` | Test athlete profiles (Emmanuel Half-Ironman + others) |
 | `ai/eval/vars/step2-inputs.yaml` | Pre-computed Step 1 outputs for Step 2 testing |
 | `ai/eval/vars/step3-inputs.yaml` | Pre-computed Step 2 outputs for Step 3 testing |
 | `ai/eval/assertions/validate-macro-plan.js` | Step 1 output validation |
 | `ai/eval/assertions/validate-macro-plan-md.js` | Step 1 markdown format validation |
 | `ai/eval/assertions/validate-workout-selection.js` | Step 3 output validation |
-| `ai/eval/check-step3-violations.js` | Post-hoc constraint checking |
-| `ai/eval/run-step3-blocks.js` | Step 3 block orchestrator for eval |
+| `ai/eval/check-step3-violations.js` | 8-metric violation checker (duration, sport, rest, brick, cluster, same-day, intensity, brick-order) |
+| `ai/eval/run-step3-blocks.js` | Step 3 block orchestrator + all 12 fixers (source of truth) |
+| `ai/eval/batch-eval.sh` | Batch runner: N parallel eval runs → plans + violations + aggregated scores |
 
 ### Workout Library
 - **Canonical file:** `ai/context/workout-library.json`

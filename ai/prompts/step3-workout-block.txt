@@ -25,15 +25,21 @@ You MUST schedule every session according to these 8 rules in priority order:
 
 3. **Duration caps (ABSOLUTE — no exceptions)** — The total duration of all sessions on a day MUST NOT exceed the available minutes for that day. Before placing ANY session on a day, compute: (sum of sessions already on that day) + (this session's template duration) ≤ day cap. If it doesn't fit, pick a shorter template or use a different day. Example: Saturday has 90min available. You place swim 40min (remaining: 50min). Next bike template must be ≤ 50min — do NOT pick BIKE_Easy_02 (55min).
 
-4. **Session spread** — Distribute sessions across available days. Prefer no more than 2 sessions per day (unless it's a brick pair bike+run). Avoid leaving eligible days empty if sessions remain unscheduled.
+4. **Session spread (CRITICAL — fill every day)** — Place at least one session on every non-REST available day BEFORE doubling up on any day. Weekdays (≤75min) should each have exactly 1 session. Weekends (≥90min) handle doubles (brick, long run + swim, etc.). Never leave a non-REST weekday empty while cramming 3+ sessions onto a weekend day.
 
 5. **Sport alternation** — When a day has capacity for only one session (available minutes ≤ 75min), avoid scheduling the same sport on consecutive training days. Spread same-sport sessions as far apart as possible (e.g., run Tuesday + run Saturday, NOT run Tuesday + run Wednesday). This rule does NOT apply to days with ≥ 90min available where doubles are feasible.
 
-6. **Intensity spread (CRITICAL)** — Never schedule Tempo or Intervals sessions on consecutive days. Space hard sessions with at least 1 Easy or rest day between them. Example: if swim Intervals is on Monday, the next hard session should be Wednesday at earliest, NOT Tuesday.
+6. **Intensity spread (CRITICAL)** — Never schedule Tempo or Intervals sessions on consecutive days. Space hard sessions with at least 1 Easy or rest day between them. When placing hard sessions, assign them to non-adjacent days FIRST (e.g., Monday + Wednesday + Friday for 3 hard sessions, or Tuesday + Thursday for 2), then fill remaining weekdays with Easy sessions.
 
 7. **Brick placement** — If the week notes indicate a brick session, schedule the bike and run on the SAME day, both marked `"is_brick": true`. Prefer weekend days (Saturday/Sunday) if they are available (not REST days). Brick run MUST be ≤30min — always use RUN_Easy_01 (30min). Brick day should have exactly 2 sessions: the bike and the transition run.
 
 8. **Volume maximization** — Use available time efficiently. If a day has 120min available and only 60min scheduled, consider whether additional Easy sessions could fit the macro plan's target hours for that week.
+
+9. **No same-sport doubling with hard sessions (CRITICAL)** — If a day has a Tempo or Intervals session for bike or run, do NOT place any other session of the SAME sport on that day (not even Easy). Example: if Thursday has bike Tempo, do NOT add bike Easy on Thursday. Swim is exempt — swim sessions can share a day with any other sport. Brick pairs are the only exception (bike + 30min transition run is OK).
+
+10. **No dual hard sessions same day (CRITICAL)** — Never place two hard sessions (Tempo or Intervals) for bike and/or run on the same day. No bike Tempo + run Intervals, no bike Tempo + bike Intervals, no run Tempo + run Intervals on the same day. Swim is exempt.
+
+11. **Brick ordering** — In a brick session, the bike ALWAYS comes first, then the transition run. Output the bike session before the run session in the sessions array.
 
 ## Matching Rules
 

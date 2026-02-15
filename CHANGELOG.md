@@ -6,13 +6,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-02-15
+
 ### Changed
-- **Improved training plan sport distribution** — Plans now alternate sports across consecutive single-session days instead of clustering same-sport sessions back-to-back. Cross-sport swaps enabled when same-sport candidates unavailable (DRO-85)
-- **Brick sessions guaranteed and isolated** — Bike-to-run transition sessions now guaranteed by post-processing fixer for all athletes (every 2 weeks in Base, weekly in Build/Peak). Brick day cleared to exactly 2 sessions: bike + 30min transition run (RUN_Easy_01). Other sessions moved to empty eligible days (DRO-85)
-- **Guaranteed long run with phase-aware scaling** — Every non-recovery week now includes at least one run ≥75min via post-processing fixer. Max duration scales by phase: Base/Peak 90min max, Build 120min max (DRO-85)
-- **Intensity spread enforcement** — Hard sessions (Tempo/Intervals) now spread across the week via new `fixIntensitySpread` post-processing fixer. Consecutive hard days broken up by swapping with Easy sessions from non-adjacent days (≥2 days apart) (DRO-85)
+- **15-fixer post-processing chain** — Complete overhaul of training plan quality enforcement. 7 rounds of eval iteration achieved 0 violations across all 8 metrics on 5 consecutive batch runs (DRO-85)
+- **Same-day sport rules** — Max 1 bike + 1 run per day (brick counts). No dual hard (Tempo/Intervals) bike/run sessions on same day. Swim exempt (DRO-85)
+- **Improved intensity spread** — `fixIntensitySpread` now tries both days of a consecutive hard pair, uses post-swap adjacency simulation, and checks same-sport conflicts on swap targets. Swim excluded from hard-day tracking (DRO-85)
+- **Density-aware intensity checker** — Consecutive different-sport hard days accepted for high-volume athletes when `available_days / hard_sessions < 2` (DRO-85)
+- **Brick sessions guaranteed and isolated** — Bike-to-run transition sessions guaranteed (Base biweekly, Build/Peak weekly). Brick day cleared to 2 sessions: bike + RUN_Easy_01 (30min). `fixBrickRunDuration` catches informal bricks. `fixBrickOrder` enforces bike-before-run in sessions array (DRO-85)
+- **Sport clustering skip for high-volume** — `fixSportClustering` disabled for athletes with ≥8h/week (consecutive same-sport expected with 3 sports over 7 days) (DRO-85)
+- **Volume gap filler** — Empty available days in non-Recovery/Taper weeks filled with Easy sessions based on macro plan sport targets and neighbor alternation (DRO-85)
+- **Removed fixLongRun** — Long run placement now handled by improved prompt rules + volume gap filler (DRO-85)
+- **Step 3 prompt rules 9-11** — Added explicit LLM rules for same-sport doubling, dual hard sessions, and brick ordering (DRO-85)
 
 ### Added
+- **Batch eval pipeline** — `ai/eval/batch-eval.sh` runs N parallel eval runs, produces per-run plans + violation reports, aggregates scores. Used for iterating on fixer quality (DRO-85)
+- **8-metric violation checker** — `check-step3-violations.js` validates duration caps, sport eligibility, rest days, missing bricks, sport clustering, same-day conflicts, intensity clustering, and brick order (DRO-85)
 - **Rich session card data foundation** — Workout segment flattening and step summary generation with sport-specific formatting (DRO-82)
   - ProfileService shared from MainTabView for athlete metrics (FTP, VMA, CSS)
   - FlatSegment model for graph rendering (expands nested repeats into individual segments)
@@ -109,6 +118,3 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `008_rename_css_column.sql`: Rename css_seconds_per_100m → css_seconds_per100m
 - `009_add_current_weekly_hours.sql`: Add current_weekly_hours DECIMAL(3,1) with CHECK 0–25
 
----
-
-**Note:** No releases have been tagged yet. All changes above are in `main` branch but not deployed.
