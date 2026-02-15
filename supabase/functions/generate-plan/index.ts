@@ -213,7 +213,9 @@ function buildStep1Prompt(user: any, vars: any): string {
     "{{swim_css}}",
     formatCSS(user.css_seconds_per100m)
   );
-  prompt = prompt.replace("{{limiters}}", user.limiters || "none");
+  // Limiters column not yet in users table — defaults to "none" until onboarding captures it
+  const limitersValue = (user.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
+  prompt = prompt.replace("{{limiters}}", limitersValue);
 
   // Current training volume (athlete's baseline for progressive overload)
   prompt = prompt.replace(
@@ -769,6 +771,9 @@ function fixSportClustering(
       const session1 = byDay[day1][0];
       const session2 = byDay[day2][0];
 
+      // Never swap brick sessions — would break brick pairing
+      if (session2.is_brick) continue;
+
       // If same sport, try to move session2
       if (session1.sport === session2.sport) {
         // Find a candidate: same sport, same type, not brick, not adjacent to day1
@@ -802,13 +807,12 @@ function fixSportClustering(
               // Can candidate fit on day2?
               const day2Eligible = (sportEligibility[day2] || []).includes(candidate.sport);
               const day2Cap = dayCaps[day2] || 0;
-              const day2Remaining = day2Cap - session2Dur + candidateDur;
 
               if (
                 candidateDayEligible &&
                 candidateDayRemaining >= session2Dur &&
                 day2Eligible &&
-                day2Remaining >= candidateDur
+                day2Cap >= candidateDur
               ) {
                 swapCandidate = candidate;
                 swapCandidateDay = candidateDay;
@@ -821,6 +825,14 @@ function fixSportClustering(
 
         // Perform the swap
         if (swapCandidate && swapCandidateDay) {
+          // Update byDay to reflect the swap
+          byDay[day2] = (byDay[day2] || []).filter((s: any) => s !== session2);
+          byDay[swapCandidateDay] = (byDay[swapCandidateDay] || []).filter((s: any) => s !== swapCandidate);
+          byDay[swapCandidateDay] = byDay[swapCandidateDay] || [];
+          byDay[swapCandidateDay].push(session2);
+          byDay[day2] = byDay[day2] || [];
+          byDay[day2].push(swapCandidate);
+          // Update day properties on session objects
           session2.day = swapCandidateDay;
           swapCandidate.day = day2;
           fixes++;
@@ -1047,7 +1059,9 @@ Deno.serve(async (req) => {
         "{{block_weeks_json}}",
         JSON.stringify(block, null, 2)
       );
-      finalPrompt = finalPrompt.replace("{{limiters}}", userProfile.limiters || "none");
+      // Limiters column not yet in users table — defaults to "none" until onboarding captures it
+      const limitersStep3 = (userProfile.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
+      finalPrompt = finalPrompt.replace("{{limiters}}", limitersStep3);
       finalPrompt = finalPrompt.replace("{{constraints}}", constraintString);
       const prevStr =
         previouslyUsed.length > 0
@@ -1085,6 +1099,8 @@ Deno.serve(async (req) => {
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
     fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
     fixSportClustering(allBlockWeeks, dayCaps, sportEligibility);
+    // Re-run duration caps after sport clustering swaps to catch any new violations
+    fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
 
     // Validate LLM output before DB writes
     const VALID_PHASES = ["Base", "Build", "Peak", "Taper", "Recovery"];

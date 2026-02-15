@@ -17,7 +17,7 @@ For each session in the weeks above, assign a `template_id` from the workout lib
 Schedule each session to a specific day and handle brick sessions.
 
 ## Day scheduling (CRITICAL — these are HARD CONSTRAINTS)
-You MUST schedule every session according to these 7 rules in priority order:
+You MUST schedule every session according to these 8 rules in priority order:
 
 1. **REST days** — Days marked "REST" in Daily Availability are HARD CONSTRAINTS. You MUST NOT schedule any session on a REST day. This applies to ALL weeks including Taper and Recovery.
 
