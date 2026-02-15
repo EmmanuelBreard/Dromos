@@ -58,10 +58,18 @@ Swim intensity: swim MUST include Tempo or Intervals in Build and Peak phases (a
 - Never have one sport at 100% Easy throughout Build/Peak
 - Intensity session duration cap (HARD CONSTRAINT): Tempo and Intervals sessions MUST be ≤60min — no exceptions. A 90min Tempo does not exist; split it into 60min Tempo + 30min Easy instead. If more volume is needed in a sport, add Easy sessions. Before outputting each week, verify every Tempo/Intervals session is ≤60min.
 
+### Brick Sessions (CRITICAL — applies to ALL athletes)
+Brick sessions (bike immediately followed by run) are essential triathlon training:
+- **Base**: 1x every 2 weeks IF a weekend day has ≥ 90min. Short easy run (15-20min).
+- **Build**: 1x/week MINIMUM. Tempo run (20-30min) off the bike. Prefer weekends.
+- **Peak**: 1x/week MINIMUM. Race-pace run (20-30min) off race-effort bike.
+- **Taper/Recovery**: No bricks.
+Mark ALL brick sessions in Notes as "Brick: bike→run".
+If the athlete's limiter involves transitions, increase to 2x/week in Build/Peak.
+
 ### Limiter strategy (CRITICAL)
 - The athlete's limiters MUST drive sport-hour distribution
 - Allocate proportionally MORE hours to the limiter discipline(s)
-- If the limiter involves transitions (e.g. "run off the bike"), you MUST schedule brick sessions (bike immediately followed by run) at least 1x/week in Build and Peak phases. Mark these clearly in the Notes field as "Brick: bike→run". This is non-negotiable for transition-related limiters.
 - If the limiter is a specific sport, that sport should get ~5-15% more hours than it would in a balanced plan
 
 ### Budget (HARD CONSTRAINT)

@@ -213,7 +213,9 @@ function buildStep1Prompt(user: any, vars: any): string {
     "{{swim_css}}",
     formatCSS(user.css_seconds_per100m)
   );
-  prompt = prompt.replace("{{limiters}}", "none");
+  // Limiters column not yet in users table — defaults to "none" until onboarding captures it
+  const limitersValue = (user.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
+  prompt = prompt.replace("{{limiters}}", limitersValue);
 
   // Current training volume (athlete's baseline for progressive overload)
   prompt = prompt.replace(
@@ -727,6 +729,121 @@ function fixRestDays(
   return fixes;
 }
 
+// Post-processing: fix sport clustering on single-session days
+// When consecutive single-session days (≤75min) have the same sport, spread them apart
+function fixSportClustering(
+  planWeeks: any[],
+  dayCaps: Record<string, number>,
+  sportEligibility: Record<string, string[]>
+): number {
+  const SINGLE_SESSION_CAP = 75;
+  let fixes = 0;
+
+  for (const week of planWeeks) {
+    // Group sessions by day
+    const byDay: Record<string, any[]> = {};
+    for (const session of week.sessions || []) {
+      const d = normDay(session.day);
+      byDay[d] = byDay[d] || [];
+      byDay[d].push(session);
+    }
+
+    // Identify single-session days
+    const singleSessionDays: string[] = [];
+    for (const day of ALL_DAYS) {
+      const cap = dayCaps[day] || 0;
+      const sessions = byDay[day] || [];
+      if (cap > 0 && cap <= SINGLE_SESSION_CAP && sessions.length === 1) {
+        singleSessionDays.push(day);
+      }
+    }
+
+    // Check for consecutive single-session days with the same sport
+    for (let i = 0; i < singleSessionDays.length - 1; i++) {
+      const day1 = singleSessionDays[i];
+      const day2 = singleSessionDays[i + 1];
+
+      // Check if they are consecutive in ALL_DAYS
+      const idx1 = ALL_DAYS.indexOf(day1);
+      const idx2 = ALL_DAYS.indexOf(day2);
+      if (idx2 !== idx1 + 1) continue;
+
+      const session1 = byDay[day1][0];
+      const session2 = byDay[day2][0];
+
+      // Never swap brick sessions — would break brick pairing
+      if (session2.is_brick) continue;
+
+      // If same sport, try to move session2
+      if (session1.sport === session2.sport) {
+        // Find a candidate: same sport, same type, not brick, not adjacent to day1
+        const session2Dur = session2.duration_minutes || 0;
+        let swapCandidate: any = null;
+        let swapCandidateDay: string | null = null;
+
+        for (const candidateDay of ALL_DAYS) {
+          // Skip day1 and days adjacent to day1
+          const candidateIdx = ALL_DAYS.indexOf(candidateDay);
+          if (candidateIdx === idx1 || candidateIdx === idx1 - 1 || candidateIdx === idx1 + 1) {
+            continue;
+          }
+
+          const candidateSessions = byDay[candidateDay] || [];
+          for (const candidate of candidateSessions) {
+            if (
+              candidate.sport === session2.sport &&
+              candidate.type === session2.type &&
+              !candidate.is_brick
+            ) {
+              const candidateDur = candidate.duration_minutes || 0;
+
+              // Check if swap is feasible
+              // Can session2 fit on candidateDay?
+              const candidateDayEligible = (sportEligibility[candidateDay] || []).includes(session2.sport);
+              const candidateDayCap = dayCaps[candidateDay] || 0;
+              const candidateDayUsed = candidateSessions.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0);
+              const candidateDayRemaining = candidateDayCap - candidateDayUsed + candidateDur;
+
+              // Can candidate fit on day2?
+              const day2Eligible = (sportEligibility[day2] || []).includes(candidate.sport);
+              const day2Cap = dayCaps[day2] || 0;
+
+              if (
+                candidateDayEligible &&
+                candidateDayRemaining >= session2Dur &&
+                day2Eligible &&
+                day2Cap >= candidateDur
+              ) {
+                swapCandidate = candidate;
+                swapCandidateDay = candidateDay;
+                break;
+              }
+            }
+          }
+          if (swapCandidate) break;
+        }
+
+        // Perform the swap
+        if (swapCandidate && swapCandidateDay) {
+          // Update byDay to reflect the swap
+          byDay[day2] = (byDay[day2] || []).filter((s: any) => s !== session2);
+          byDay[swapCandidateDay] = (byDay[swapCandidateDay] || []).filter((s: any) => s !== swapCandidate);
+          byDay[swapCandidateDay] = byDay[swapCandidateDay] || [];
+          byDay[swapCandidateDay].push(session2);
+          byDay[day2] = byDay[day2] || [];
+          byDay[day2].push(swapCandidate);
+          // Update day properties on session objects
+          session2.day = swapCandidateDay;
+          swapCandidate.day = day2;
+          fixes++;
+        }
+      }
+    }
+  }
+
+  return fixes;
+}
+
 // Main handler
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -942,7 +1059,9 @@ Deno.serve(async (req) => {
         "{{block_weeks_json}}",
         JSON.stringify(block, null, 2)
       );
-      finalPrompt = finalPrompt.replace("{{limiters}}", "none");
+      // Limiters column not yet in users table — defaults to "none" until onboarding captures it
+      const limitersStep3 = (userProfile.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
+      finalPrompt = finalPrompt.replace("{{limiters}}", limitersStep3);
       finalPrompt = finalPrompt.replace("{{constraints}}", constraintString);
       const prevStr =
         previouslyUsed.length > 0
@@ -979,6 +1098,9 @@ Deno.serve(async (req) => {
     fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
     fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
+    fixSportClustering(allBlockWeeks, dayCaps, sportEligibility);
+    // Re-run duration caps after sport clustering swaps to catch any new violations
+    fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
 
     // Validate LLM output before DB writes
     const VALID_PHASES = ["Base", "Build", "Peak", "Taper", "Recovery"];

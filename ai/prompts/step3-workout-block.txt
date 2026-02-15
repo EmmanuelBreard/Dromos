@@ -17,7 +17,7 @@ For each session in the weeks above, assign a `template_id` from the workout lib
 Schedule each session to a specific day and handle brick sessions.
 
 ## Day scheduling (CRITICAL — these are HARD CONSTRAINTS)
-You MUST schedule every session according to these 7 rules in priority order:
+You MUST schedule every session according to these 8 rules in priority order:
 
 1. **REST days** — Days marked "REST" in Daily Availability are HARD CONSTRAINTS. You MUST NOT schedule any session on a REST day. This applies to ALL weeks including Taper and Recovery.
 
@@ -27,11 +27,13 @@ You MUST schedule every session according to these 7 rules in priority order:
 
 4. **Session spread** — Distribute sessions across available days. Prefer no more than 2 sessions per day (unless it's a brick pair bike+run). Avoid leaving eligible days empty if sessions remain unscheduled.
 
-5. **Intensity placement** — Place high-intensity sessions (Intervals) on fresh days. Do not schedule Intervals immediately after another Intervals session in the same sport. Separate hard days with Easy days when possible.
+5. **Sport alternation** — When a day has capacity for only one session (available minutes ≤ 75min), avoid scheduling the same sport on consecutive training days. Spread same-sport sessions as far apart as possible (e.g., run Tuesday + run Saturday, NOT run Tuesday + run Wednesday). This rule does NOT apply to days with ≥ 90min available where doubles are feasible.
 
-6. **Brick placement** — If the week notes indicate a brick session, schedule the bike and run on the SAME day, both marked `"is_brick": true`. Prefer weekend days (Saturday/Sunday) if they are available (not REST days). Brick runs are typically shorter (15-30min).
+6. **Intensity placement** — Place high-intensity sessions (Intervals) on fresh days. Do not schedule Intervals immediately after another Intervals session in the same sport. Separate hard days with Easy days when possible.
 
-7. **Volume maximization** — Use available time efficiently. If a day has 120min available and only 60min scheduled, consider whether additional Easy sessions could fit the macro plan's target hours for that week.
+7. **Brick placement** — If the week notes indicate a brick session, schedule the bike and run on the SAME day, both marked `"is_brick": true`. Prefer weekend days (Saturday/Sunday) if they are available (not REST days). Brick runs are typically shorter (15-30min).
+
+8. **Volume maximization** — Use available time efficiently. If a day has 120min available and only 60min scheduled, consider whether additional Easy sessions could fit the macro plan's target hours for that week.
 
 ## Matching Rules
 
