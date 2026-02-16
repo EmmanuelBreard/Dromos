@@ -64,6 +64,10 @@ Authenticated + plan → MainTabView
 - Calendar (calendar icon) → `CalendarPlanView`
 - Profile (person icon) → `ProfileView` (receives shared `profileService`)
 
+**Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Home or Calendar:
+- Home: toggles `homeScrollReset` → HomeView scrolls to today's day section and resets progressive disclosure
+- Calendar: toggles `calendarReset` → CalendarPlanView resets `currentWeekIndex` to the week containing today
+
 **Local navigation**: `NavigationStack` inside individual tab views.
 
 ---
