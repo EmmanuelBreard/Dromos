@@ -120,14 +120,11 @@ struct PlanGenerationView: View {
     /// View shown during plan generation with stepped progress bar.
     private var generatingView: some View {
         VStack(spacing: 24) {
-            // Progress spinner
-            ProgressView()
-                .scaleEffect(1.5)
-
             // Custom progress bar with shimmer wave
             GeometryReader { geometry in
                 let barWidth = geometry.size.width
                 let filledWidth = barWidth * progress
+                let shimmerWidth: CGFloat = 60
 
                 ZStack(alignment: .leading) {
                     // Track background
@@ -139,19 +136,18 @@ struct PlanGenerationView: View {
                         .fill(Color.green)
                         .frame(width: max(0, filledWidth))
                         .overlay(
-                            // Shimmer wave — lighter green sweep
+                            // Shimmer wave — lighter green sweep across filled area
                             LinearGradient(
                                 colors: [
                                     .clear,
-                                    Color.white.opacity(0.35),
+                                    Color.white.opacity(0.4),
                                     .clear
                                 ],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
-                            .frame(width: 60)
-                            .offset(x: -30 + filledWidth * shimmerPhase)
-                            .clipped()
+                            .frame(width: shimmerWidth)
+                            .offset(x: -filledWidth / 2 - shimmerWidth / 2 + (filledWidth + shimmerWidth) * shimmerPhase)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
