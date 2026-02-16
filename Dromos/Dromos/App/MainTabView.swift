@@ -37,18 +37,14 @@ struct MainTabView: View {
     /// week reset in CalendarPlanView via a @Binding that stays live even when the tab is inactive.
     @State private var calendarReset: Bool = false
 
-    /// Custom binding that detects both tab switches and same-tab re-taps.
-    /// SwiftUI's onChange(of: selectedTab) only fires on value changes, missing re-taps.
+    /// Custom binding that triggers view resets on tab navigation.
+    /// Fires for both tab switches (Calendar→Home) and same-tab re-taps (Home→Home).
     private var tabSelection: Binding<AppTab> {
         Binding(
             get: { selectedTab },
             set: { newValue in
-                if newValue == .home || (newValue == selectedTab && selectedTab == .home) {
-                    homeScrollReset.toggle()
-                }
-                if newValue == .calendar || (newValue == selectedTab && selectedTab == .calendar) {
-                    calendarReset.toggle()
-                }
+                if newValue == .home { homeScrollReset.toggle() }
+                if newValue == .calendar { calendarReset.toggle() }
                 selectedTab = newValue
             }
         )

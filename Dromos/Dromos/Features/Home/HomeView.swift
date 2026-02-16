@@ -84,9 +84,6 @@ struct HomeView: View {
         return ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
-                    // Stable anchor for programmatic scroll-to-top on tab return
-                    Color.clear.frame(height: 0).id("scrollTop")
-
                     // Multi-week sections (current week through lastVisibleWeekIndex)
                     ForEach(Array(visibleWeeks.enumerated()), id: \.element.id) { offset, week in
                         let weekIndex = currentWeekIndex + offset
