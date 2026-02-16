@@ -33,8 +33,25 @@ struct MainTabView: View {
     /// scroll reset in HomeView via a @Binding that stays live even when the tab is inactive.
     @State private var homeScrollReset: Bool = false
 
+    /// Toggled each time the Calendar tab is re-selected; the toggle (not the value) drives
+    /// week reset in CalendarPlanView via a @Binding that stays live even when the tab is inactive.
+    @State private var calendarReset: Bool = false
+
+    /// Custom binding that triggers view resets on tab navigation.
+    /// Fires for both tab switches (Calendar→Home) and same-tab re-taps (Home→Home).
+    private var tabSelection: Binding<AppTab> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == .home { homeScrollReset.toggle() }
+                if newValue == .calendar { calendarReset.toggle() }
+                selectedTab = newValue
+            }
+        )
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             Tab("Home", systemImage: "house", value: .home) {
                 HomeView(
                     authService: authService,
@@ -45,17 +62,12 @@ struct MainTabView: View {
             }
 
             Tab("Calendar", systemImage: "calendar", value: .calendar) {
-                CalendarPlanView(authService: authService, planService: planService)
+                CalendarPlanView(authService: authService, planService: planService, calendarReset: $calendarReset)
             }
 
             Tab("Profile", systemImage: "person", value: .profile) {
                 // FIX #6: Pass shared profileService to ProfileView
                 ProfileView(authService: authService, profileService: profileService)
-            }
-        }
-        .onChange(of: selectedTab) { _, newValue in
-            if newValue == .home {
-                homeScrollReset.toggle()
             }
         }
         .task {
