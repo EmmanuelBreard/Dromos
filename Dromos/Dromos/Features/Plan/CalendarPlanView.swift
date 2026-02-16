@@ -14,6 +14,9 @@ import OSLog
 struct CalendarPlanView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var planService: PlanService
+    /// Toggled by MainTabView each time the Calendar tab is re-selected.
+    /// Using @Binding ensures the change propagates even when the tab is inactive.
+    @Binding var calendarReset: Bool
 
     @State private var currentWeekIndex: Int = 0
 
@@ -44,6 +47,12 @@ struct CalendarPlanView: View {
                 if let plan = planService.trainingPlan {
                     currentWeekIndex = plan.currentWeekIndex()
                     logger.debug("Current week index recalculated: \(currentWeekIndex, privacy: .public)")
+                }
+            }
+            .onChange(of: calendarReset) { _, _ in
+                // Tab re-selection: reset to current week
+                if let plan = planService.trainingPlan {
+                    currentWeekIndex = plan.currentWeekIndex()
                 }
             }
         }
@@ -157,5 +166,5 @@ struct CalendarPlanView: View {
 }
 
 #Preview {
-    CalendarPlanView(authService: AuthService(), planService: PlanService())
+    CalendarPlanView(authService: AuthService(), planService: PlanService(), calendarReset: .constant(false))
 }

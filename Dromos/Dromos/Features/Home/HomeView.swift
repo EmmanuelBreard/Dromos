@@ -122,11 +122,9 @@ struct HomeView: View {
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
             }
             .onChange(of: scrollReset) { _, _ in
-                // Tab re-selection: reset weeks and scroll to top immediately
+                // Tab re-selection: reset weeks and scroll to today (matching first-load behavior)
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo("scrollTop", anchor: .top)
-                }
+                scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
             }
         }
     }
