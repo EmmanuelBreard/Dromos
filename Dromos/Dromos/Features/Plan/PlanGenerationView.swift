@@ -19,6 +19,7 @@ struct PlanGenerationView: View {
     @State private var elapsedSeconds: Double = 0
     @State private var generationCompleted: Bool = false
     @State private var timerCancellable: AnyCancellable?
+    @State private var shimmerPhase: CGFloat = 0
 
     /// Logger for plan generation operations
     private let logger = Logger(subsystem: "com.dromos.app", category: "PlanGeneration")
@@ -123,10 +124,45 @@ struct PlanGenerationView: View {
             ProgressView()
                 .scaleEffect(1.5)
 
-            // Progress bar
-            ProgressView(value: progress)
-                .tint(.blue)
+            // Custom progress bar with shimmer wave
+            GeometryReader { geometry in
+                let barWidth = geometry.size.width
+                let filledWidth = barWidth * progress
+
+                ZStack(alignment: .leading) {
+                    // Track background
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.green.opacity(0.2))
+
+                    // Filled portion with shimmer overlay
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.green)
+                        .frame(width: max(0, filledWidth))
+                        .overlay(
+                            // Shimmer wave — lighter green sweep
+                            LinearGradient(
+                                colors: [
+                                    .clear,
+                                    Color.white.opacity(0.35),
+                                    .clear
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: 60)
+                            .offset(x: -30 + filledWidth * shimmerPhase)
+                            .clipped()
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
                 .animation(.easeInOut(duration: 0.5), value: progress)
+            }
+            .frame(height: 8)
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    shimmerPhase = 1.0
+                }
+            }
 
             // Step label
             Text("Step \(currentStep) of 3 — \(currentLabel)")
@@ -271,6 +307,7 @@ struct PlanGenerationView: View {
         generationStartTime = Date()
         elapsedSeconds = 0
         generationCompleted = false
+        shimmerPhase = 0
 
         // Create timer to update elapsed time every 0.5 seconds
         timerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
