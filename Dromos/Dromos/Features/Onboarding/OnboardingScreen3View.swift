@@ -222,8 +222,8 @@ struct OnboardingScreen3View: View {
                     }
                 }
             }
+            .padding()
         }
-        .padding()
         .onAppear {
             // Restore picker values from data, or set defaults
             if let vma = data.vma {
