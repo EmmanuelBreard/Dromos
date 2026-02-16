@@ -1,6 +1,6 @@
 # DRO-100: Session Graph — Final Time Label + Formatting
 
-**Overall Progress:** `50%`
+**Overall Progress:** `100%`
 
 ## TLDR
 The workout graph x-axis is missing the final duration label and uses raw minute format for all values. Fix the axis layout to always show the endpoint, format labels using hour notation for 60min+, and prevent overlap between the final label and nearby interval ticks.
@@ -19,7 +19,7 @@ The workout graph x-axis is missing the final duration label and uses raw minute
 
 ## Tasks
 
-- [x] 🟨 **Step 1: Add `formatTimeLabel(_:)` helper**
+- [x] 🟩 **Step 1: Add `formatTimeLabel(_:)` helper**
   - Add a `private func formatTimeLabel(_ minutes: Double) -> String` to `WorkoutGraphView`
   - Logic:
     - `minutes == 0` → `"0'"`
@@ -28,7 +28,7 @@ The workout graph x-axis is missing the final duration label and uses raw minute
     - else → `"\(Int(minutes/60))h\(Int(minutes.truncatingRemainder(dividingBy: 60)))"`
   - Place it in the `// MARK: - Time Axis` section, after `timeInterval`
 
-- [x] 🟨 **Step 2: Add `timeTickMinutes` computed property**
+- [x] 🟩 **Step 2: Add `timeTickMinutes` computed property**
   - Add a `private var timeTickMinutes: [Double]` computed property
   - Logic:
     1. Generate interval ticks: `stride(from: 0, through: totalDurationMinutes, by: timeInterval)` — but cap at `< totalDurationMinutes` (do NOT include the endpoint if it lands exactly on an interval; it will be added as the final tick)
@@ -37,7 +37,7 @@ The workout graph x-axis is missing the final duration label and uses raw minute
     4. Filter: remove any interval tick that is within 3 minutes of the final tick (overlap prevention). The `0'` tick and the final tick are never removed.
   - Result: a sorted array of minute values to render as labels
 
-- [x] 🟨 **Step 3: Rewrite `timeAxisView` using ZStack positioning**
+- [x] 🟩 **Step 3: Rewrite `timeAxisView` using ZStack positioning**
   - Replace the current `HStack`-based `timeAxisView` with:
     ```swift
     private var timeAxisView: some View {
@@ -63,7 +63,7 @@ The workout graph x-axis is missing the final duration label and uses raw minute
   - Labels are centered on their tick position via `.position(x:y:)` (SwiftUI `.position` centers the view at the given point)
   - `.fixedSize()` ensures labels aren't compressed
 
-- [ ] 🟨 **Step 4: Verify with existing previews**
+- [x] 🟩 **Step 4: Verify with existing previews**
   - The 4 existing `#Preview` blocks cover: 45min bike intervals, 40min run tempo, ~15min swim, 180min long ride
   - Confirm labels render correctly in Xcode previews:
     - Bike intervals (51min total): `0'  15'  30'  45'  51'`
