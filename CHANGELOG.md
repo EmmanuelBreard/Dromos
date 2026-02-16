@@ -6,6 +6,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Onboarding inputs replaced with wheel Pickers** — All numeric TextFields across onboarding screens 1-3 replaced with native iOS wheel pickers, eliminating the keyboard entirely (DRO-103)
+  - Weight: wheel picker (30-150 kg, default 70)
+  - Race time objective: toggle + dual hour/minute pickers
+  - VMA, CSS, FTP, experience: toggle-to-reveal pattern (toggle off = nil, toggle on = picker)
+- **Graph final time label** — Time axis now displays exact session duration (e.g., 45', 1h30) with hour formatting and overlap prevention (DRO-100)
+- **Easy intensity differentiation** — Easy sessions now show different intensity based on duration for run and bike (DRO-102)
+- **Simplified day headers** — Day headers now show "Today" / "Tomorrow" instead of full date (DRO-107)
+
 ## [1.0.0] - 2026-02-15
 
 ### Changed
