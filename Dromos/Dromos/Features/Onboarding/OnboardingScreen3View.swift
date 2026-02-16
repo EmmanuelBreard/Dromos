@@ -100,6 +100,9 @@ struct OnboardingScreen3View: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("VMA (km/h)")
                             .font(.headline)
+                        Text("Your maximal aerobic speed")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
                         Picker("VMA", selection: $selectedVma) {
                             ForEach(Self.vmaValues, id: \.self) { value in
@@ -112,16 +115,15 @@ struct OnboardingScreen3View: View {
                         .onChange(of: selectedVma) { _, newValue in
                             data.vma = newValue
                         }
-
-                        Text("Your maximal aerobic speed")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
 
                     // CSS
                     VStack(alignment: .leading, spacing: 8) {
                         Text("CSS (Critical Swim Speed)")
                             .font(.headline)
+                        Text("Pace per 100 meters")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
                         HStack(spacing: 12) {
                             Picker("Minutes", selection: $selectedCssMin) {
@@ -148,16 +150,15 @@ struct OnboardingScreen3View: View {
                                 data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
                             }
                         }
-
-                        Text("Pace per 100 meters")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
 
                     // FTP
                     VStack(alignment: .leading, spacing: 8) {
                         Text("FTP (Watts)")
                             .font(.headline)
+                        Text("Your functional threshold power")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
                         Picker("FTP", selection: $selectedFtp) {
                             ForEach(Array(stride(from: 50, through: 500, by: 5)), id: \.self) { value in
@@ -170,16 +171,15 @@ struct OnboardingScreen3View: View {
                         .onChange(of: selectedFtp) { _, newValue in
                             data.ftp = newValue
                         }
-
-                        Text("Your functional threshold power")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
 
                     // Experience years
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Triathlon Experience")
                             .font(.headline)
+                        Text("How long have you been training?")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
                         Picker("Experience", selection: $selectedExperience) {
                             ForEach(0...30, id: \.self) { value in
@@ -192,10 +192,6 @@ struct OnboardingScreen3View: View {
                         .onChange(of: selectedExperience) { _, newValue in
                             data.experienceYears = newValue
                         }
-
-                        Text("How long have you been training?")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
                 }
             }
