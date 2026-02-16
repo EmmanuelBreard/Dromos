@@ -93,6 +93,7 @@ struct HomeView: View {
                             .padding(.horizontal)
                             .padding(.top, offset == 0 ? 0 : 16)
                             .padding(.bottom, 8)
+                            .id("week-\(week.weekNumber)")
 
                         // Day sections for this week
                         let days = plan.daysForWeek(week)
@@ -108,7 +109,7 @@ struct HomeView: View {
 
                     // "Show next week" CTA (only if more weeks remain)
                     if endIndex < plan.planWeeks.count - 1 {
-                        showNextWeekButton
+                        showNextWeekButton(proxy: proxy, plan: plan)
                     }
                 }
             }
@@ -270,11 +271,21 @@ struct HomeView: View {
     
     // MARK: - "Show Next Week" CTA
 
-    /// Button to progressively reveal more weeks.
-    private var showNextWeekButton: some View {
+    /// Button to progressively reveal more weeks, scrolling to the newly revealed week header.
+    private func showNextWeekButton(proxy: ScrollViewProxy, plan: TrainingPlan) -> some View {
         Button {
+            let newIndex = lastVisibleWeekIndex + 1
             withAnimation(.easeInOut(duration: 0.3)) {
-                lastVisibleWeekIndex += 1
+                lastVisibleWeekIndex = newIndex
+            }
+            // Scroll to the newly revealed week header after the view updates
+            if newIndex < plan.planWeeks.count {
+                let newWeek = plan.planWeeks[newIndex]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo("week-\(newWeek.weekNumber)", anchor: .top)
+                    }
+                }
             }
         } label: {
             HStack(spacing: 6) {
