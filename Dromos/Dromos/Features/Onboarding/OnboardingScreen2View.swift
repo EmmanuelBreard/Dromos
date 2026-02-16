@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Second onboarding screen collecting race goals.
-/// Required: race objective, race date. Optional: time objective.
+/// All fields are required: race objective, race date, time objective.
 struct OnboardingScreen2View: View {
     @Binding var data: RaceGoalsData
     var onBack: () -> Void
@@ -16,8 +16,7 @@ struct OnboardingScreen2View: View {
 
     @State private var showErrors = false
 
-    // Time objective toggle and picker state
-    @State private var showTimeObjective: Bool = false
+    // Time objective picker state
     @State private var selectedHours: Int = 2
     @State private var selectedMinutes: Int = 0
 
@@ -114,41 +113,32 @@ struct OnboardingScreen2View: View {
                     }
                 }
 
-                // Time objective (optional)
+                // Time objective
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("I have a time goal", isOn: $showTimeObjective)
+                    Text("Time Objective")
                         .font(.headline)
-                        .onChange(of: showTimeObjective) { _, isOn in
-                            if isOn {
-                                data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
-                            } else {
-                                data.timeObjectiveMinutes = nil
+
+                    HStack(spacing: 16) {
+                        Picker("Hours", selection: $selectedHours) {
+                            ForEach(0...23, id: \.self) { hour in
+                                Text("\(hour) h").tag(hour)
                             }
                         }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .onChange(of: selectedHours) { _, _ in
+                            data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
+                        }
 
-                    if showTimeObjective {
-                        HStack(spacing: 16) {
-                            Picker("Hours", selection: $selectedHours) {
-                                ForEach(0...23, id: \.self) { hour in
-                                    Text("\(hour) h").tag(hour)
-                                }
+                        Picker("Minutes", selection: $selectedMinutes) {
+                            ForEach(0...59, id: \.self) { minute in
+                                Text("\(minute) min").tag(minute)
                             }
-                            .pickerStyle(.wheel)
-                            .frame(height: 120)
-                            .onChange(of: selectedHours) { _, _ in
-                                data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
-                            }
-
-                            Picker("Minutes", selection: $selectedMinutes) {
-                                ForEach(0...59, id: \.self) { minute in
-                                    Text("\(minute) min").tag(minute)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(height: 120)
-                            .onChange(of: selectedMinutes) { _, _ in
-                                data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
-                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .onChange(of: selectedMinutes) { _, _ in
+                            data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
                         }
                     }
                 }
@@ -187,9 +177,10 @@ struct OnboardingScreen2View: View {
         .padding()
         .onAppear {
             if let totalMinutes = data.timeObjectiveMinutes {
-                showTimeObjective = true
                 selectedHours = totalMinutes / 60
                 selectedMinutes = totalMinutes % 60
+            } else {
+                data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
             }
         }
     }

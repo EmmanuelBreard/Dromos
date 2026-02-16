@@ -8,19 +8,13 @@
 import SwiftUI
 
 /// Third onboarding screen collecting performance metrics.
-/// Current weekly training hours is required; VMA, CSS, FTP, experience years are optional.
+/// All fields are required: current weekly hours, VMA, CSS, FTP, experience years.
 struct OnboardingScreen3View: View {
     @Binding var data: MetricsData
     var onBack: () -> Void
     var onNext: () -> Void
 
     @State private var showErrors = false
-
-    // Toggle states for optional metrics
-    @State private var showVma: Bool = false
-    @State private var showCss: Bool = false
-    @State private var showFtp: Bool = false
-    @State private var showExperience: Bool = false
 
     // Picker selection values
     @State private var selectedVma: Double = 18.0
@@ -33,26 +27,16 @@ struct OnboardingScreen3View: View {
     private static let vmaValues: [Double] = stride(from: 13.0, through: 25.0, by: 0.1)
         .map { Double(round($0 * 10)) / 10 }
 
-    // MARK: - Validation (only for filled fields)
-
-    /// Validates CSS: if enabled, must be between 25-300 seconds per 100m
-    private var isCssValid: Bool {
-        if showCss, let total = data.cssSecondsPer100m {
-            return total >= 25 && total <= 300
-        } else {
-            return true
-        }
-    }
+    // MARK: - Validation
 
     /// Current weekly hours must be set (required field)
     private var isCurrentWeeklyHoursValid: Bool {
         data.currentWeeklyHours != nil
     }
 
-    /// Form is valid when all filled fields meet validation criteria
-    /// and the required current weekly hours field is set
+    /// Form is valid when required field is set (all picker fields have defaults)
     private var isFormValid: Bool {
-        isCssValid && isCurrentWeeklyHoursValid
+        isCurrentWeeklyHoursValid
     }
 
     // MARK: - Body
@@ -114,33 +98,19 @@ struct OnboardingScreen3View: View {
 
                     // VMA
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("VMA (km/h)")
-                                .font(.headline)
-                            Spacer()
-                            Toggle("", isOn: $showVma)
-                                .labelsHidden()
-                                .onChange(of: showVma) { _, newValue in
-                                    if newValue {
-                                        data.vma = selectedVma
-                                    } else {
-                                        data.vma = nil
-                                    }
-                                }
-                        }
+                        Text("VMA (km/h)")
+                            .font(.headline)
 
-                        if showVma {
-                            Picker("VMA", selection: $selectedVma) {
-                                ForEach(Self.vmaValues, id: \.self) { value in
-                                    Text(String(format: "%.1f km/h", value))
-                                        .tag(value)
-                                }
+                        Picker("VMA", selection: $selectedVma) {
+                            ForEach(Self.vmaValues, id: \.self) { value in
+                                Text(String(format: "%.1f km/h", value))
+                                    .tag(value)
                             }
-                            .pickerStyle(.wheel)
-                            .frame(height: 120)
-                            .onChange(of: selectedVma) { _, newValue in
-                                data.vma = newValue
-                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .onChange(of: selectedVma) { _, newValue in
+                            data.vma = newValue
                         }
 
                         Text("Your maximal aerobic speed")
@@ -150,89 +120,55 @@ struct OnboardingScreen3View: View {
 
                     // CSS
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("CSS (Critical Swim Speed)")
-                                .font(.headline)
-                            Spacer()
-                            Toggle("", isOn: $showCss)
-                                .labelsHidden()
-                                .onChange(of: showCss) { _, newValue in
-                                    if newValue {
-                                        data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
-                                    } else {
-                                        data.cssSecondsPer100m = nil
-                                    }
-                                }
-                        }
+                        Text("CSS (Critical Swim Speed)")
+                            .font(.headline)
 
-                        if showCss {
-                            HStack(spacing: 12) {
-                                Picker("Minutes", selection: $selectedCssMin) {
-                                    ForEach(0...5, id: \.self) { value in
-                                        Text("\(value) min")
-                                            .tag(value)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(height: 120)
-                                .onChange(of: selectedCssMin) { _, _ in
-                                    data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
-                                }
-
-                                Picker("Seconds", selection: $selectedCssSec) {
-                                    ForEach(0...59, id: \.self) { value in
-                                        Text(String(format: "%02d sec", value))
-                                            .tag(value)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(height: 120)
-                                .onChange(of: selectedCssSec) { _, _ in
-                                    data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
-                                }
-                            }
-                        }
-
-                        if showErrors && !isCssValid {
-                            Text("CSS must be between 0:25 and 5:00 per 100m")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        } else {
-                            Text("Pace per 100 meters")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    // FTP
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("FTP (Watts)")
-                                .font(.headline)
-                            Spacer()
-                            Toggle("", isOn: $showFtp)
-                                .labelsHidden()
-                                .onChange(of: showFtp) { _, newValue in
-                                    if newValue {
-                                        data.ftp = selectedFtp
-                                    } else {
-                                        data.ftp = nil
-                                    }
-                                }
-                        }
-
-                        if showFtp {
-                            Picker("FTP", selection: $selectedFtp) {
-                                ForEach(Array(stride(from: 50, through: 500, by: 5)), id: \.self) { value in
-                                    Text("\(value) W")
+                        HStack(spacing: 12) {
+                            Picker("Minutes", selection: $selectedCssMin) {
+                                ForEach(0...5, id: \.self) { value in
+                                    Text("\(value) min")
                                         .tag(value)
                                 }
                             }
                             .pickerStyle(.wheel)
                             .frame(height: 120)
-                            .onChange(of: selectedFtp) { _, newValue in
-                                data.ftp = newValue
+                            .onChange(of: selectedCssMin) { _, _ in
+                                data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
                             }
+
+                            Picker("Seconds", selection: $selectedCssSec) {
+                                ForEach(0...59, id: \.self) { value in
+                                    Text(String(format: "%02d sec", value))
+                                        .tag(value)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 120)
+                            .onChange(of: selectedCssSec) { _, _ in
+                                data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
+                            }
+                        }
+
+                        Text("Pace per 100 meters")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    // FTP
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("FTP (Watts)")
+                            .font(.headline)
+
+                        Picker("FTP", selection: $selectedFtp) {
+                            ForEach(Array(stride(from: 50, through: 500, by: 5)), id: \.self) { value in
+                                Text("\(value) W")
+                                    .tag(value)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .onChange(of: selectedFtp) { _, newValue in
+                            data.ftp = newValue
                         }
 
                         Text("Your functional threshold power")
@@ -242,33 +178,19 @@ struct OnboardingScreen3View: View {
 
                     // Experience years
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Triathlon Experience")
-                                .font(.headline)
-                            Spacer()
-                            Toggle("", isOn: $showExperience)
-                                .labelsHidden()
-                                .onChange(of: showExperience) { _, newValue in
-                                    if newValue {
-                                        data.experienceYears = selectedExperience
-                                    } else {
-                                        data.experienceYears = nil
-                                    }
-                                }
-                        }
+                        Text("Triathlon Experience")
+                            .font(.headline)
 
-                        if showExperience {
-                            Picker("Experience", selection: $selectedExperience) {
-                                ForEach(0...30, id: \.self) { value in
-                                    Text(value == 1 ? "1 year" : "\(value) years")
-                                        .tag(value)
-                                }
+                        Picker("Experience", selection: $selectedExperience) {
+                            ForEach(0...30, id: \.self) { value in
+                                Text(value == 1 ? "1 year" : "\(value) years")
+                                    .tag(value)
                             }
-                            .pickerStyle(.wheel)
-                            .frame(height: 120)
-                            .onChange(of: selectedExperience) { _, newValue in
-                                data.experienceYears = newValue
-                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .onChange(of: selectedExperience) { _, newValue in
+                            data.experienceYears = newValue
                         }
 
                         Text("How long have you been training?")
@@ -308,22 +230,27 @@ struct OnboardingScreen3View: View {
         }
         .padding()
         .onAppear {
+            // Restore picker values from data, or set defaults
             if let vma = data.vma {
-                showVma = true
                 selectedVma = Double(round(vma * 10)) / 10
+            } else {
+                data.vma = selectedVma
             }
             if let css = data.cssSecondsPer100m {
-                showCss = true
                 selectedCssMin = css / 60
                 selectedCssSec = css % 60
+            } else {
+                data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
             }
             if let ftp = data.ftp {
-                showFtp = true
                 selectedFtp = ftp
+            } else {
+                data.ftp = selectedFtp
             }
             if let years = data.experienceYears {
-                showExperience = true
                 selectedExperience = years
+            } else {
+                data.experienceYears = selectedExperience
             }
         }
     }
