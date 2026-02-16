@@ -15,9 +15,6 @@ struct OnboardingScreen1View: View {
 
     @State private var showErrors = false
 
-    // Weight as string for TextField binding
-    @State private var weightText: String = ""
-
     // MARK: - Validation
 
     /// Validates that sex has been selected
@@ -33,10 +30,9 @@ struct OnboardingScreen1View: View {
         return age >= 13 && age <= 99
     }
 
-    /// Validates that weight is between 30-300 kg
+    /// Validates that weight has been selected (picker constrains to 30-150 kg range)
     private var isWeightValid: Bool {
-        guard let weight = data.weightKg else { return false }
-        return weight >= 30 && weight <= 300
+        data.weightKg != nil
     }
 
     /// Form is valid when all fields meet validation criteria
@@ -60,128 +56,127 @@ struct OnboardingScreen1View: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Progress indicator
-            Text("1 of 6")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            // Title
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Let's get started")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                Text("Tell us a bit about yourself")
+        ScrollView {
+            VStack(spacing: 24) {
+                // Progress indicator
+                Text("1 of 6")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Form
-            VStack(alignment: .leading, spacing: 20) {
-                // Sex selection
+                // Title
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Sex")
-                        .font(.headline)
-
-                    HStack(spacing: 12) {
-                        Button(action: { data.sex = "Male" }) {
-                            Text("Male")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(data.sex == "Male" ? Color.blue : Color.gray.opacity(0.2))
-                                .foregroundColor(data.sex == "Male" ? .white : .primary)
-                                .cornerRadius(10)
-                        }
-
-                        Button(action: { data.sex = "Female" }) {
-                            Text("Female")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(data.sex == "Female" ? Color.blue : Color.gray.opacity(0.2))
-                                .foregroundColor(data.sex == "Female" ? .white : .primary)
-                                .cornerRadius(10)
-                        }
-                    }
-
-                    if showErrors && !isSexValid {
-                        Text("Please select your sex")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
+                    Text("Let's get started")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    Text("Tell us a bit about yourself")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Birth date
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Birth Date")
-                        .font(.headline)
+                // Form
+                VStack(alignment: .leading, spacing: 20) {
+                    // Sex selection
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Sex")
+                            .font(.headline)
 
-                    DatePicker(
-                        "Birth Date",
-                        selection: Binding(
-                            get: { data.birthDate ?? Date() },
-                            set: { data.birthDate = $0 }
-                        ),
-                        in: dateRange,
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-
-                    if showErrors && !isBirthDateValid {
-                        Text("Age must be between 13 and 99 years")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                }
-
-                // Weight
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Weight (kg)")
-                        .font(.headline)
-
-                    TextField("Enter weight", text: $weightText)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: weightText) { _, newValue in
-                            if let weight = Double(newValue) {
-                                data.weightKg = weight
+                        HStack(spacing: 12) {
+                            Button(action: { data.sex = "Male" }) {
+                                Text("Male")
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(data.sex == "Male" ? Color.blue : Color.gray.opacity(0.2))
+                                    .foregroundColor(data.sex == "Male" ? .white : .primary)
+                                    .cornerRadius(10)
                             }
-                            // Don't set to nil on invalid input - preserve previous valid value
-                        }
-                        .onAppear {
-                            if let weight = data.weightKg {
-                                weightText = String(format: "%.1f", weight)
+
+                            Button(action: { data.sex = "Female" }) {
+                                Text("Female")
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(data.sex == "Female" ? Color.blue : Color.gray.opacity(0.2))
+                                    .foregroundColor(data.sex == "Female" ? .white : .primary)
+                                    .cornerRadius(10)
                             }
                         }
 
-                    if showErrors && !isWeightValid {
-                        Text("Weight must be between 30 and 300 kg")
-                            .font(.caption)
-                            .foregroundColor(.red)
+                        if showErrors && !isSexValid {
+                            Text("Please select your sex")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
+
+                    // Birth date
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Birth Date")
+                            .font(.headline)
+
+                        DatePicker(
+                            "Birth Date",
+                            selection: Binding(
+                                get: { data.birthDate ?? Date() },
+                                set: { data.birthDate = $0 }
+                            ),
+                            in: dateRange,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+
+                        if showErrors && !isBirthDateValid {
+                            Text("Age must be between 13 and 99 years")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
+
+                    // Weight
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Weight (kg)")
+                            .font(.headline)
+
+                        Picker("Weight", selection: Binding(
+                            get: { data.weightKg ?? 70.0 },
+                            set: { data.weightKg = $0 }
+                        )) {
+                            ForEach(Array(stride(from: 30.0, through: 150.0, by: 1.0)), id: \.self) { weight in
+                                Text("\(Int(weight)) kg").tag(weight)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .labelsHidden()
                     }
                 }
-            }
 
-            Spacer()
+                Spacer()
 
-            // Next button
-            Button(action: {
-                showErrors = true
-                if isFormValid {
-                    onNext()
+                // Next button
+                Button(action: {
+                    showErrors = true
+                    if isFormValid {
+                        onNext()
+                    }
+                }) {
+                    Text("Next")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                 }
-            }) {
-                Text("Next")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
             }
         }
         .padding()
+        .onAppear {
+            // Set default weight if not already set
+            if data.weightKg == nil {
+                data.weightKg = 70.0
+            }
+        }
     }
 }
 

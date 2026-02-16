@@ -28,7 +28,7 @@ Dromos/Dromos/
 │
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
-│   ├── Onboarding/                   # 5-screen onboarding flow
+│   ├── Onboarding/                   # 7-screen onboarding flow
 │   ├── Home/                         # Multi-week rolling dashboard
 │   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today
 │   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView

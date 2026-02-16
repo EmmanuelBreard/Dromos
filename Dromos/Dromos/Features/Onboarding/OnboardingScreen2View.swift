@@ -16,9 +16,10 @@ struct OnboardingScreen2View: View {
 
     @State private var showErrors = false
 
-    // Time objective as strings for TextField binding
-    @State private var hoursText: String = ""
-    @State private var minutesText: String = ""
+    // Time objective toggle and picker state
+    @State private var showTimeObjective: Bool = false
+    @State private var selectedHours: Int = 2
+    @State private var selectedMinutes: Int = 0
 
     // MARK: - Validation
 
@@ -115,65 +116,41 @@ struct OnboardingScreen2View: View {
 
                 // Time objective (optional)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Time Objective (Optional)")
+                    Toggle("I have a time goal", isOn: $showTimeObjective)
                         .font(.headline)
-
-                    HStack(spacing: 12) {
-                        VStack {
-                            TextField("Hours", text: $hoursText)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
-                                .multilineTextAlignment(.center)
-                                .onChange(of: hoursText) { _, newValue in
-                                    // Convert hours:minutes UI to total minutes
-                                    let hours = Int(newValue) ?? 0
-                                    let minutes = Int(minutesText) ?? 0
-                                    let total = hours * 60 + minutes
-                                    data.timeObjectiveMinutes = total > 0 ? total : nil
-                                }
-                                .onAppear {
-                                    // Decompose total minutes into hours:minutes for display
-                                    if let totalMinutes = data.timeObjectiveMinutes {
-                                        let hours = totalMinutes / 60
-                                        hoursText = String(hours)
-                                    }
-                                }
-                            Text("Hours")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        .onChange(of: showTimeObjective) { _, isOn in
+                            if isOn {
+                                data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
+                            } else {
+                                data.timeObjectiveMinutes = nil
+                            }
                         }
 
-                        Text(":")
-                            .font(.title2)
+                    if showTimeObjective {
+                        HStack(spacing: 16) {
+                            Picker("Hours", selection: $selectedHours) {
+                                ForEach(0...23, id: \.self) { hour in
+                                    Text("\(hour) h").tag(hour)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 120)
+                            .onChange(of: selectedHours) { _, _ in
+                                data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
+                            }
 
-                        VStack {
-                            TextField("Minutes", text: $minutesText)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
-                                .multilineTextAlignment(.center)
-                                .onChange(of: minutesText) { _, newValue in
-                                    // Convert hours:minutes UI to total minutes
-                                    let hours = Int(hoursText) ?? 0
-                                    let minutes = Int(newValue) ?? 0
-                                    let total = hours * 60 + minutes
-                                    data.timeObjectiveMinutes = total > 0 ? total : nil
+                            Picker("Minutes", selection: $selectedMinutes) {
+                                ForEach(0...59, id: \.self) { minute in
+                                    Text("\(minute) min").tag(minute)
                                 }
-                                .onAppear {
-                                    // Decompose total minutes into hours:minutes for display
-                                    if let totalMinutes = data.timeObjectiveMinutes {
-                                        let minutes = totalMinutes % 60
-                                        minutesText = String(minutes)
-                                    }
-                                }
-                            Text("Minutes")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 120)
+                            .onChange(of: selectedMinutes) { _, _ in
+                                data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
+                            }
                         }
                     }
-
-                    Text("You can skip this if you're not sure yet")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
             }
 
@@ -208,6 +185,13 @@ struct OnboardingScreen2View: View {
             }
         }
         .padding()
+        .onAppear {
+            if let totalMinutes = data.timeObjectiveMinutes {
+                showTimeObjective = true
+                selectedHours = totalMinutes / 60
+                selectedMinutes = totalMinutes % 60
+            }
+        }
     }
 }
 

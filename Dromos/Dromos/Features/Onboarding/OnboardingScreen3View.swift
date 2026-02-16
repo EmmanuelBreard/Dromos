@@ -16,40 +16,32 @@ struct OnboardingScreen3View: View {
 
     @State private var showErrors = false
 
-    // Text field bindings
-    @State private var vmaText: String = ""
-    @State private var cssMinutesText: String = ""
-    @State private var cssSecondsText: String = ""
-    @State private var ftpText: String = ""
-    @State private var experienceYearsText: String = ""
+    // Toggle states for optional metrics
+    @State private var showVma: Bool = false
+    @State private var showCss: Bool = false
+    @State private var showFtp: Bool = false
+    @State private var showExperience: Bool = false
+
+    // Picker selection values
+    @State private var selectedVma: Double = 18.0
+    @State private var selectedCssMin: Int = 2
+    @State private var selectedCssSec: Int = 0
+    @State private var selectedFtp: Int = 200
+    @State private var selectedExperience: Int = 2
+
+    // Static VMA values array (computed once)
+    private static let vmaValues: [Double] = stride(from: 13.0, through: 25.0, by: 0.1)
+        .map { Double(round($0 * 10)) / 10 }
 
     // MARK: - Validation (only for filled fields)
 
-    /// Validates VMA is 10-25 km/h if filled
-    private var isVmaValid: Bool {
-        guard !vmaText.isEmpty, let vma = data.vma else { return true } // Empty is valid
-        return vma >= 10 && vma <= 25
-    }
-
-    /// Validates CSS total seconds is 25-300 and seconds component is 0-59 if filled
+    /// Validates CSS: if enabled, must be between 25-300 seconds per 100m
     private var isCssValid: Bool {
-        // If either field is filled, validate total seconds and seconds component
-        guard !cssMinutesText.isEmpty || !cssSecondsText.isEmpty else { return true }
-        guard let totalSeconds = data.cssSecondsPer100m else { return true }
-        let seconds = Int(cssSecondsText) ?? 0
-        return totalSeconds >= 25 && totalSeconds <= 300 && seconds >= 0 && seconds <= 59
-    }
-
-    /// Validates FTP is 50-500 watts if filled
-    private var isFtpValid: Bool {
-        guard !ftpText.isEmpty, let ftp = data.ftp else { return true }
-        return ftp >= 50 && ftp <= 500
-    }
-
-    /// Validates experience years is >= 0 if filled
-    private var isExperienceYearsValid: Bool {
-        guard !experienceYearsText.isEmpty, let years = data.experienceYears else { return true }
-        return years >= 0
+        if showCss, let total = data.cssSecondsPer100m {
+            return total >= 25 && total <= 300
+        } else {
+            return true
+        }
     }
 
     /// Current weekly hours must be set (required field)
@@ -60,7 +52,7 @@ struct OnboardingScreen3View: View {
     /// Form is valid when all filled fields meet validation criteria
     /// and the required current weekly hours field is set
     private var isFormValid: Bool {
-        isVmaValid && isCssValid && isFtpValid && isExperienceYearsValid && isCurrentWeeklyHoursValid
+        isCssValid && isCurrentWeeklyHoursValid
     }
 
     // MARK: - Body
@@ -122,90 +114,82 @@ struct OnboardingScreen3View: View {
 
                     // VMA
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("VMA (km/h)")
-                            .font(.headline)
-
-                        TextField("e.g., 18.5", text: $vmaText)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: vmaText) { _, newValue in
-                                if let vma = Double(newValue) {
-                                    data.vma = vma
+                        HStack {
+                            Text("VMA (km/h)")
+                                .font(.headline)
+                            Spacer()
+                            Toggle("", isOn: $showVma)
+                                .labelsHidden()
+                                .onChange(of: showVma) { _, newValue in
+                                    if newValue {
+                                        data.vma = selectedVma
+                                    } else {
+                                        data.vma = nil
+                                    }
                                 }
-                                // Don't set to nil on invalid input - preserve previous valid value
-                            }
-                            .onAppear {
-                                if let vma = data.vma {
-                                    vmaText = String(format: "%.1f", vma)
-                                }
-                            }
-
-                        if showErrors && !isVmaValid {
-                            Text("VMA must be between 10 and 25 km/h")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        } else {
-                            Text("Your maximal aerobic speed")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
                         }
+
+                        if showVma {
+                            Picker("VMA", selection: $selectedVma) {
+                                ForEach(Self.vmaValues, id: \.self) { value in
+                                    Text(String(format: "%.1f km/h", value))
+                                        .tag(value)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 120)
+                            .onChange(of: selectedVma) { _, newValue in
+                                data.vma = newValue
+                            }
+                        }
+
+                        Text("Your maximal aerobic speed")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
                     // CSS
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("CSS (Critical Swim Speed)")
-                            .font(.headline)
+                        HStack {
+                            Text("CSS (Critical Swim Speed)")
+                                .font(.headline)
+                            Spacer()
+                            Toggle("", isOn: $showCss)
+                                .labelsHidden()
+                                .onChange(of: showCss) { _, newValue in
+                                    if newValue {
+                                        data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
+                                    } else {
+                                        data.cssSecondsPer100m = nil
+                                    }
+                                }
+                        }
 
-                        HStack(spacing: 12) {
-                            VStack {
-                                TextField("Min", text: $cssMinutesText)
-                                    .keyboardType(.numberPad)
-                                    .textFieldStyle(.roundedBorder)
-                                    .multilineTextAlignment(.center)
-                                    .onChange(of: cssMinutesText) { _, newValue in
-                                        // Convert min:sec UI to total seconds
-                                        let minutes = Int(newValue) ?? 0
-                                        let seconds = Int(cssSecondsText) ?? 0
-                                        let total = minutes * 60 + seconds
-                                        data.cssSecondsPer100m = total > 0 ? total : nil
+                        if showCss {
+                            HStack(spacing: 12) {
+                                Picker("Minutes", selection: $selectedCssMin) {
+                                    ForEach(0...5, id: \.self) { value in
+                                        Text("\(value) min")
+                                            .tag(value)
                                     }
-                                    .onAppear {
-                                        // Decompose total seconds into min:sec for display
-                                        if let totalSeconds = data.cssSecondsPer100m {
-                                            let minutes = totalSeconds / 60
-                                            cssMinutesText = String(minutes)
-                                        }
-                                    }
-                                Text("Minutes")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(height: 120)
+                                .onChange(of: selectedCssMin) { _, _ in
+                                    data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
+                                }
 
-                            Text(":")
-                                .font(.title2)
-
-                            VStack {
-                                TextField("Sec", text: $cssSecondsText)
-                                    .keyboardType(.numberPad)
-                                    .textFieldStyle(.roundedBorder)
-                                    .multilineTextAlignment(.center)
-                                    .onChange(of: cssSecondsText) { _, newValue in
-                                        // Convert min:sec UI to total seconds
-                                        let minutes = Int(cssMinutesText) ?? 0
-                                        let seconds = Int(newValue) ?? 0
-                                        let total = minutes * 60 + seconds
-                                        data.cssSecondsPer100m = total > 0 ? total : nil
+                                Picker("Seconds", selection: $selectedCssSec) {
+                                    ForEach(0...59, id: \.self) { value in
+                                        Text(String(format: "%02d sec", value))
+                                            .tag(value)
                                     }
-                                    .onAppear {
-                                        // Decompose total seconds into min:sec for display
-                                        if let totalSeconds = data.cssSecondsPer100m {
-                                            let seconds = totalSeconds % 60
-                                            cssSecondsText = String(seconds)
-                                        }
-                                    }
-                                Text("Seconds")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(height: 120)
+                                .onChange(of: selectedCssSec) { _, _ in
+                                    data.cssSecondsPer100m = selectedCssMin * 60 + selectedCssSec
+                                }
                             }
                         }
 
@@ -222,64 +206,74 @@ struct OnboardingScreen3View: View {
 
                     // FTP
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("FTP (Watts)")
-                            .font(.headline)
-
-                        TextField("e.g., 250", text: $ftpText)
-                            .keyboardType(.numberPad)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: ftpText) { _, newValue in
-                                if let ftp = Int(newValue) {
-                                    data.ftp = ftp
+                        HStack {
+                            Text("FTP (Watts)")
+                                .font(.headline)
+                            Spacer()
+                            Toggle("", isOn: $showFtp)
+                                .labelsHidden()
+                                .onChange(of: showFtp) { _, newValue in
+                                    if newValue {
+                                        data.ftp = selectedFtp
+                                    } else {
+                                        data.ftp = nil
+                                    }
                                 }
-                                // Don't set to nil on invalid input - preserve previous valid value
-                            }
-                            .onAppear {
-                                if let ftp = data.ftp {
-                                    ftpText = String(ftp)
-                                }
-                            }
-
-                        if showErrors && !isFtpValid {
-                            Text("FTP must be between 50 and 500 watts")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        } else {
-                            Text("Your functional threshold power")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
                         }
+
+                        if showFtp {
+                            Picker("FTP", selection: $selectedFtp) {
+                                ForEach(Array(stride(from: 50, through: 500, by: 5)), id: \.self) { value in
+                                    Text("\(value) W")
+                                        .tag(value)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 120)
+                            .onChange(of: selectedFtp) { _, newValue in
+                                data.ftp = newValue
+                            }
+                        }
+
+                        Text("Your functional threshold power")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
                     // Experience years
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Triathlon Experience (years)")
-                            .font(.headline)
-
-                        TextField("e.g., 2", text: $experienceYearsText)
-                            .keyboardType(.numberPad)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: experienceYearsText) { _, newValue in
-                                if let years = Int(newValue) {
-                                    data.experienceYears = years
+                        HStack {
+                            Text("Triathlon Experience")
+                                .font(.headline)
+                            Spacer()
+                            Toggle("", isOn: $showExperience)
+                                .labelsHidden()
+                                .onChange(of: showExperience) { _, newValue in
+                                    if newValue {
+                                        data.experienceYears = selectedExperience
+                                    } else {
+                                        data.experienceYears = nil
+                                    }
                                 }
-                                // Don't set to nil on invalid input - preserve previous valid value
-                            }
-                            .onAppear {
-                                if let years = data.experienceYears {
-                                    experienceYearsText = String(years)
-                                }
-                            }
-
-                        if showErrors && !isExperienceYearsValid {
-                            Text("Experience must be 0 or more years")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        } else {
-                            Text("How long have you been training?")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
                         }
+
+                        if showExperience {
+                            Picker("Experience", selection: $selectedExperience) {
+                                ForEach(0...30, id: \.self) { value in
+                                    Text(value == 1 ? "1 year" : "\(value) years")
+                                        .tag(value)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 120)
+                            .onChange(of: selectedExperience) { _, newValue in
+                                data.experienceYears = newValue
+                            }
+                        }
+
+                        Text("How long have you been training?")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -313,6 +307,25 @@ struct OnboardingScreen3View: View {
             }
         }
         .padding()
+        .onAppear {
+            if let vma = data.vma {
+                showVma = true
+                selectedVma = Double(round(vma * 10)) / 10
+            }
+            if let css = data.cssSecondsPer100m {
+                showCss = true
+                selectedCssMin = css / 60
+                selectedCssSec = css % 60
+            }
+            if let ftp = data.ftp {
+                showFtp = true
+                selectedFtp = ftp
+            }
+            if let years = data.experienceYears {
+                showExperience = true
+                selectedExperience = years
+            }
+        }
     }
 }
 
