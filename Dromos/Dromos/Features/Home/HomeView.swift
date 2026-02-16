@@ -291,16 +291,15 @@ struct HomeView: View {
 
     // MARK: - Helper Methods
 
-    /// Creates the day header label with relative prefix (Today/Tomorrow) + full date.
-    /// Examples: "Today Saturday 1 February", "Tomorrow Sunday 2 February", "Monday 3 February"
+    /// Creates the day header label: "Today", "Tomorrow", or full date for other days.
+    /// Examples: "Today", "Tomorrow", "Monday 3 February"
     private func dayHeaderLabel(for date: Date, weekday: Weekday) -> String {
-        let dateString = Self.dayDateFormatter.string(from: date)
-
         if calendar.isDateInToday(date) {
-            return "Today \(weekday.fullName) \(dateString)"
+            return "Today"
         } else if calendar.isDateInTomorrow(date) {
-            return "Tomorrow \(weekday.fullName) \(dateString)"
+            return "Tomorrow"
         } else {
+            let dateString = Self.dayDateFormatter.string(from: date)
             return "\(weekday.fullName) \(dateString)"
         }
     }
