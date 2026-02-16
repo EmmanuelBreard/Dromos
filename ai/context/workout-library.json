@@ -1690,7 +1690,7 @@
         {
           "label": "work",
           "duration_minutes": 30,
-          "ftp_pct": 75,
+          "ftp_pct": 70,
           "cadence_rpm": 90
         }
       ]
@@ -1702,7 +1702,7 @@
         {
           "label": "work",
           "duration_minutes": 45,
-          "ftp_pct": 75,
+          "ftp_pct": 70,
           "cadence_rpm": 90
         },
         {
@@ -1712,14 +1712,14 @@
             {
               "label": "work",
               "duration_seconds": 20,
-              "ftp_pct": 75,
+              "ftp_pct": 70,
               "cadence_rpm": 115
             }
           ],
           "recovery": {
             "label": "recovery",
             "duration_minutes": 3,
-            "ftp_pct": 75,
+            "ftp_pct": 70,
             "cadence_rpm": 90
           }
         }
@@ -1732,7 +1732,7 @@
         {
           "label": "work",
           "duration_minutes": 60,
-          "ftp_pct": 75,
+          "ftp_pct": 70,
           "cadence_rpm": 90
         }
       ]
@@ -1744,7 +1744,7 @@
         {
           "label": "work",
           "duration_minutes": 80,
-          "ftp_pct": 75,
+          "ftp_pct": 68,
           "cadence_rpm": 90
         }
       ]
@@ -1756,7 +1756,7 @@
         {
           "label": "work",
           "duration_minutes": 90,
-          "ftp_pct": 75,
+          "ftp_pct": 65,
           "cadence_rpm": 90
         }
       ]
@@ -1768,7 +1768,7 @@
         {
           "label": "work",
           "duration_minutes": 120,
-          "ftp_pct": 75,
+          "ftp_pct": 65,
           "cadence_rpm": 90
         }
       ]
@@ -3139,7 +3139,7 @@
         {
           "label": "work",
           "duration_minutes": 30,
-          "mas_pct": 70
+          "mas_pct": 60
         }
       ]
     },
@@ -3150,7 +3150,7 @@
         {
           "label": "work",
           "duration_minutes": 45,
-          "mas_pct": 70
+          "mas_pct": 65
         }
       ]
     },
@@ -3161,7 +3161,7 @@
         {
           "label": "work",
           "duration_minutes": 60,
-          "mas_pct": 70
+          "mas_pct": 65
         }
       ]
     },
@@ -3172,7 +3172,7 @@
         {
           "label": "work",
           "duration_minutes": 80,
-          "mas_pct": 70
+          "mas_pct": 63
         }
       ]
     },
@@ -3183,7 +3183,7 @@
         {
           "label": "work",
           "duration_minutes": 90,
-          "mas_pct": 70
+          "mas_pct": 62
         }
       ]
     },
@@ -3194,7 +3194,7 @@
         {
           "label": "work",
           "duration_minutes": 120,
-          "mas_pct": 70
+          "mas_pct": 62
         }
       ]
     }
