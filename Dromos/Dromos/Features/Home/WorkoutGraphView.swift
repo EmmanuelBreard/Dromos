@@ -187,7 +187,7 @@ struct WorkoutGraphView: View {
     }
     
     // MARK: - Time Axis
-    
+
     /// Renders time axis labels at ~15 min intervals.
     /// For very long workouts (3h+), increases interval to prevent crowding.
     /// Adaptive time axis interval based on workout duration.
@@ -197,22 +197,70 @@ struct WorkoutGraphView: View {
         return 15.0
     }
 
+    /// Formats a time label for the axis.
+    /// - Parameter minutes: The time value in minutes
+    /// - Returns: Formatted string (e.g., "0'", "45'", "1h", "1h30")
+    private func formatTimeLabel(_ minutes: Double) -> String {
+        if minutes == 0 { return "0'" }
+        if minutes < 60 { return "\(Int(minutes))'" }
+
+        let hours = Int(minutes / 60)
+        let remainingMinutes = Int(minutes.truncatingRemainder(dividingBy: 60))
+
+        if remainingMinutes == 0 {
+            return "\(hours)h"
+        } else {
+            return "\(hours)h\(remainingMinutes)"
+        }
+    }
+
+    /// Computes the tick positions for the time axis with overlap prevention.
+    /// - Returns: Array of minute values to render as labels
+    private var timeTickMinutes: [Double] {
+        var ticks: [Double] = []
+
+        // 1. Generate interval ticks (excluding endpoint)
+        var current = 0.0
+        while current < totalDurationMinutes {
+            ticks.append(current)
+            current += timeInterval
+        }
+
+        // 2. Always append the final tick
+        let finalTick = totalDurationMinutes
+
+        // 3. Deduplicate: if final tick equals last interval tick, don't add it twice
+        if let lastTick = ticks.last, abs(lastTick - finalTick) < 0.01 {
+            // Already have the final tick, no need to add it again
+        } else {
+            // 4. Filter: remove any interval tick within 3 minutes of the final tick
+            // Keep 0' and the final tick always
+            ticks = ticks.filter { tick in
+                tick == 0 || abs(finalTick - tick) >= 3.0
+            }
+
+            // Now append the final tick
+            ticks.append(finalTick)
+        }
+
+        return ticks.sorted()
+    }
+
     private var timeAxisView: some View {
         GeometryReader { geometry in
             let availableWidth = geometry.size.width
-            let interval = timeInterval
-            let labelCount = Int(totalDurationMinutes / interval) + 1
-            
-            HStack(spacing: 0) {
-                ForEach(0..<labelCount, id: \.self) { index in
-                    let minutes = Double(index) * interval
-                    
-                    if minutes <= totalDurationMinutes {
-                        Text("\(Int(minutes))'")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .frame(width: index < labelCount - 1 ? interval / totalDurationMinutes * availableWidth : nil, alignment: .leading)
-                    }
+            let ticks = timeTickMinutes
+
+            ZStack(alignment: .leading) {
+                ForEach(ticks, id: \.self) { minutes in
+                    Text(formatTimeLabel(minutes))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize()
+                        .position(
+                            x: (minutes / totalDurationMinutes) * availableWidth,
+                            y: axisHeight / 2
+                        )
                 }
             }
         }

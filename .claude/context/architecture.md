@@ -146,11 +146,11 @@ All services follow:
 - Examples: "15' warmup - 120 W", "3× (6' work - 260 W + 4' recovery)"
 
 **WorkoutGraphView** (`WorkoutGraphView.swift`):
-- Interactive horizontal bar chart with GeometryReader + HStack
+- Interactive horizontal bar chart with GeometryReader + ZStack
 - Bar width = proportional to segment duration
 - Bar height = normalized intensity (30%-100% of graph height)
 - Bar color = intensity-based gradient (via `Color.intensity(for:isRecovery:)`)
-- Time axis below with adaptive intervals (15/30/60 min based on workout duration)
+- Time axis below with adaptive intervals (15/30/60 min), hour formatting for 60min+ labels, overlap prevention for final duration tick
 - Fixed heights: 60pt graph, 20pt axis
 - **Phase 3 additions:**
   - Tap any bar to reveal custom tooltip-style popover with segment details
