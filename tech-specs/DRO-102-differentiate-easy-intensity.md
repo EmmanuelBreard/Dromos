@@ -1,6 +1,6 @@
 # DRO-102: Differentiate Easy Intensity by Session Context
 
-**Overall Progress:** `0%`
+**Overall Progress:** `100%`
 
 ## TLDR
 All `RUN_Easy_*` templates use a flat `mas_pct: 70` and all `BIKE_Easy_*` templates use a flat `ftp_pct: 75`, regardless of duration. A 30min brick run and a 120min long run shouldn't be at the same intensity. Lower the intensity on longer and brick sessions to match coaching best practices.
@@ -45,25 +45,25 @@ All `RUN_Easy_*` templates use a flat `mas_pct: 70` and all `BIKE_Easy_*` templa
 
 ## Tasks
 
-- [ ] 🟥 **Step 1: Update RUN_Easy templates**
-  - [ ] 🟥 Set `RUN_Easy_01` → `mas_pct: 60`
-  - [ ] 🟥 Set `RUN_Easy_02` → `mas_pct: 65`
-  - [ ] 🟥 Set `RUN_Easy_03` → `mas_pct: 65`
-  - [ ] 🟥 Set `RUN_Easy_04` → `mas_pct: 63`
-  - [ ] 🟥 Set `RUN_Easy_05` → `mas_pct: 62`
-  - [ ] 🟥 Set `RUN_Easy_06` → `mas_pct: 62`
+- [x] 🟩 **Step 1: Update RUN_Easy templates**
+  - [x] 🟩 Set `RUN_Easy_01` → `mas_pct: 60`
+  - [x] 🟩 Set `RUN_Easy_02` → `mas_pct: 65`
+  - [x] 🟩 Set `RUN_Easy_03` → `mas_pct: 65`
+  - [x] 🟩 Set `RUN_Easy_04` → `mas_pct: 63`
+  - [x] 🟩 Set `RUN_Easy_05` → `mas_pct: 62`
+  - [x] 🟩 Set `RUN_Easy_06` → `mas_pct: 62`
 
-- [ ] 🟥 **Step 2: Update BIKE_Easy templates**
-  - [ ] 🟥 Set `BIKE_Easy_01` → `ftp_pct: 70`
-  - [ ] 🟥 Set `BIKE_Easy_02` → `ftp_pct: 70` (all 3 segments: work + drill work + drill recovery)
-  - [ ] 🟥 Set `BIKE_Easy_03` → `ftp_pct: 70`
-  - [ ] 🟥 Set `BIKE_Easy_04` → `ftp_pct: 68`
-  - [ ] 🟥 Set `BIKE_Easy_05` → `ftp_pct: 65`
-  - [ ] 🟥 Set `BIKE_Easy_06` → `ftp_pct: 65`
+- [x] 🟩 **Step 2: Update BIKE_Easy templates**
+  - [x] 🟩 Set `BIKE_Easy_01` → `ftp_pct: 70`
+  - [x] 🟩 Set `BIKE_Easy_02` → `ftp_pct: 70` (all 3 segments: work + drill work + drill recovery)
+  - [x] 🟩 Set `BIKE_Easy_03` → `ftp_pct: 70`
+  - [x] 🟩 Set `BIKE_Easy_04` → `ftp_pct: 68`
+  - [x] 🟩 Set `BIKE_Easy_05` → `ftp_pct: 65`
+  - [x] 🟩 Set `BIKE_Easy_06` → `ftp_pct: 65`
 
-- [ ] 🟥 **Step 3: Deploy**
-  - [ ] 🟥 Run `scripts/upload-static-assets.sh` to push updated JSON to Supabase Storage (edge function source)
-  - [ ] 🟥 iOS picks up changes automatically via symlink at next build
+- [x] 🟩 **Step 3: Deploy**
+  - [x] 🟩 Run `scripts/upload-static-assets.sh` to push updated JSON to Supabase Storage (edge function source)
+  - [x] 🟩 iOS picks up changes automatically via symlink at next build
 
-- [ ] 🟥 **Step 4: Update context docs**
-  - [ ] 🟥 Add note to `ai-pipeline.md` that Easy intensity varies by template duration
+- [x] 🟩 **Step 4: Update context docs**
+  - [x] 🟩 Add note to `ai-pipeline.md` that Easy intensity varies by template duration
