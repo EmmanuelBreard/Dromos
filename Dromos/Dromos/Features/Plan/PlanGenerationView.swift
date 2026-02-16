@@ -7,6 +7,7 @@
 
 import SwiftUI
 import OSLog
+import Combine
 
 /// View displayed when user has completed onboarding but doesn't have an active training plan.
 /// Provides a CTA to generate their plan, shows progress during generation (~140s), and handles errors.
@@ -14,20 +15,20 @@ struct PlanGenerationView: View {
     @ObservedObject var authService: AuthService
     @StateObject private var planService = PlanService()
 
-    @State private var currentProgressPhraseIndex = 0
-    @State private var progressPhraseTimer: Timer?
-
-    /// Progress phrases that rotate every ~15 seconds during plan generation.
-    private let progressPhrases = [
-        "Analyzing your goals...",
-        "Building weekly structure...",
-        "Selecting workouts...",
-        "Optimizing your schedule...",
-        "Finalizing your plan..."
-    ]
+    @State private var generationStartTime: Date?
+    @State private var elapsedSeconds: Double = 0
+    @State private var generationCompleted: Bool = false
+    @State private var timerCancellable: AnyCancellable?
 
     /// Logger for plan generation operations
     private let logger = Logger(subsystem: "com.dromos.app", category: "PlanGeneration")
+
+    /// Step thresholds for progress bar
+    private let stepThresholds: [(threshold: Double, label: String, step: Int)] = [
+        (0, "Periodizing your plan", 1),
+        (20, "Structuring your weeks", 2),
+        (40, "Selecting your workouts", 3)
+    ]
 
     var body: some View {
         NavigationStack {
@@ -62,13 +63,13 @@ struct PlanGenerationView: View {
             }
             .onChange(of: planService.isGenerating) { _, isGenerating in
                 if isGenerating {
-                    startProgressPhraseRotation()
+                    startProgressTimer()
                 } else {
-                    stopProgressPhraseRotation()
+                    stopProgressTimer()
                 }
             }
             .onDisappear {
-                stopProgressPhraseRotation()
+                stopProgressTimer()
             }
         }
     }
@@ -115,23 +116,74 @@ struct PlanGenerationView: View {
 
     // MARK: - Generating State View
 
-    /// View shown during plan generation with rotating progress phrases.
+    /// View shown during plan generation with stepped progress bar.
     private var generatingView: some View {
         VStack(spacing: 24) {
             // Progress spinner
             ProgressView()
                 .scaleEffect(1.5)
 
-            // Rotating progress phrase
-            Text(progressPhrases[currentProgressPhraseIndex])
+            // Progress bar
+            ProgressView(value: progress)
+                .tint(.blue)
+                .animation(.easeInOut(duration: 0.5), value: progress)
+
+            // Step label
+            Text("Step \(currentStep) of 3 — \(currentLabel)")
                 .font(.headline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .animation(.easeInOut, value: currentProgressPhraseIndex)
+        }
+    }
 
-            Text("This may take a few minutes...")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+    // MARK: - Computed Properties
+
+    /// Current step based on elapsed time
+    private var currentStep: Int {
+        for i in stride(from: stepThresholds.count - 1, through: 0, by: -1) {
+            if elapsedSeconds >= stepThresholds[i].threshold {
+                return stepThresholds[i].step
+            }
+        }
+        return stepThresholds[0].step
+    }
+
+    /// Current label based on elapsed time
+    private var currentLabel: String {
+        if elapsedSeconds > 65 && !generationCompleted {
+            return "Finalizing..."
+        }
+
+        for i in stride(from: stepThresholds.count - 1, through: 0, by: -1) {
+            if elapsedSeconds >= stepThresholds[i].threshold {
+                return stepThresholds[i].label
+            }
+        }
+
+        return stepThresholds[0].label
+    }
+
+    /// Progress value (0.0–1.0) based on elapsed time
+    private var progress: Double {
+        if generationCompleted {
+            return 1.0
+        }
+
+        // 0-20s → 0.0-0.33
+        if elapsedSeconds < 20 {
+            return (elapsedSeconds / 20.0) * 0.33
+        }
+        // 20-40s → 0.33-0.66
+        else if elapsedSeconds < 40 {
+            return 0.33 + ((elapsedSeconds - 20) / 20.0) * 0.33
+        }
+        // 40-65s → 0.66-0.90
+        else if elapsedSeconds < 65 {
+            return 0.66 + ((elapsedSeconds - 40) / 25.0) * 0.24
+        }
+        // Cap at 0.90 if generation is taking longer than expected
+        else {
+            return 0.90
         }
     }
 
@@ -183,6 +235,12 @@ struct PlanGenerationView: View {
                 try await planService.generatePlan()
                 logger.info("Plan generation completed successfully")
 
+                // Mark generation as completed to snap progress bar to 100%
+                generationCompleted = true
+
+                // Brief delay to let user see the bar hit 100%
+                try? await Task.sleep(for: .milliseconds(600))
+
                 // Mark that user has a plan locally to trigger RootView transition
                 // If status check fails, use fallback - we know generation succeeded
                 do {
@@ -198,32 +256,38 @@ struct PlanGenerationView: View {
             } catch {
                 logger.error("Plan generation failed: \(error.localizedDescription, privacy: .public)")
                 // Error is already set in planService.errorMessage
+                // Timer cleanup handled by .onChange(of: planService.isGenerating)
             }
         }
     }
 
-    // MARK: - Progress Phrase Rotation
+    // MARK: - Progress Timer
 
-    /// Starts rotating progress phrases every ~15 seconds.
-    private func startProgressPhraseRotation() {
-        stopProgressPhraseRotation() // Ensure no existing timer
+    /// Starts the progress timer that updates elapsed time every 0.5 seconds.
+    private func startProgressTimer() {
+        stopProgressTimer() // Ensure no existing timer
 
-        // Set initial phrase
-        currentProgressPhraseIndex = 0
+        // Reset state
+        generationStartTime = Date()
+        elapsedSeconds = 0
+        generationCompleted = false
 
-        // Create timer to rotate phrases every 15 seconds
-        progressPhraseTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { _ in
-            Task { @MainActor in
-                currentProgressPhraseIndex = (currentProgressPhraseIndex + 1) % progressPhrases.count
+        // Create timer to update elapsed time every 0.5 seconds
+        timerCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                guard let startTime = generationStartTime else { return }
+                elapsedSeconds = Date().timeIntervalSince(startTime)
             }
-        }
     }
 
-    /// Stops rotating progress phrases.
-    private func stopProgressPhraseRotation() {
-        progressPhraseTimer?.invalidate()
-        progressPhraseTimer = nil
-        currentProgressPhraseIndex = 0
+    /// Stops the progress timer.
+    private func stopProgressTimer() {
+        timerCancellable?.cancel()
+        timerCancellable = nil
+        generationStartTime = nil
+        elapsedSeconds = 0
+        generationCompleted = false
     }
 }
 
