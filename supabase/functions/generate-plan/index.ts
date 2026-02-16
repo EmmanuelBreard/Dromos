@@ -1682,6 +1682,10 @@ Deno.serve(async (req) => {
     });
   }
 
+  let planId: string | null = null;
+  // deno-lint-ignore no-explicit-any
+  let dbClient: any = null;
+
   try {
     // Verify JWT and get user_id
     const authHeader = req.headers.get("Authorization");
@@ -1735,7 +1739,7 @@ Deno.serve(async (req) => {
     }
 
     // Create service_role client for DB operations
-    const dbClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+    dbClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Fetch user profile
     const { data: userProfile, error: profileError } = await dbClient
@@ -1818,7 +1822,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create training plan: ${planError?.message}`);
     }
 
-    const planId = plan.id;
+    planId = plan.id;
 
     // Initialize OpenAI client
     const openai = getOpenAIClient();
@@ -2106,10 +2110,27 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Plan generation failed:", error);
+
+    // Best-effort cleanup: delete the zombie plan row
+    if (planId && dbClient) {
+      try {
+        await dbClient
+          .from("training_plans")
+          .delete()
+          .eq("id", planId);
+        console.log(`Cleaned up zombie plan ${planId}`);
+      } catch (cleanupError) {
+        console.error("Failed to clean up zombie plan:", cleanupError);
+      }
+    }
+
+    const message =
+      error instanceof Error
+        ? `Plan generation failed: ${error.message}`
+        : "Plan generation failed. Please try again.";
+
     return new Response(
-      JSON.stringify({
-        error: "Plan generation failed. Please try again.",
-      }),
+      JSON.stringify({ error: message }),
       {
         status: 500,
         headers: {

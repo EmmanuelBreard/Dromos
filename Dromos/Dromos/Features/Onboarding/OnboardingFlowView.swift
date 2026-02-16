@@ -66,7 +66,7 @@ struct OnboardingFlowView: View {
                             data: $basicInfo,
                             onNext: {
                                 transitionDirection = .forward
-                                currentScreen = 2
+                                withAnimation(.easeInOut) { currentScreen = 2 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -76,11 +76,11 @@ struct OnboardingFlowView: View {
                             data: $raceGoals,
                             onBack: {
                                 transitionDirection = .backward
-                                currentScreen = 1
+                                withAnimation(.easeInOut) { currentScreen = 1 }
                             },
                             onNext: {
                                 transitionDirection = .forward
-                                currentScreen = 3
+                                withAnimation(.easeInOut) { currentScreen = 3 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -90,11 +90,11 @@ struct OnboardingFlowView: View {
                             data: $metrics,
                             onBack: {
                                 transitionDirection = .backward
-                                currentScreen = 2
+                                withAnimation(.easeInOut) { currentScreen = 2 }
                             },
                             onNext: {
                                 transitionDirection = .forward
-                                currentScreen = 4
+                                withAnimation(.easeInOut) { currentScreen = 4 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -107,11 +107,11 @@ struct OnboardingFlowView: View {
                             selectedDays: $availability.swimDays,
                             onNext: {
                                 transitionDirection = .forward
-                                currentScreen = 5
+                                withAnimation(.easeInOut) { currentScreen = 5 }
                             },
                             onBack: {
                                 transitionDirection = .backward
-                                currentScreen = 3
+                                withAnimation(.easeInOut) { currentScreen = 3 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -124,11 +124,11 @@ struct OnboardingFlowView: View {
                             selectedDays: $availability.bikeDays,
                             onNext: {
                                 transitionDirection = .forward
-                                currentScreen = 6
+                                withAnimation(.easeInOut) { currentScreen = 6 }
                             },
                             onBack: {
                                 transitionDirection = .backward
-                                currentScreen = 4
+                                withAnimation(.easeInOut) { currentScreen = 4 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -141,11 +141,11 @@ struct OnboardingFlowView: View {
                             selectedDays: $availability.runDays,
                             onNext: {
                                 transitionDirection = .forward
-                                currentScreen = 7
+                                withAnimation(.easeInOut) { currentScreen = 7 }
                             },
                             onBack: {
                                 transitionDirection = .backward
-                                currentScreen = 5
+                                withAnimation(.easeInOut) { currentScreen = 5 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -159,7 +159,7 @@ struct OnboardingFlowView: View {
                             onNext: { saveOnboardingData() },
                             onBack: {
                                 transitionDirection = .backward
-                                currentScreen = 6
+                                withAnimation(.easeInOut) { currentScreen = 6 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -168,7 +168,6 @@ struct OnboardingFlowView: View {
                         EmptyView()
                     }
                 }
-                .animation(.easeInOut, value: currentScreen)
 
                 // Loading overlay
                 if isSaving {

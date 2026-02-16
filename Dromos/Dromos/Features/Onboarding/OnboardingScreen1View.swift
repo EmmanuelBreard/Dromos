@@ -151,8 +151,6 @@ struct OnboardingScreen1View: View {
                     }
                 }
 
-                Spacer()
-
                 // Next button
                 Button(action: {
                     showErrors = true

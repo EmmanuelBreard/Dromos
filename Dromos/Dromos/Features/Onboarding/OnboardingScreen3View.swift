@@ -42,29 +42,32 @@ struct OnboardingScreen3View: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Progress indicator
-            Text("3 of 6")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            // Title
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Performance Metrics")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                Text("Help us personalize your training")
+        ScrollView {
+            VStack(spacing: 24) {
+                // Progress indicator
+                Text("3 of 6")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            ScrollView {
+                // Title
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Performance Metrics")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    Text("Help us personalize your training")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
                 VStack(alignment: .leading, spacing: 20) {
                     // Current Weekly Hours (required)
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Current Training Volume")
                             .font(.headline)
+                        Text("In the last 4 weeks, how many hours per week did you train?")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
                         VStack(spacing: 4) {
                             Text(data.currentWeeklyHours.map { "\(String(format: "%.1f", $0))h / week" } ?? "Select your volume")
@@ -87,10 +90,6 @@ struct OnboardingScreen3View: View {
                             Text("Please set your current training volume")
                                 .font(.caption)
                                 .foregroundColor(.red)
-                        } else {
-                            Text("In the last 4 weeks, how many hours per week did you train?")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
                         }
                     }
 
@@ -194,33 +193,33 @@ struct OnboardingScreen3View: View {
                         }
                     }
                 }
-            }
 
-            // Navigation buttons
-            HStack(spacing: 16) {
-                Button(action: onBack) {
-                    Text("Back")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
-                }
-
-                Button(action: {
-                    showErrors = true
-                    if isFormValid {
-                        onNext()
+                // Navigation buttons
+                HStack(spacing: 16) {
+                    Button(action: onBack) {
+                        Text("Back")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.gray.opacity(0.2))
+                            .foregroundColor(.primary)
+                            .cornerRadius(10)
                     }
-                }) {
-                    Text("Next")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+
+                    Button(action: {
+                        showErrors = true
+                        if isFormValid {
+                            onNext()
+                        }
+                    }) {
+                        Text("Next")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
                 }
             }
         }

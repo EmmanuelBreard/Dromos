@@ -7,10 +7,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Changed
-- **Onboarding inputs replaced with wheel Pickers** — All numeric TextFields across onboarding screens 1-3 replaced with native iOS wheel pickers, eliminating the keyboard entirely (DRO-103)
+- **Onboarding inputs replaced with wheel Pickers** — All numeric TextFields across onboarding screens 1-3 replaced with native iOS wheel pickers, eliminating the keyboard entirely. All metrics mandatory with sensible defaults (DRO-103)
   - Weight: wheel picker (30-150 kg, default 70)
-  - Race time objective: toggle + dual hour/minute pickers
-  - VMA, CSS, FTP, experience: toggle-to-reveal pattern (toggle off = nil, toggle on = picker)
+  - Race time objective: dual hour/minute pickers (default 2h 0min)
+  - VMA, CSS, FTP, experience: always-visible pickers with hint text above each
+  - All screens use consistent ScrollView layout with non-sticky navigation buttons
+
+### Fixed
+- **Onboarding transition direction** — Back/Next screen transitions now always slide in the correct direction (DRO-103)
 - **Graph final time label** — Time axis now displays exact session duration (e.g., 45', 1h30) with hour formatting and overlap prevention (DRO-100)
 - **Easy intensity differentiation** — Easy sessions now show different intensity based on duration for run and bike (DRO-102)
 - **Simplified day headers** — Day headers now show "Today" / "Tomorrow" instead of full date (DRO-107)
