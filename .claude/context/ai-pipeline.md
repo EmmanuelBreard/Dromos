@@ -155,6 +155,7 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 - **Canonical file:** `ai/context/workout-library.json`
 - **iOS:** Symlink at `Dromos/Dromos/Resources/workout-library.json` → canonical file. Loaded by `WorkoutLibraryService`.
 - **Edge Function:** Fetched at runtime from Supabase Storage (`static-assets/workout-library.json`). Upload via `scripts/upload-static-assets.sh`.
+- **Easy intensity varies by duration:** Easy templates are NOT flat — shorter sessions use higher % (run: 65% MAS, bike: 70% FTP) while long sessions use lower % (run: 62% MAS, bike: 65% FTP). Brick runs (`RUN_Easy_01`) use the lowest (60% MAS).
 
 ---
 
