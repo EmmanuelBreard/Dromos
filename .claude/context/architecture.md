@@ -36,9 +36,9 @@ Dromos/Dromos/
 │   │   ├── WorkoutGraphView.swift    # Interactive intensity bar chart with tap-to-reveal popovers (Phase 2-3)
 │   │   └── IntensityColorHelper.swift # Shared intensity color gradient function (Phase 2)
 │   ├── Plan/                         # Week-by-week calendar navigator
-│   │   ├── CalendarPlanView.swift    # Plan tab main view
+│   │   ├── CalendarPlanView.swift    # Plan tab main view (receives profileService for expanded details)
 │   │   ├── WeekHeaderView.swift      # Week nav + phase badge
-│   │   └── DaySessionRow.swift       # Day row with sessions
+│   │   └── DaySessionRow.swift       # Day row with expandable sessions (steps + graph on tap)
 │   └── Profile/
 │       └── ProfileView.swift         # User profile display/edit (receives shared ProfileService)
 │
@@ -61,12 +61,12 @@ Authenticated + plan → MainTabView
 
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
 - Home (house icon) → `HomeView` (receives shared `profileService`)
-- Calendar (calendar icon) → `CalendarPlanView`
+- Calendar (calendar icon) → `CalendarPlanView` (receives shared `profileService`)
 - Profile (person icon) → `ProfileView` (receives shared `profileService`)
 
 **Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Home or Calendar:
 - Home: toggles `homeScrollReset` → HomeView scrolls to today's day section and resets progressive disclosure
-- Calendar: toggles `calendarReset` → CalendarPlanView resets `currentWeekIndex` to the week containing today
+- Calendar: toggles `calendarReset` → CalendarPlanView resets `currentWeekIndex` to the week containing today and collapses all expanded sessions
 
 **Local navigation**: `NavigationStack` inside individual tab views.
 

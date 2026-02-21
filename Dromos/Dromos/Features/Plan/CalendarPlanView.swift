@@ -10,18 +10,22 @@ import OSLog
 
 /// Main calendar view displaying week-by-week training plan overview.
 /// Auto-opens to current week, allows navigation between weeks.
-/// Receives planService from parent (MainTabView) for shared data access.
+/// Receives planService and profileService from parent (MainTabView) for shared data access.
 struct CalendarPlanView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var planService: PlanService
+    /// Shared profile service — provides athlete metrics (FTP, VMA, CSS) for expanded session details.
+    @ObservedObject var profileService: ProfileService
     /// Toggled by MainTabView each time the Calendar tab is re-selected.
     /// Using @Binding ensures the change propagates even when the tab is inactive.
     @Binding var calendarReset: Bool
 
     @State private var currentWeekIndex: Int = 0
+    /// Tracks which sessions are currently expanded. Resets on tab re-selection.
+    @State private var expandedSessionIDs: Set<UUID> = []
 
     /// Logger for calendar operations
-    private let logger = Logger(subsystem: "com.dromos.app", category: "CalendarPlan")
+    private let logger = Logger(subsystem: "com.getdromos.app", category: "CalendarPlan")
 
     var body: some View {
         NavigationStack {
@@ -50,10 +54,11 @@ struct CalendarPlanView: View {
                 }
             }
             .onChange(of: calendarReset) { _, _ in
-                // Tab re-selection: reset to current week
+                // Tab re-selection: reset to current week and collapse all sessions
                 if let plan = planService.trainingPlan {
                     currentWeekIndex = plan.currentWeekIndex()
                 }
+                expandedSessionIDs.removeAll()
             }
         }
     }
@@ -95,7 +100,20 @@ struct CalendarPlanView: View {
                             weekday: dayInfo.weekday,
                             date: dayInfo.date,
                             sessions: dayInfo.sessions,
-                            isRestDay: dayInfo.isRestDay
+                            isRestDay: dayInfo.isRestDay,
+                            expandedSessionIDs: expandedSessionIDs,
+                            ftp: profileService.user?.ftp,
+                            vma: profileService.user?.vma,
+                            css: profileService.user?.cssSecondsPer100m,
+                            onToggleExpand: { sessionID in
+                                withAnimation {
+                                    if expandedSessionIDs.contains(sessionID) {
+                                        expandedSessionIDs.remove(sessionID)
+                                    } else {
+                                        expandedSessionIDs.insert(sessionID)
+                                    }
+                                }
+                            }
                         )
                         .padding(.horizontal)
                         Divider()
@@ -166,5 +184,5 @@ struct CalendarPlanView: View {
 }
 
 #Preview {
-    CalendarPlanView(authService: AuthService(), planService: PlanService(), calendarReset: .constant(false))
+    CalendarPlanView(authService: AuthService(), planService: PlanService(), profileService: ProfileService(), calendarReset: .constant(false))
 }

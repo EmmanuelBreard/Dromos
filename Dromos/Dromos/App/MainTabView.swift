@@ -62,7 +62,7 @@ struct MainTabView: View {
             }
 
             Tab("Calendar", systemImage: "calendar", value: .calendar) {
-                CalendarPlanView(authService: authService, planService: planService, calendarReset: $calendarReset)
+                CalendarPlanView(authService: authService, planService: planService, profileService: profileService, calendarReset: $calendarReset)
             }
 
             Tab("Profile", systemImage: "person", value: .profile) {
