@@ -22,7 +22,7 @@ Dromos/Dromos/
 │   └── Services/
 │       ├── SupabaseClient.swift      # Singleton client with snake_case encoder/decoder
 │       ├── AuthService.swift         # Auth state, sign up/in/out, onboarding/plan status
-│       ├── PlanService.swift         # Plan generation (edge function) + fetching (nested query)
+│       ├── PlanService.swift         # Plan generation (edge function) + fetching (nested query) + session reordering (RPC)
 │       ├── ProfileService.swift      # User profile CRUD + onboarding save
 │       └── WorkoutLibraryService.swift # Bundled JSON library, O(1) template lookup, flattenedSegments(), stepSummaries()
 │
@@ -30,7 +30,7 @@ Dromos/Dromos/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 6-screen onboarding flow
 │   ├── Home/                         # Multi-week rolling dashboard
-│   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today
+│   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today + edit mode (session reordering)
 │   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView
 │   │   ├── WorkoutStepsView.swift    # Workout step list with intensity dots (Phase 2)
 │   │   ├── WorkoutGraphView.swift    # Interactive intensity bar chart with tap-to-reveal popovers (Phase 2-3)

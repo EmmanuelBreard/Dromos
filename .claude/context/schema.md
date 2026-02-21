@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-02-21 | Migrations: 001-010
+> Last updated: 2026-02-21 | Migrations: 001-011
 
 ## Tables Overview
 
@@ -108,7 +108,7 @@ Individual training sessions within a week.
 | `notes` | TEXT | | |
 | `order_in_day` | INT | NOT NULL, DEFAULT 0 | |
 
-**RLS:** SELECT own sessions (via join to `plan_weeks` → `training_plans`).
+**RLS:** SELECT own sessions (via join to `plan_weeks` → `training_plans`). No direct UPDATE — all writes go through `reorder_sessions` RPC.
 
 **Indexes:** `idx_plan_sessions_week_id_day` on `(week_id, day)`
 
@@ -120,6 +120,7 @@ Individual training sessions within a week.
 |----------|------|----------|
 | `handle_new_user()` | TRIGGER (AFTER INSERT on `auth.users`) | Auto-inserts `users` row with id/email/name |
 | `update_updated_at()` | TRIGGER (BEFORE UPDATE) | Sets `updated_at = now()` on `users` and `training_plans` |
+| `reorder_sessions(JSONB)` | RPC (SECURITY DEFINER) | Batch-updates `day`, `week_id`, `order_in_day` on `plan_sessions`. Validates per-row ownership via `auth.uid()`. GRANT EXECUTE TO authenticated. |
 
 ---
 
@@ -129,4 +130,4 @@ Individual training sessions within a week.
 - **JSONB for availability:** `swim_days`, `bike_days`, `run_days` use arrays instead of join tables (lightweight, LLM-friendly)
 - **No soft deletes:** Hard deletes with CASCADE
 - **No custom enums:** Validation via CHECK constraints on TEXT columns
-- **Write pattern:** Edge Function writes via `service_role` key (bypasses RLS); iOS reads only via user JWT
+- **Write pattern:** Edge Function writes via `service_role` key (bypasses RLS); iOS reads via user JWT; session reordering uses `reorder_sessions` RPC (SECURITY DEFINER with per-row ownership validation)
