@@ -43,11 +43,11 @@ struct DromosTextField: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 56)
-        .background(Color(.systemGray6))
+        .background(Color(uiColor: .systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color(.systemGray4), lineWidth: 1)
+                .strokeBorder(Color(uiColor: .systemGray4), lineWidth: 1)
         )
     }
 }
@@ -94,7 +94,7 @@ struct DromosButton: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(Color(.systemGray2))
+            .background(Color(uiColor: .systemGray2))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .disabled(isLoading)
