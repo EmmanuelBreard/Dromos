@@ -71,6 +71,8 @@ struct DromosButton: View {
     var isLoading: Bool = false
     let action: () -> Void
 
+    @Environment(\.isEnabled) private var isEnabled
+
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -94,7 +96,7 @@ struct DromosButton: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(Color(uiColor: .systemGray2))
+            .background(isEnabled ? Color.accentColor : Color(uiColor: .systemGray2))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }

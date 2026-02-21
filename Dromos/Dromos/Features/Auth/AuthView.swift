@@ -40,7 +40,7 @@ struct AuthView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .background(Color(uiColor: .systemBackground))
-        .ignoresSafeArea()
+        .ignoresSafeArea(.container)
     }
 }
 
