@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-02-14 | Migrations: 001-009
+> Last updated: 2026-02-21 | Migrations: 001-010
 
 ## Tables Overview
 
@@ -23,9 +23,6 @@ Profile data linked to `auth.users` via UUID primary key.
 | `name` | TEXT | | Display name |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | Auto-trigger |
-| `sex` | TEXT | | M/F |
-| `birth_date` | TIMESTAMPTZ | | |
-| `weight_kg` | DECIMAL(5,2) | CHECK 30-300 OR NULL | |
 | `race_objective` | TEXT | CHECK IN ('Sprint','Olympic','Ironman 70.3','Ironman') OR NULL | |
 | `race_date` | TIMESTAMPTZ | | Target race date |
 | `time_objective_minutes` | INT | CHECK > 0 OR NULL | Target race time |
