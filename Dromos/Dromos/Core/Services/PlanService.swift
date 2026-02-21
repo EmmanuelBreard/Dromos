@@ -149,6 +149,131 @@ final class PlanService: ObservableObject {
         trainingPlan = nil
         errorMessage = nil
     }
+
+    /// Move a session to a new day/week at a specific index, with optimistic local mutation and Supabase persistence.
+    /// Handles both cross-day moves and same-day reorders.
+    /// On RPC failure, restores the previous state and sets `errorMessage`.
+    /// - Parameters:
+    ///   - sessionId: The ID of the session to move
+    ///   - toDay: Full weekday name of the destination day (e.g., "Monday")
+    ///   - toWeekId: The UUID of the destination week
+    ///   - atIndex: The position in the destination day's session list to insert at
+    func moveSession(sessionId: UUID, toDay: String, toWeekId: UUID, atIndex: Int) async {
+        guard var plan = trainingPlan else { return }
+
+        // Snapshot for rollback
+        let snapshot = plan
+
+        // --- Locate source session ---
+        guard
+            let srcWeekIndex = plan.planWeeks.firstIndex(where: { $0.planSessions.contains(where: { $0.id == sessionId }) }),
+            let srcSessionIndex = plan.planWeeks[srcWeekIndex].planSessions.firstIndex(where: { $0.id == sessionId })
+        else { return }
+
+        // --- Extract and update the session ---
+        var session = plan.planWeeks[srcWeekIndex].planSessions[srcSessionIndex]
+        let srcDay = session.day
+        let srcWeekId = session.weekId
+
+        session.day = toDay
+        session.weekId = toWeekId
+
+        // --- Mutate source week ---
+        plan.planWeeks[srcWeekIndex].planSessions.remove(at: srcSessionIndex)
+
+        // Recalculate orderInDay for source day after removal (skip if same day — handled below)
+        let isSameDay = srcDay == toDay && srcWeekId == toWeekId
+
+        if !isSameDay {
+            let srcDaySessions = plan.planWeeks[srcWeekIndex].planSessions
+                .filter { $0.day == srcDay }
+                .sorted { $0.orderInDay < $1.orderInDay }
+
+            for (i, s) in srcDaySessions.enumerated() {
+                if let idx = plan.planWeeks[srcWeekIndex].planSessions.firstIndex(where: { $0.id == s.id }) {
+                    plan.planWeeks[srcWeekIndex].planSessions[idx].orderInDay = i
+                }
+            }
+        }
+
+        // --- Locate or confirm destination week ---
+        guard let dstWeekIndex = plan.planWeeks.firstIndex(where: { $0.id == toWeekId }) else {
+            // Destination week not found — abort without mutating state
+            return
+        }
+
+        // --- Insert session into destination day at requested index ---
+        var dstDaySessions = plan.planWeeks[dstWeekIndex].planSessions
+            .filter { $0.day == toDay }
+            .sorted { $0.orderInDay < $1.orderInDay }
+
+        let clampedIndex = max(0, min(atIndex, dstDaySessions.count))
+        dstDaySessions.insert(session, at: clampedIndex)
+
+        // Recalculate orderInDay sequentially for the entire destination day
+        for (i, s) in dstDaySessions.enumerated() {
+            if s.id == session.id {
+                // This is our moved session — add it to the destination week's session list
+                var updated = s
+                updated.orderInDay = i
+                plan.planWeeks[dstWeekIndex].planSessions.append(updated)
+            } else if let idx = plan.planWeeks[dstWeekIndex].planSessions.firstIndex(where: { $0.id == s.id }) {
+                plan.planWeeks[dstWeekIndex].planSessions[idx].orderInDay = i
+            }
+        }
+
+        // --- Apply optimistic update ---
+        trainingPlan = plan
+
+        // --- Build RPC payload ---
+        // Collect all affected sessions: source day + destination day (deduped by ID)
+        var affectedSessions: [PlanSession] = []
+
+        // Source day sessions (from source week, if not same-day move)
+        if !isSameDay {
+            let srcDayUpdated = plan.planWeeks[srcWeekIndex].planSessions.filter { $0.day == srcDay }
+            affectedSessions.append(contentsOf: srcDayUpdated)
+        }
+
+        // Destination day sessions (from destination week)
+        let dstDayUpdated = plan.planWeeks[dstWeekIndex].planSessions.filter { $0.day == toDay }
+        affectedSessions.append(contentsOf: dstDayUpdated)
+
+        // Deduplicate by ID (same-day move would have duplicates otherwise)
+        var seen = Set<UUID>()
+        affectedSessions = affectedSessions.filter { seen.insert($0.id).inserted }
+
+        let sessionUpdates: [SessionReorderItem] = affectedSessions.map { s in
+            SessionReorderItem(id: s.id.uuidString, day: s.day, weekId: s.weekId.uuidString, orderInDay: s.orderInDay)
+        }
+
+        // --- Persist to Supabase ---
+        do {
+            try await client.rpc("reorder_sessions", params: ["session_updates": sessionUpdates]).execute()
+        } catch {
+            // Rollback optimistic update and surface error
+            trainingPlan = snapshot
+            errorMessage = "Failed to save session order. Please try again."
+        }
+    }
+}
+
+// MARK: - RPC Payload Types
+
+/// Encodable payload item for the `reorder_sessions` RPC.
+/// Uses snake_case keys to match the expected JSONB schema.
+private struct SessionReorderItem: Encodable {
+    let id: String
+    let day: String
+    let weekId: String
+    let orderInDay: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case day
+        case weekId = "week_id"
+        case orderInDay = "order_in_day"
+    }
 }
 
 // MARK: - Error Types
