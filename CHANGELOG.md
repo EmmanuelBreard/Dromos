@@ -6,7 +6,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Expandable sessions in Calendar Plan** — Tap any session in the Calendar tab to expand workout steps and intensity graph inline. Tap again to collapse. All sessions reset to collapsed when switching tabs (DRO-122)
+
 ### Changed
+- **Redesigned login and sign-up screens** — New mobile-friendly auth UI with large typography, icon-prefixed input fields, custom full-width buttons, and brand-colored accent links. Content vertically centered (DRO-126)
+- **Lighter onboarding** — Removed the demographics screen (sex, age, weight) from onboarding, reducing the flow from 7 screens to 6. Race Goals is now the first screen (DRO-125)
+
+### Removed
+- Sex, age, and weight fields removed from onboarding, profile edit, and database (DRO-125)
+
+### Database Migrations
+- `010_drop_demographic_columns.sql` — Drops `sex`, `birth_date`, `weight_kg` columns and `check_weight_kg` constraint from `public.users` (DRO-125)
+- **Plan generation loading screen** — Replaced rotating text phrases with a 3-step progress bar showing pipeline stages (Periodizing → Structuring → Selecting), capped at 90% until the real response arrives (DRO-110)
 - **Onboarding inputs replaced with wheel Pickers** — All numeric TextFields across onboarding screens 1-3 replaced with native iOS wheel pickers, eliminating the keyboard entirely. All metrics mandatory with sensible defaults (DRO-103)
   - Weight: wheel picker (30-150 kg, default 70)
   - Race time objective: dual hour/minute pickers (default 2h 0min)
