@@ -72,7 +72,7 @@ struct SessionCardView: View {
             }
             
             // Row 3: Workout steps (only if template has >1 segment or has repeats)
-            if let template = template, shouldShowSteps(template: template) {
+            if let template = template, session.shouldShowWorkoutSteps(template: template) {
                 let steps = workoutLibrary.stepSummaries(
                     for: session.templateId,
                     sport: session.sport,
@@ -105,7 +105,7 @@ struct SessionCardView: View {
             // Row 5: Swim distance (only for simple swims without steps/graph)
             if session.sport.lowercased() == "swim",
                let distance = swimDistance,
-               template.map({ shouldShowSteps(template: $0) }) != true {
+               template.map({ session.shouldShowWorkoutSteps(template: $0) }) != true {
                 HStack(spacing: 6) {
                     Image(systemName: "ruler")
                         .font(.caption)
@@ -115,7 +115,7 @@ struct SessionCardView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    Text(formatDistance(distance))
+                    Text(PlanSession.formatDistance(distance))
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
@@ -127,37 +127,6 @@ struct SessionCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
     
-    // MARK: - Helper Methods
-    
-    /// Determines whether to show workout steps for a template.
-    /// Simple swims (1 segment, no repeats) → don't show steps (distance only).
-    /// All other workouts → always show steps (even single-segment easy sessions).
-    private func shouldShowSteps(template: WorkoutTemplate) -> Bool {
-        // Swim exception: simple swims (1 segment, no repeats) → skip steps
-        if session.sport.lowercased() == "swim" {
-            if template.segments.count == 1,
-               template.segments.first?.repeats == nil {
-                return false
-            }
-        }
-        return true
-    }
-    
-    /// Formats distance in meters to a readable string.
-    /// Uses "km" for distances >= 1000m, otherwise "m".
-    private func formatDistance(_ meters: Int) -> String {
-        if meters >= 1000 {
-            let km = Double(meters) / 1000.0
-            // Format with one decimal if not a whole number
-            if km.truncatingRemainder(dividingBy: 1) == 0 {
-                return "\(Int(km)) km"
-            } else {
-                return String(format: "%.1f km", km)
-            }
-        } else {
-            return "\(meters) m"
-        }
-    }
 }
 
 // MARK: - Rest Day Card
