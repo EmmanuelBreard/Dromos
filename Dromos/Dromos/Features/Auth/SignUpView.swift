@@ -74,6 +74,7 @@ struct SignUpView: View {
             // Sign up button
             DromosButton(title: "Create Account", isLoading: authService.isLoading) {
                 Task {
+                    // Error surfaced via authService.errorMessage
                     try? await authService.signUp(email: email, password: password)
                 }
             }

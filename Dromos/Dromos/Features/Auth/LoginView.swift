@@ -57,6 +57,7 @@ struct LoginView: View {
             // Sign in button
             DromosButton(title: "Sign In", isLoading: authService.isLoading) {
                 Task {
+                    // Error surfaced via authService.errorMessage
                     try? await authService.signIn(email: email, password: password)
                 }
             }

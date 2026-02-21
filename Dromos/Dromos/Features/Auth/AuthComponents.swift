@@ -58,7 +58,7 @@ struct DromosTextField: View {
 ///
 /// Shows a dark pill-shaped button with white title text and a trailing
 /// chevron icon. When `isLoading` is `true`, a `ProgressView` replaces
-/// the label and the button is automatically disabled.
+/// the label. Callers should apply `.disabled()` for form validation.
 ///
 /// Usage:
 /// ```swift
@@ -97,7 +97,6 @@ struct DromosButton: View {
             .background(Color(uiColor: .systemGray2))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .disabled(isLoading)
     }
 }
 
