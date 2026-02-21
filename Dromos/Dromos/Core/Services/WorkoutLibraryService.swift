@@ -24,7 +24,7 @@ final class WorkoutLibraryService {
     private var templates: [String: WorkoutTemplate] = [:]
     
     /// Logger for debugging library operations.
-    private let logger = Logger(subsystem: "com.dromos.app", category: "WorkoutLibrary")
+    private let logger = Logger(subsystem: "com.getdromos.app", category: "WorkoutLibrary")
     
     // MARK: - Initialization
     

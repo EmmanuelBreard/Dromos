@@ -22,7 +22,7 @@ struct PlanGenerationView: View {
     @State private var shimmerPhase: CGFloat = 0
 
     /// Logger for plan generation operations
-    private let logger = Logger(subsystem: "com.dromos.app", category: "PlanGeneration")
+    private let logger = Logger(subsystem: "com.getdromos.app", category: "PlanGeneration")
 
     /// Step thresholds for progress bar
     private let stepThresholds: [(threshold: Double, label: String, step: Int)] = [
