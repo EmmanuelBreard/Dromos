@@ -19,7 +19,7 @@ struct LoginView: View {
     var onSwitchToSignUp: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 32) {
             // Header
             VStack(spacing: 8) {
                 Image("DromosLogo")
@@ -28,7 +28,7 @@ struct LoginView: View {
                     .scaledToFit()
                     .frame(width: 80, height: 48)
                 Text("Welcome back")
-                    .font(.title)
+                    .font(.largeTitle)
                     .fontWeight(.bold)
                 Text("Sign in to continue your training")
                     .foregroundStyle(.secondary)
@@ -37,15 +37,13 @@ struct LoginView: View {
 
             // Form fields
             VStack(spacing: 16) {
-                TextField("Email", text: $email)
+                DromosTextField(icon: "envelope", placeholder: "Email", text: $email)
                     .textContentType(.emailAddress)
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
-                    .textFieldStyle(.roundedBorder)
 
-                SecureField("Password", text: $password)
+                DromosTextField(icon: "lock", placeholder: "Password", text: $password, isSecure: true)
                     .textContentType(.password)
-                    .textFieldStyle(.roundedBorder)
             }
 
             // Error message
@@ -57,28 +55,25 @@ struct LoginView: View {
             }
 
             // Sign in button
-            Button {
+            DromosButton(title: "Sign In", isLoading: authService.isLoading) {
                 Task {
                     try await authService.signIn(email: email, password: password)
                 }
-            } label: {
-                if authService.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Text("Sign In")
-                        .frame(maxWidth: .infinity)
-                }
             }
-            .buttonStyle(.borderedProminent)
             .disabled(!isFormValid || authService.isLoading)
 
             // Switch to sign up
             Button {
                 onSwitchToSignUp()
             } label: {
-                Text("Don't have an account? Sign up")
-                    .font(.subheadline)
+                HStack(spacing: 4) {
+                    Text("Don't have an account? ")
+                        .font(.subheadline)
+                    Text("Sign up")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.green)
+                }
             }
             .disabled(authService.isLoading)
         }
