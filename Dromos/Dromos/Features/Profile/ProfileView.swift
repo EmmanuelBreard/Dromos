@@ -12,7 +12,7 @@ import SwiftUI
 /// Sections:
 /// 1. Goals - Race objectives and targets
 /// 2. Metrics - Performance metrics (VMA, CSS, FTP, experience)
-/// 3. Settings - Personal information (demographics, name, email)
+/// 3. Settings - Personal information (name, email)
 struct ProfileView: View {
     @ObservedObject var authService: AuthService
     // FIX #6: Receive shared ProfileService instead of creating a new instance
@@ -31,9 +31,6 @@ struct ProfileView: View {
     // MARK: - Edit State
 
     @State private var editName: String = ""
-    @State private var editSex: String = ""
-    @State private var editBirthDate: Date = Date()
-    @State private var editWeightKg: String = ""
     @State private var editRaceObjective: RaceObjective = .sprint
     @State private var editRaceDate: Date = Date()
     @State private var editTimeHours: String = ""
@@ -52,21 +49,6 @@ struct ProfileView: View {
         formatter.dateStyle = .medium
         return formatter
     }()
-
-    // MARK: - Computed Properties
-
-    /// Date range for birth date picker (100 years ago to 13 years ago)
-    /// Ensures age between 13-99 years, matching onboarding validation
-    private var birthDateRange: ClosedRange<Date> {
-        let calendar = Calendar.current
-        let now = Date()
-        guard let minDate = calendar.date(byAdding: .year, value: -100, to: now),
-              let maxDate = calendar.date(byAdding: .year, value: -13, to: now) else {
-            // Fallback to reasonable defaults if calendar operations fail
-            return Date(timeIntervalSince1970: -1388534400)...Date(timeIntervalSince1970: 1356998400)
-        }
-        return minDate...maxDate
-    }
 
     // MARK: - Body
 
@@ -309,27 +291,6 @@ struct ProfileView: View {
     private func settingsDisplayView(user: User) -> some View {
         Group {
             HStack {
-                Text("Sex")
-                Spacer()
-                Text(user.sex ?? "Not set")
-                    .foregroundColor(.secondary)
-            }
-
-            HStack {
-                Text("Age")
-                Spacer()
-                Text(formatAge(user.age))
-                    .foregroundColor(.secondary)
-            }
-
-            HStack {
-                Text("Weight")
-                Spacer()
-                Text(formatWeight(user.weightKg))
-                    .foregroundColor(.secondary)
-            }
-
-            HStack {
                 Text("Name")
                 Spacer()
                 Text(user.name ?? "Not set")
@@ -348,37 +309,6 @@ struct ProfileView: View {
     /// Edit mode for Settings section
     private var settingsEditingView: some View {
         Group {
-            HStack {
-                Text("Sex")
-                Spacer()
-                Button(editSex == "Male" ? "Male ✓" : "Male") {
-                    editSex = "Male"
-                }
-                .foregroundColor(editSex == "Male" ? .blue : .primary)
-
-                Button(editSex == "Female" ? "Female ✓" : "Female") {
-                    editSex = "Female"
-                }
-                .foregroundColor(editSex == "Female" ? .blue : .primary)
-            }
-
-            DatePicker(
-                "Birth Date",
-                selection: $editBirthDate,
-                in: birthDateRange,
-                displayedComponents: .date
-            )
-
-            HStack {
-                Text("Weight (kg)")
-                Spacer()
-                TextField("Weight", text: $editWeightKg)
-                    .keyboardType(.decimalPad)
-                    .frame(width: 80)
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.trailing)
-            }
-
             HStack {
                 Text("Name")
                 Spacer()
@@ -402,13 +332,6 @@ struct ProfileView: View {
     /// Validates all edit fields before save.
     /// Returns nil if valid, or an error message if invalid.
     private func validateEditFields() -> String? {
-        // Weight validation (30-300 kg)
-        if !editWeightKg.isEmpty {
-            guard let weight = Double(editWeightKg), weight >= 30, weight <= 300 else {
-                return "Weight must be between 30 and 300 kg"
-            }
-        }
-
         // VMA validation (10-25 km/h)
         if !editVma.isEmpty {
             guard let vma = Double(editVma), vma >= 10, vma <= 25 else {
@@ -445,12 +368,6 @@ struct ProfileView: View {
             }
         }
 
-        // Age validation (13-99 years)
-        let age = Calendar.current.dateComponents([.year], from: editBirthDate, to: Date()).year ?? 0
-        if age < 13 || age > 99 {
-            return "Age must be between 13 and 99 years"
-        }
-
         // Race date validation (not in the past)
         if editRaceDate < Calendar.current.startOfDay(for: Date()) {
             return "Race date cannot be in the past"
@@ -481,9 +398,6 @@ struct ProfileView: View {
     private func loadEditState() {
         guard let user = user else { return }
         editName = user.name ?? ""
-        editSex = user.sex ?? ""
-        editBirthDate = user.birthDate ?? Date()
-        editWeightKg = user.weightKg.map { String(format: "%.1f", $0) } ?? ""
         editRaceObjective = user.raceObjective ?? .sprint
         editRaceDate = user.raceDate ?? Date()
         // Decompose total minutes into hours:minutes for display
@@ -541,9 +455,6 @@ struct ProfileView: View {
                 try await profileService.updateProfile(
                     userId: userId,
                     name: editName.isEmpty ? nil : editName,
-                    sex: editSex.isEmpty ? nil : editSex,
-                    birthDate: editBirthDate,
-                    weightKg: Double(editWeightKg),
                     raceObjective: editRaceObjective,
                     raceDate: editRaceDate,
                     timeObjectiveMinutes: timeObjectiveMinutes,
@@ -628,18 +539,6 @@ struct ProfileView: View {
     private func formatExperience(_ years: Int?) -> String {
         guard let years = years else { return "Not set" }
         return "\(years) year\(years == 1 ? "" : "s")"
-    }
-
-    /// Format age calculated from birth date
-    private func formatAge(_ age: Int?) -> String {
-        guard let age = age else { return "Not set" }
-        return "\(age) years"
-    }
-
-    /// Format weight in kilograms
-    private func formatWeight(_ weight: Double?) -> String {
-        guard let weight = weight else { return "Not set" }
-        return String(format: "%.1f kg", weight)
     }
 }
 

@@ -28,7 +28,7 @@ Dromos/Dromos/
 │
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
-│   ├── Onboarding/                   # 7-screen onboarding flow
+│   ├── Onboarding/                   # 6-screen onboarding flow
 │   ├── Home/                         # Multi-week rolling dashboard
 │   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today
 │   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView
@@ -197,6 +197,10 @@ All services follow:
 **WeekHeaderView** — Week navigation arrows + phase badge + date range
 **DaySessionRow** — Day header + session list (reused in Home and Plan tabs)
 
+**Auth Components** (`AuthComponents.swift` in Features/Auth/):
+- `DromosTextField` — Styled text field with SF Symbol icon, optional secure input, and adaptive gray background
+- `DromosButton` — Full-width primary action button with loading state and trailing chevron
+
 **Color Extensions:**
 - `Color.phaseColor(for:)` — Base=blue, Build=orange, Peak=red, Taper=purple, Recovery=green
 - `PlanSession.sportColor` — swim=cyan, bike=green, run=orange
@@ -208,7 +212,7 @@ All services follow:
 - `Weekday` enum with `fullName`, `abbreviation`, date calculation
 - `PlanWeek` — `totalMinutes`, `sessionsByDay`, `restDaySet`
 - `TrainingPlan` — `currentWeekIndex()`, `daysForWeek()`
-- `User` — `age`, `formattedCSS`, `formattedTimeObjective`
+- `User` — `formattedCSS`, `formattedTimeObjective`
 
 ---
 

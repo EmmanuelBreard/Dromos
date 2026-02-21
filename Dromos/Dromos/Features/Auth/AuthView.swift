@@ -16,24 +16,31 @@ struct AuthView: View {
     @State private var isShowingSignUp = false
 
     var body: some View {
-        ScrollView {
-            if isShowingSignUp {
-                SignUpView(authService: authService) {
-                    withAnimation {
-                        isShowingSignUp = false
-                        authService.errorMessage = nil
+        GeometryReader { geometry in
+            ScrollView {
+                Group {
+                    if isShowingSignUp {
+                        SignUpView(authService: authService) {
+                            withAnimation {
+                                isShowingSignUp = false
+                                authService.errorMessage = nil
+                            }
+                        }
+                    } else {
+                        LoginView(authService: authService) {
+                            withAnimation {
+                                isShowingSignUp = true
+                                authService.errorMessage = nil
+                            }
+                        }
                     }
                 }
-            } else {
-                LoginView(authService: authService) {
-                    withAnimation {
-                        isShowingSignUp = true
-                        authService.errorMessage = nil
-                    }
-                }
+                .frame(minHeight: geometry.size.height)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
-        .scrollDismissesKeyboard(.interactively)
+        .background(Color(uiColor: .systemBackground))
+        .ignoresSafeArea()
     }
 }
 

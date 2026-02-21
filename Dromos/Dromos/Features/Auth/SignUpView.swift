@@ -20,7 +20,7 @@ struct SignUpView: View {
     var onSwitchToLogin: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 32) {
             // Header
             VStack(spacing: 8) {
                 Image("DromosLogo")
@@ -29,7 +29,7 @@ struct SignUpView: View {
                     .scaledToFit()
                     .frame(width: 80, height: 48)
                 Text("Create account")
-                    .font(.title)
+                    .font(.largeTitle)
                     .fontWeight(.bold)
                 Text("Start your triathlon training journey")
                     .foregroundStyle(.secondary)
@@ -38,19 +38,16 @@ struct SignUpView: View {
 
             // Form fields
             VStack(spacing: 16) {
-                TextField("Email", text: $email)
+                DromosTextField(icon: "envelope", placeholder: "Email", text: $email)
                     .textContentType(.emailAddress)
                     .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
 
-                SecureField("Password", text: $password)
+                DromosTextField(icon: "lock", placeholder: "Password", text: $password, isSecure: true)
                     .textContentType(.newPassword)
-                    .textFieldStyle(.roundedBorder)
 
-                SecureField("Confirm Password", text: $confirmPassword)
+                DromosTextField(icon: "lock", placeholder: "Confirm Password", text: $confirmPassword, isSecure: true)
                     .textContentType(.newPassword)
-                    .textFieldStyle(.roundedBorder)
             }
 
             // Validation hints
@@ -75,29 +72,29 @@ struct SignUpView: View {
             }
 
             // Sign up button
-            Button {
+            DromosButton(title: "Create Account", isLoading: authService.isLoading) {
                 Task {
-                    try await authService.signUp(email: email, password: password)
-                }
-            } label: {
-                if authService.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Text("Create Account")
-                        .frame(maxWidth: .infinity)
+                    // Error surfaced via authService.errorMessage
+                    try? await authService.signUp(email: email, password: password)
                 }
             }
-            .buttonStyle(.borderedProminent)
             .disabled(!isFormValid || authService.isLoading)
 
             // Switch to login
             Button {
                 onSwitchToLogin()
             } label: {
-                Text("Already have an account? Sign in")
-                    .font(.subheadline)
+                HStack(spacing: 4) {
+                    Text("Already have an account?")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("Sign in")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.accentColor)
+                }
             }
+            .buttonStyle(.plain)
             .disabled(authService.isLoading)
         }
         .padding()
