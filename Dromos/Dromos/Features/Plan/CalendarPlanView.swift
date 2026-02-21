@@ -100,7 +100,20 @@ struct CalendarPlanView: View {
                             weekday: dayInfo.weekday,
                             date: dayInfo.date,
                             sessions: dayInfo.sessions,
-                            isRestDay: dayInfo.isRestDay
+                            isRestDay: dayInfo.isRestDay,
+                            expandedSessionIDs: expandedSessionIDs,
+                            ftp: profileService.user?.ftp,
+                            vma: profileService.user?.vma,
+                            css: profileService.user?.cssSecondsPer100m,
+                            onToggleExpand: { sessionID in
+                                withAnimation {
+                                    if expandedSessionIDs.contains(sessionID) {
+                                        expandedSessionIDs.remove(sessionID)
+                                    } else {
+                                        expandedSessionIDs.insert(sessionID)
+                                    }
+                                }
+                            }
                         )
                         .padding(.horizontal)
                         Divider()
