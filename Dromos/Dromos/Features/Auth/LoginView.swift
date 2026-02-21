@@ -73,9 +73,10 @@ struct LoginView: View {
                     Text("Sign up")
                         .font(.subheadline)
                         .fontWeight(.bold)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
+            .buttonStyle(.plain)
             .disabled(authService.isLoading)
         }
         .padding()

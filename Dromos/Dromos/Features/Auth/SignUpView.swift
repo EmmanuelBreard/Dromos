@@ -90,9 +90,10 @@ struct SignUpView: View {
                     Text("Sign in")
                         .font(.subheadline)
                         .fontWeight(.bold)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
+            .buttonStyle(.plain)
             .disabled(authService.isLoading)
         }
         .padding()
