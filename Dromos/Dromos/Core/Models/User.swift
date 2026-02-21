@@ -29,17 +29,6 @@ struct User: Codable, Identifiable, Equatable {
     let email: String
     var name: String?
 
-    // MARK: - Onboarding: Basic Info (Screen 1)
-
-    /// User's biological sex (e.g., "Male", "Female")
-    var sex: String?
-
-    /// User's date of birth for age calculation
-    var birthDate: Date?
-
-    /// User's weight in kilograms (valid range: 30-300 kg)
-    var weightKg: Double?
-
     // MARK: - Onboarding: Race Goals (Screen 2)
 
     /// Target triathlon race distance
@@ -114,15 +103,6 @@ struct User: Codable, Identifiable, Equatable {
 
     // MARK: - Computed Properties
 
-    /// Calculates user's age from birth date.
-    /// Returns nil if birth date is not set.
-    var age: Int? {
-        guard let birthDate = birthDate else { return nil }
-        let calendar = Calendar.current
-        let ageComponents = calendar.dateComponents([.year], from: birthDate, to: Date())
-        return ageComponents.year
-    }
-
     /// Formats the CSS pace as a string (e.g., "1:45" for 1 min 45 sec per 100m)
     /// Derives minutes:seconds from total seconds
     var formattedCSS: String? {
@@ -150,9 +130,6 @@ struct UserUpdate: Codable {
     var name: String?
 
     // Onboarding fields
-    var sex: String?
-    var birthDate: Date?
-    var weightKg: Double?
     var raceObjective: RaceObjective?
     var raceDate: Date?
     var timeObjectiveMinutes: Int?

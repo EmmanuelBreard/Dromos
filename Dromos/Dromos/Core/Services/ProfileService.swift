@@ -62,9 +62,6 @@ final class ProfileService: ObservableObject {
     /// - Parameters:
     ///   - userId: The user's ID
     ///   - name: New name value (optional)
-    ///   - sex: User's biological sex (optional)
-    ///   - birthDate: User's date of birth (optional)
-    ///   - weightKg: User's weight in kg (optional)
     ///   - raceObjective: Target triathlon race distance (optional)
     ///   - raceDate: Target race date (optional)
     ///   - timeObjectiveMinutes: Target finish time in total minutes (optional)
@@ -78,9 +75,6 @@ final class ProfileService: ObservableObject {
     func updateProfile(
         userId: UUID,
         name: String? = nil,
-        sex: String? = nil,
-        birthDate: Date? = nil,
-        weightKg: Double? = nil,
         raceObjective: RaceObjective? = nil,
         raceDate: Date? = nil,
         timeObjectiveMinutes: Int? = nil,
@@ -97,9 +91,6 @@ final class ProfileService: ObservableObject {
         do {
             let update = UserUpdate(
                 name: name,
-                sex: sex,
-                birthDate: birthDate,
-                weightKg: weightKg,
                 raceObjective: raceObjective,
                 raceDate: raceDate,
                 timeObjectiveMinutes: timeObjectiveMinutes,
@@ -144,9 +135,6 @@ final class ProfileService: ObservableObject {
             // Availability arrays (swimDays, bikeDays, runDays) are encoded as JSONB arrays
             // Duration fields are nullable INT values (30-420 minutes)
             struct OnboardingUpdate: Encodable {
-                let sex: String?
-                let birthDate: Date?
-                let weightKg: Double?
                 let raceObjective: String?
                 let raceDate: Date?
                 let timeObjectiveMinutes: Int?
@@ -168,9 +156,6 @@ final class ProfileService: ObservableObject {
             }
 
             let update = OnboardingUpdate(
-                sex: data.sex,
-                birthDate: data.birthDate,
-                weightKg: data.weightKg,
                 raceObjective: data.raceObjective?.rawValue,
                 raceDate: data.raceDate,
                 timeObjectiveMinutes: data.timeObjectiveMinutes,
