@@ -28,6 +28,9 @@ final class PlanService: ObservableObject {
     /// Whether plan data is currently being fetched.
     @Published private(set) var isLoadingPlan: Bool = false
 
+    /// Whether a session move is in flight (prevents concurrent drag-and-drop races).
+    @Published private(set) var isMovingSession: Bool = false
+
     // MARK: - Private Properties
 
     private let client = SupabaseClientProvider.client
@@ -155,14 +158,19 @@ final class PlanService: ObservableObject {
     /// On RPC failure, restores the previous state and sets `errorMessage`.
     /// - Parameters:
     ///   - sessionId: The ID of the session to move
-    ///   - toDay: Full weekday name of the destination day (e.g., "Monday")
+    ///   - toDay: Destination weekday
     ///   - toWeekId: The UUID of the destination week
     ///   - atIndex: The position in the destination day's session list to insert at
-    func moveSession(sessionId: UUID, toDay: String, toWeekId: UUID, atIndex: Int) async {
+    func moveSession(sessionId: UUID, toDay: Weekday, toWeekId: UUID, atIndex: Int) async {
+        guard !isMovingSession else { return }
         guard var plan = trainingPlan else { return }
+
+        isMovingSession = true
+        defer { isMovingSession = false }
 
         // Snapshot for rollback
         let snapshot = plan
+        let toDayName = toDay.fullName
 
         // --- Locate source session ---
         guard
@@ -170,20 +178,33 @@ final class PlanService: ObservableObject {
             let srcSessionIndex = plan.planWeeks[srcWeekIndex].planSessions.firstIndex(where: { $0.id == sessionId })
         else { return }
 
+        // --- Validate destination week exists before any mutation ---
+        guard let dstWeekIndex = plan.planWeeks.firstIndex(where: { $0.id == toWeekId }) else {
+            assertionFailure("moveSession: destination week \(toWeekId) not found in plan")
+            return
+        }
+
         // --- Extract and update the session ---
         var session = plan.planWeeks[srcWeekIndex].planSessions[srcSessionIndex]
         let srcDay = session.day
         let srcWeekId = session.weekId
+        let isSameDay = srcDay == toDayName && srcWeekId == toWeekId
 
-        session.day = toDay
+        // No-op check: same day, same position
+        if isSameDay {
+            let currentOrder = session.orderInDay
+            let dayCount = plan.planWeeks[srcWeekIndex].planSessions.filter { $0.day == srcDay }.count
+            let clamped = max(0, min(atIndex, dayCount - 1))
+            if clamped == currentOrder { return }
+        }
+
+        session.day = toDayName
         session.weekId = toWeekId
 
         // --- Mutate source week ---
         plan.planWeeks[srcWeekIndex].planSessions.remove(at: srcSessionIndex)
 
         // Recalculate orderInDay for source day after removal (skip if same day — handled below)
-        let isSameDay = srcDay == toDay && srcWeekId == toWeekId
-
         if !isSameDay {
             let srcDaySessions = plan.planWeeks[srcWeekIndex].planSessions
                 .filter { $0.day == srcDay }
@@ -196,15 +217,9 @@ final class PlanService: ObservableObject {
             }
         }
 
-        // --- Locate or confirm destination week ---
-        guard let dstWeekIndex = plan.planWeeks.firstIndex(where: { $0.id == toWeekId }) else {
-            // Destination week not found — abort without mutating state
-            return
-        }
-
         // --- Insert session into destination day at requested index ---
         var dstDaySessions = plan.planWeeks[dstWeekIndex].planSessions
-            .filter { $0.day == toDay }
+            .filter { $0.day == toDayName }
             .sorted { $0.orderInDay < $1.orderInDay }
 
         let clampedIndex = max(0, min(atIndex, dstDaySessions.count))
@@ -213,7 +228,6 @@ final class PlanService: ObservableObject {
         // Recalculate orderInDay sequentially for the entire destination day
         for (i, s) in dstDaySessions.enumerated() {
             if s.id == session.id {
-                // This is our moved session — add it to the destination week's session list
                 var updated = s
                 updated.orderInDay = i
                 plan.planWeeks[dstWeekIndex].planSessions.append(updated)
@@ -222,24 +236,27 @@ final class PlanService: ObservableObject {
             }
         }
 
+        // Re-sort affected weeks to maintain the array order invariant from fetchFullPlan
+        sortWeekSessions(&plan.planWeeks[dstWeekIndex])
+        if !isSameDay {
+            sortWeekSessions(&plan.planWeeks[srcWeekIndex])
+        }
+
         // --- Apply optimistic update ---
         trainingPlan = plan
 
         // --- Build RPC payload ---
-        // Collect all affected sessions: source day + destination day (deduped by ID)
         var affectedSessions: [PlanSession] = []
 
-        // Source day sessions (from source week, if not same-day move)
         if !isSameDay {
             let srcDayUpdated = plan.planWeeks[srcWeekIndex].planSessions.filter { $0.day == srcDay }
             affectedSessions.append(contentsOf: srcDayUpdated)
         }
 
-        // Destination day sessions (from destination week)
-        let dstDayUpdated = plan.planWeeks[dstWeekIndex].planSessions.filter { $0.day == toDay }
+        let dstDayUpdated = plan.planWeeks[dstWeekIndex].planSessions.filter { $0.day == toDayName }
         affectedSessions.append(contentsOf: dstDayUpdated)
 
-        // Deduplicate by ID (same-day move would have duplicates otherwise)
+        // Deduplicate by ID
         var seen = Set<UUID>()
         affectedSessions = affectedSessions.filter { seen.insert($0.id).inserted }
 
@@ -251,9 +268,23 @@ final class PlanService: ObservableObject {
         do {
             try await client.rpc("reorder_sessions", params: ["session_updates": sessionUpdates]).execute()
         } catch {
-            // Rollback optimistic update and surface error
             trainingPlan = snapshot
             errorMessage = "Failed to save session order. Please try again."
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    /// Sorts a week's sessions by day order then orderInDay, matching the invariant from fetchFullPlan.
+    private func sortWeekSessions(_ week: inout PlanWeek) {
+        let weekdayOrder: [String: Int] = [
+            "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+            "Friday": 4, "Saturday": 5, "Sunday": 6
+        ]
+        week.planSessions.sort { a, b in
+            let da = weekdayOrder[a.day] ?? 99
+            let db = weekdayOrder[b.day] ?? 99
+            return da != db ? da < db : a.orderInDay < b.orderInDay
         }
     }
 }
