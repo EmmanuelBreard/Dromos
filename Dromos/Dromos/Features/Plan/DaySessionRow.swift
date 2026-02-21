@@ -114,7 +114,7 @@ struct DaySessionRow: View {
                 // Chevron indicator
                 Image(systemName: "chevron.right")
                     .font(.caption2)
-                    .foregroundColor(.tertiary)
+                    .foregroundStyle(.tertiary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
             }
             .padding(.vertical, 4)
