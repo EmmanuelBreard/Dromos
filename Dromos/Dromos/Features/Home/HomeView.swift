@@ -41,7 +41,10 @@ struct HomeView: View {
 
     /// Last visible week index (controls progressive disclosure).
     @State private var lastVisibleWeekIndex: Int = 0
-    
+
+    /// Whether edit mode is active (shows move arrows on session cards).
+    @State private var isEditMode: Bool = false
+
     var body: some View {
         NavigationStack {
             Group {
@@ -56,6 +59,15 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Home")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if planService.trainingPlan != nil {
+                        Button(isEditMode ? "Done" : "Edit") {
+                            withAnimation(.easeInOut(duration: 0.25)) { isEditMode.toggle() }
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -99,7 +111,7 @@ struct HomeView: View {
                         let days = plan.daysForWeek(week)
                         LazyVStack(spacing: 16) {
                             ForEach(days, id: \.weekday) { dayInfo in
-                                daySectionView(dayInfo: dayInfo, plan: plan)
+                                daySectionView(dayInfo: dayInfo, plan: plan, weekId: week.id, weekNumber: week.weekNumber)
                                     .id("\(week.weekNumber)-\(dayInfo.weekday)")
                             }
                         }
@@ -177,7 +189,8 @@ struct HomeView: View {
     // MARK: - Day Section
 
     /// A day section with header, session cards, and optional race day indicator.
-    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan) -> some View {
+    /// In edit mode, each session card shows up/down arrows to move between days.
+    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekId: UUID, weekNumber: Int) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             // Day header with relative label + full date
             Text(dayHeaderLabel(for: dayInfo.date, weekday: dayInfo.weekday))
@@ -188,15 +201,53 @@ struct HomeView: View {
             if dayInfo.isRestDay && dayInfo.sessions.isEmpty {
                 RestDayCardView()
             } else {
-                ForEach(dayInfo.sessions) { session in
-                    SessionCardView(
-                        session: session,
-                        swimDistance: swimDistance(for: session),
-                        template: workoutLibrary.template(for: session.templateId),
-                        ftp: profileService.user?.ftp,
-                        vma: profileService.user?.vma,
-                        css: profileService.user?.cssSecondsPer100m
-                    )
+                let days = plan.daysForWeek(plan.planWeeks.first(where: { $0.id == weekId })!)
+                let dayIndex = days.firstIndex(where: { $0.weekday == dayInfo.weekday }) ?? 0
+
+                ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
+                    HStack(spacing: 8) {
+                        SessionCardView(
+                            session: session,
+                            swimDistance: swimDistance(for: session),
+                            template: workoutLibrary.template(for: session.templateId),
+                            ftp: profileService.user?.ftp,
+                            vma: profileService.user?.vma,
+                            css: profileService.user?.cssSecondsPer100m
+                        )
+
+                        if isEditMode {
+                            VStack(spacing: 12) {
+                                // Up: reorder within day first, then cross to previous day
+                                Button {
+                                    moveSessionUp(
+                                        session: session, sessionIndex: sessionIndex,
+                                        weekId: weekId, dayInfo: dayInfo,
+                                        days: days, dayIndex: dayIndex
+                                    )
+                                } label: {
+                                    Image(systemName: "chevron.up")
+                                        .fontWeight(.semibold)
+                                }
+                                .disabled(dayIndex == 0 && sessionIndex == 0)
+
+                                // Down: reorder within day first, then cross to next day
+                                Button {
+                                    moveSessionDown(
+                                        session: session, sessionIndex: sessionIndex,
+                                        weekId: weekId, dayInfo: dayInfo,
+                                        days: days, dayIndex: dayIndex
+                                    )
+                                } label: {
+                                    Image(systemName: "chevron.down")
+                                        .fontWeight(.semibold)
+                                }
+                                .disabled(dayIndex == days.count - 1 && sessionIndex == dayInfo.sessions.count - 1)
+                            }
+                            .font(.title3)
+                            .foregroundColor(.blue)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
+                    }
                 }
             }
 
@@ -206,8 +257,10 @@ struct HomeView: View {
                 RaceDayCardView(raceObjective: plan.raceObjective)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
     }
-    
+
     // MARK: - Empty State
     
     /// Empty state when no plan is available.
@@ -357,6 +410,62 @@ struct HomeView: View {
     private func swimDistance(for session: PlanSession) -> Int? {
         guard session.sport.lowercased() == "swim" else { return nil }
         return workoutLibrary.swimDistance(for: session.templateId)
+    }
+
+    // MARK: - Edit Mode Actions
+
+    /// Moves a session up: reorders within the same day first, then crosses to the previous day.
+    private func moveSessionUp(session: PlanSession, sessionIndex: Int, weekId: UUID, dayInfo: DayInfo, days: [DayInfo], dayIndex: Int) {
+        if sessionIndex > 0 {
+            // Reorder within same day — move up one position
+            Task {
+                await planService.moveSession(
+                    sessionId: session.id,
+                    toDay: dayInfo.weekday,
+                    toWeekId: weekId,
+                    atIndex: sessionIndex - 1
+                )
+            }
+        } else if dayIndex > 0 {
+            // Already at top of day — move to previous day (append at end,
+            // visually close to where it came from).
+            let targetDay = days[dayIndex - 1]
+            Task {
+                await planService.moveSession(
+                    sessionId: session.id,
+                    toDay: targetDay.weekday,
+                    toWeekId: weekId,
+                    atIndex: targetDay.sessions.count
+                )
+            }
+        }
+    }
+
+    /// Moves a session down: reorders within the same day first, then crosses to the next day.
+    private func moveSessionDown(session: PlanSession, sessionIndex: Int, weekId: UUID, dayInfo: DayInfo, days: [DayInfo], dayIndex: Int) {
+        if sessionIndex < dayInfo.sessions.count - 1 {
+            // Reorder within same day — move down one position
+            Task {
+                await planService.moveSession(
+                    sessionId: session.id,
+                    toDay: dayInfo.weekday,
+                    toWeekId: weekId,
+                    atIndex: sessionIndex + 1
+                )
+            }
+        } else if dayIndex < days.count - 1 {
+            // Already at bottom of day — move to next day (insert at start,
+            // visually close to where it came from).
+            let targetDay = days[dayIndex + 1]
+            Task {
+                await planService.moveSession(
+                    sessionId: session.id,
+                    toDay: targetDay.weekday,
+                    toWeekId: weekId,
+                    atIndex: 0
+                )
+            }
+        }
     }
 }
 

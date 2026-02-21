@@ -19,6 +19,32 @@ Before writing anything, gather precise implementation details:
    - Are there strategic/architectural decisions not yet resolved (e.g., where responsibility lives, validation strategy, UX behavior)? → If YES, **stop and ask the user** before writing the spec. Agents can't resolve these.
    - For trivial changes (1-2 files) or when context docs + discovery cover everything, skip agents entirely.
 
+## Phase 1.5: Complexity Gate
+
+After gathering context, **before writing the spec**, evaluate complexity using these signals:
+
+**Count the risk factors:**
+1. **New write path** — Does this introduce writes to tables that currently only have one writer? (e.g., first UPDATE on a table that only had INSERT)
+2. **LLM-in-the-loop** — Does the feature depend on LLM output quality for correctness? (not just generation — but ongoing correctness in production)
+3. **New infrastructure** — Does this require a new edge function, new table, AND new iOS service? (all three = high complexity)
+4. **Untested pattern** — Does this use a pattern that doesn't exist anywhere in the codebase yet? (e.g., multi-turn conversation, streaming, real-time sync)
+5. **Multi-system coordination** — Does a single user action trigger changes across 3+ systems? (e.g., iOS → edge function → LLM → DB mutation → plan refresh)
+6. **Ambiguous correctness** — Is it hard to define "correct" output? (e.g., "did the AI make the right coaching decision?" vs. "did the button change color?")
+
+**Decision:**
+- **0-1 risk factors:** Proceed to full tech spec.
+- **2-3 risk factors:** Flag to the user — "This has [N] complexity signals: [list them]. I'd recommend a PoC first to validate [the riskiest assumption]. Want me to scope a PoC instead, or proceed with the full spec?"
+- **4+ risk factors:** Strongly recommend a PoC — "This is too complex for a single implementation pass. I recommend scoping a standalone PoC in `ai/eval/` or a throwaway script that validates [core assumption] before we write the full spec. Here's what the PoC would test: [list]. Proceed with PoC spec?"
+
+**If PoC is chosen:**
+- Write a lightweight PoC spec (not the full feature spec) focused on:
+  - What question the PoC answers
+  - Minimal script/test to validate the riskiest assumption
+  - Success criteria (what "works" looks like)
+  - Expected timeline (hours, not days)
+- Store in `/tech-specs/` with suffix `-poc` (e.g., `DRO-132-chat-plan-adjustment-poc.md`)
+- After PoC results are in, run `/create-tech-spec` again for the full feature spec
+
 ## Phase 2: Write the Tech Spec
 
 Using the conversation context AND any research findings:

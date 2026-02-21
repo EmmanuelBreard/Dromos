@@ -108,15 +108,15 @@ enum Weekday: String, CaseIterable, Codable, Hashable {
 /// Represents a single workout (swim, bike, or run) scheduled for a specific day.
 struct PlanSession: Codable, Identifiable {
     let id: UUID
-    let weekId: UUID
-    let day: String // Full name: "Monday", "Tuesday", etc.
+    var weekId: UUID
+    var day: String // Full name: "Monday", "Tuesday", etc.
     let sport: String // "swim", "bike", "run"
     let type: String // "Easy", "Tempo", "Intervals"
     let templateId: String
     let durationMinutes: Int
     let isBrick: Bool
     let notes: String?
-    let orderInDay: Int
+    var orderInDay: Int
 
     // MARK: - Computed Properties
 
