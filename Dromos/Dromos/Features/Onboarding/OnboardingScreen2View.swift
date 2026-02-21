@@ -7,11 +7,11 @@
 
 import SwiftUI
 
-/// Second onboarding screen collecting race goals.
+/// First onboarding screen collecting race goals.
 /// All fields are required: race objective, race date, time objective.
 struct OnboardingScreen2View: View {
     @Binding var data: RaceGoalsData
-    var onBack: () -> Void
+    var onBack: (() -> Void)?
     var onNext: () -> Void
 
     @State private var showErrors = false
@@ -145,14 +145,16 @@ struct OnboardingScreen2View: View {
 
                 // Navigation buttons
                 HStack(spacing: 16) {
-                    Button(action: onBack) {
-                        Text("Back")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray.opacity(0.2))
-                            .foregroundColor(.primary)
-                            .cornerRadius(10)
+                    if let onBack {
+                        Button(action: onBack) {
+                            Text("Back")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.gray.opacity(0.2))
+                                .foregroundColor(.primary)
+                                .cornerRadius(10)
+                        }
                     }
 
                     Button(action: {
@@ -187,7 +189,6 @@ struct OnboardingScreen2View: View {
 #Preview {
     OnboardingScreen2View(
         data: .constant(RaceGoalsData()),
-        onBack: { print("Back tapped") },
         onNext: { print("Next tapped") }
     )
 }

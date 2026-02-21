@@ -63,7 +63,6 @@ struct OnboardingFlowView: View {
                     case 1:
                         OnboardingScreen2View(
                             data: $raceGoals,
-                            onBack: {},
                             onNext: {
                                 transitionDirection = .forward
                                 withAnimation(.easeInOut) { currentScreen = 2 }

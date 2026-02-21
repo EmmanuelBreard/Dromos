@@ -21,7 +21,7 @@ enum RaceObjective: String, Codable, CaseIterable {
 // MARK: - User Model
 
 /// User profile model matching the public.users table in Supabase.
-/// Includes onboarding fields for demographics, race goals, and performance metrics.
+/// Includes onboarding fields for race goals, performance metrics, and availability.
 struct User: Codable, Identifiable, Equatable {
     // MARK: - Core Properties
 
