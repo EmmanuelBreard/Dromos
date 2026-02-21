@@ -41,6 +41,10 @@ struct HomeView: View {
 
     /// Last visible week index (controls progressive disclosure).
     @State private var lastVisibleWeekIndex: Int = 0
+
+    /// Tracks which day section is currently being hovered over during a drag.
+    /// Key format: "\(weekNumber)-\(weekday)"
+    @State private var dragTargetedDayId: String? = nil
     
     var body: some View {
         NavigationStack {
@@ -99,7 +103,7 @@ struct HomeView: View {
                         let days = plan.daysForWeek(week)
                         LazyVStack(spacing: 16) {
                             ForEach(days, id: \.weekday) { dayInfo in
-                                daySectionView(dayInfo: dayInfo, plan: plan)
+                                daySectionView(dayInfo: dayInfo, plan: plan, weekId: week.id, weekNumber: week.weekNumber)
                                     .id("\(week.weekNumber)-\(dayInfo.weekday)")
                             }
                         }
@@ -177,8 +181,12 @@ struct HomeView: View {
     // MARK: - Day Section
 
     /// A day section with header, session cards, and optional race day indicator.
-    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+    /// Accepts `weekId` and `weekNumber` to support drop targets that call `planService.moveSession`.
+    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekId: UUID, weekNumber: Int) -> some View {
+        let dayId = "\(weekNumber)-\(dayInfo.weekday)"
+        let isTargeted = dragTargetedDayId == dayId
+
+        return VStack(alignment: .leading, spacing: 12) {
             // Day header with relative label + full date
             Text(dayHeaderLabel(for: dayInfo.date, weekday: dayInfo.weekday))
                 .font(.headline)
@@ -188,7 +196,7 @@ struct HomeView: View {
             if dayInfo.isRestDay && dayInfo.sessions.isEmpty {
                 RestDayCardView()
             } else {
-                ForEach(dayInfo.sessions) { session in
+                ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { index, session in
                     SessionCardView(
                         session: session,
                         swimDistance: swimDistance(for: session),
@@ -197,6 +205,21 @@ struct HomeView: View {
                         vma: profileService.user?.vma,
                         css: profileService.user?.cssSecondsPer100m
                     )
+                    .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 12))
+                    .draggable(session.id.uuidString)
+                    .dropDestination(for: String.self) { items, _ in
+                        guard let sessionIdString = items.first,
+                              let sessionId = UUID(uuidString: sessionIdString) else { return false }
+                        Task {
+                            await planService.moveSession(
+                                sessionId: sessionId,
+                                toDay: dayInfo.weekday,
+                                toWeekId: weekId,
+                                atIndex: index
+                            )
+                        }
+                        return true
+                    }
                 }
             }
 
@@ -205,6 +228,27 @@ struct HomeView: View {
                calendar.isDate(dayInfo.date, inSameDayAs: raceDate) {
                 RaceDayCardView(raceObjective: plan.raceObjective)
             }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isTargeted ? Color.blue.opacity(0.08) : Color.clear)
+                .animation(.easeInOut(duration: 0.2), value: isTargeted)
+        )
+        .dropDestination(for: String.self) { items, _ in
+            guard let sessionIdString = items.first,
+                  let sessionId = UUID(uuidString: sessionIdString) else { return false }
+            Task {
+                await planService.moveSession(
+                    sessionId: sessionId,
+                    toDay: dayInfo.weekday,
+                    toWeekId: weekId,
+                    atIndex: dayInfo.sessions.count
+                )
+            }
+            return true
+        } isTargeted: { targeted in
+            dragTargetedDayId = targeted ? dayId : nil
         }
     }
     
