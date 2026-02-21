@@ -44,7 +44,7 @@ struct OnboardingScreen2View: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Progress indicator
-                Text("2 of 6")
+                Text("1 of 6")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 

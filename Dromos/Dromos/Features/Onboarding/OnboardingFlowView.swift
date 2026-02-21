@@ -8,18 +8,17 @@
 import SwiftUI
 import OSLog
 
-/// Container view orchestrating the 7-screen onboarding flow.
+/// Container view orchestrating the 6-screen onboarding flow.
 /// Manages navigation between screens and handles data persistence to Supabase.
-/// Screens 1-3: Basic info, race goals, performance metrics
-/// Screens 4-6: Weekly training availability (swim, bike, run)
-/// Screen 7: Daily training duration
+/// Screens 1-2: Race goals, performance metrics
+/// Screens 3-5: Weekly training availability (swim, bike, run)
+/// Screen 6: Daily training duration
 struct OnboardingFlowView: View {
     @ObservedObject var authService: AuthService
     @StateObject private var profileService = ProfileService()
 
     @State private var currentScreen: Int = 1
     @State private var transitionDirection: TransitionDirection = .forward
-    @State private var basicInfo = BasicInfoData()
     @State private var raceGoals = RaceGoalsData()
     @State private var metrics = MetricsData()
     @State private var availability = AvailabilityData()
@@ -28,9 +27,9 @@ struct OnboardingFlowView: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
-    
+
     /// Logger for onboarding flow operations
-    private let logger = Logger(subsystem: "com.dromos.app", category: "OnboardingFlow")
+    private let logger = Logger(subsystem: "com.getdromos.app", category: "OnboardingFlow")
 
     /// Navigation direction for transitions
     enum TransitionDirection {
@@ -62,8 +61,9 @@ struct OnboardingFlowView: View {
                 Group {
                     switch currentScreen {
                     case 1:
-                        OnboardingScreen1View(
-                            data: $basicInfo,
+                        OnboardingScreen2View(
+                            data: $raceGoals,
+                            onBack: {},
                             onNext: {
                                 transitionDirection = .forward
                                 withAnimation(.easeInOut) { currentScreen = 2 }
@@ -72,8 +72,8 @@ struct OnboardingFlowView: View {
                         .transition(transitionDirection.transition)
 
                     case 2:
-                        OnboardingScreen2View(
-                            data: $raceGoals,
+                        OnboardingScreen3View(
+                            data: $metrics,
                             onBack: {
                                 transitionDirection = .backward
                                 withAnimation(.easeInOut) { currentScreen = 1 }
@@ -86,25 +86,28 @@ struct OnboardingFlowView: View {
                         .transition(transitionDirection.transition)
 
                     case 3:
-                        OnboardingScreen3View(
-                            data: $metrics,
-                            onBack: {
-                                transitionDirection = .backward
-                                withAnimation(.easeInOut) { currentScreen = 2 }
-                            },
+                        OnboardingAvailabilityView(
+                            sport: .swim,
+                            screenNumber: 3,
+                            totalScreens: 6,
+                            selectedDays: $availability.swimDays,
                             onNext: {
                                 transitionDirection = .forward
                                 withAnimation(.easeInOut) { currentScreen = 4 }
+                            },
+                            onBack: {
+                                transitionDirection = .backward
+                                withAnimation(.easeInOut) { currentScreen = 2 }
                             }
                         )
                         .transition(transitionDirection.transition)
 
                     case 4:
                         OnboardingAvailabilityView(
-                            sport: .swim,
+                            sport: .bike,
                             screenNumber: 4,
-                            totalScreens: 7,
-                            selectedDays: $availability.swimDays,
+                            totalScreens: 6,
+                            selectedDays: $availability.bikeDays,
                             onNext: {
                                 transitionDirection = .forward
                                 withAnimation(.easeInOut) { currentScreen = 5 }
@@ -118,10 +121,10 @@ struct OnboardingFlowView: View {
 
                     case 5:
                         OnboardingAvailabilityView(
-                            sport: .bike,
+                            sport: .run,
                             screenNumber: 5,
-                            totalScreens: 7,
-                            selectedDays: $availability.bikeDays,
+                            totalScreens: 6,
+                            selectedDays: $availability.runDays,
                             onNext: {
                                 transitionDirection = .forward
                                 withAnimation(.easeInOut) { currentScreen = 6 }
@@ -134,32 +137,15 @@ struct OnboardingFlowView: View {
                         .transition(transitionDirection.transition)
 
                     case 6:
-                        OnboardingAvailabilityView(
-                            sport: .run,
-                            screenNumber: 6,
-                            totalScreens: 7,
-                            selectedDays: $availability.runDays,
-                            onNext: {
-                                transitionDirection = .forward
-                                withAnimation(.easeInOut) { currentScreen = 7 }
-                            },
-                            onBack: {
-                                transitionDirection = .backward
-                                withAnimation(.easeInOut) { currentScreen = 5 }
-                            }
-                        )
-                        .transition(transitionDirection.transition)
-
-                    case 7:
                         OnboardingDailyDurationView(
-                            screenNumber: 7,
-                            totalScreens: 7,
+                            screenNumber: 6,
+                            totalScreens: 6,
                             availableDays: getAvailableDaysUnion(),
                             durationData: $duration,
                             onNext: { saveOnboardingData() },
                             onBack: {
                                 transitionDirection = .backward
-                                withAnimation(.easeInOut) { currentScreen = 6 }
+                                withAnimation(.easeInOut) { currentScreen = 5 }
                             }
                         )
                         .transition(transitionDirection.transition)
@@ -229,9 +215,8 @@ struct OnboardingFlowView: View {
 
         Task {
             do {
-                // Combine all data from 7 screens (basic info, race goals, metrics, availability, duration)
+                // Combine all data from 6 screens (race goals, metrics, availability, duration)
                 let completeData = CompleteOnboardingData(
-                    basicInfo: basicInfo,
                     raceGoals: raceGoals,
                     metrics: metrics,
                     availability: availability,
@@ -297,20 +282,20 @@ struct OnboardingFlowView: View {
         // Generic fallback
         return "Unable to save your profile. Please try again."
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Calculates the union of all available days from swim/bike/run availability.
     /// Returns a sorted list of unique days that appear in any sport's availability.
     private func getAvailableDaysUnion() -> [String] {
         let allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         var unionSet = Set<String>()
-        
+
         // Add all days from each sport (availability arrays are non-optional)
         unionSet.formUnion(availability.swimDays)
         unionSet.formUnion(availability.bikeDays)
         unionSet.formUnion(availability.runDays)
-        
+
         // Return sorted by day order
         return allDays.filter { unionSet.contains($0) }
     }
