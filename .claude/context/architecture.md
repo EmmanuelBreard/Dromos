@@ -197,6 +197,10 @@ All services follow:
 **WeekHeaderView** — Week navigation arrows + phase badge + date range
 **DaySessionRow** — Day header + session list (reused in Home and Plan tabs)
 
+**Auth Components** (`AuthComponents.swift` in Features/Auth/):
+- `DromosTextField` — Styled text field with SF Symbol icon, optional secure input, and adaptive gray background
+- `DromosButton` — Full-width primary action button with loading state and trailing chevron
+
 **Color Extensions:**
 - `Color.phaseColor(for:)` — Base=blue, Build=orange, Peak=red, Taper=purple, Recovery=green
 - `PlanSession.sportColor` — swim=cyan, bike=green, run=orange

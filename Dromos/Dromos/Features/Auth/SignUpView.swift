@@ -41,7 +41,7 @@ struct SignUpView: View {
                 DromosTextField(icon: "envelope", placeholder: "Email", text: $email)
                     .textContentType(.emailAddress)
                     .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
+                    .textInputAutocapitalization(.never)
 
                 DromosTextField(icon: "lock", placeholder: "Password", text: $password, isSecure: true)
                     .textContentType(.newPassword)
@@ -74,7 +74,7 @@ struct SignUpView: View {
             // Sign up button
             DromosButton(title: "Create Account", isLoading: authService.isLoading) {
                 Task {
-                    try await authService.signUp(email: email, password: password)
+                    try? await authService.signUp(email: email, password: password)
                 }
             }
             .disabled(!isFormValid || authService.isLoading)
