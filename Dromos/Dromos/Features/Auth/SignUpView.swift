@@ -84,8 +84,9 @@ struct SignUpView: View {
                 onSwitchToLogin()
             } label: {
                 HStack(spacing: 4) {
-                    Text("Already have an account? ")
+                    Text("Already have an account?")
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     Text("Sign in")
                         .font(.subheadline)
                         .fontWeight(.bold)
