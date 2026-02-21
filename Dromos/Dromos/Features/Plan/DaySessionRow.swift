@@ -128,7 +128,7 @@ struct DaySessionRow: View {
                 expandedContent(for: session)
                     .padding(.top, 8)
                     .padding(.bottom, 4)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             }
         }
     }

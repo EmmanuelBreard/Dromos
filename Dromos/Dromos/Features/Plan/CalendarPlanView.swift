@@ -80,11 +80,13 @@ struct CalendarPlanView: View {
                     onPrevious: {
                         if currentWeekIndex > 0 {
                             currentWeekIndex -= 1
+                            expandedSessionIDs.removeAll()
                         }
                     },
                     onNext: {
                         if currentWeekIndex < plan.planWeeks.count - 1 {
                             currentWeekIndex += 1
+                            expandedSessionIDs.removeAll()
                         }
                     },
                     canGoPrevious: currentWeekIndex > 0,
