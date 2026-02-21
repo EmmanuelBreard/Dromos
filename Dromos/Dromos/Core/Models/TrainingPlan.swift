@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftUI
-import UniformTypeIdentifiers
 
 // MARK: - Weekday Enum
 
@@ -175,7 +174,10 @@ struct PlanSession: Codable, Identifiable {
     }
 }
 
+// MARK: - Transferable (Drag & Drop)
+
 extension PlanSession: Transferable {
+    /// Export-only: drop handlers resolve PlanSession by UUID lookup in PlanService.
     static var transferRepresentation: some TransferRepresentation {
         ProxyRepresentation(exporting: \.id.uuidString)
     }
