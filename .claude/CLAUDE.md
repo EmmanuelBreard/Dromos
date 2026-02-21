@@ -10,6 +10,7 @@ Dromos is an iOS app to build and follow triathlon training.
 **We use:**
 Frontend: Swift UI
 Backend: Supabase (Postgres, RLS, Storage) - mcp server available
+GitHub: `EmmanuelBreard/Dromos` (personal account) — use `gh` CLI (already authenticated). Active account must be `EmmanuelBreard`, not the Gorgias one.
 Payments: None for now
 Analytics: None for now
 Code-assist agent (Mamma Aiuto Gang) is available and can run migrations or generate PRs.
