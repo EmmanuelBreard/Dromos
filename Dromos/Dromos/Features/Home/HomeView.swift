@@ -218,7 +218,6 @@ struct HomeView: View {
 
                 ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
                     let status = completionStatuses[session.id] ?? .planned
-
                     HStack(spacing: 8) {
                         SessionCardView(
                             session: session,

@@ -130,104 +130,13 @@ struct SessionCardView: View {
                     .buttonStyle(.plain)
 
                     if showPlannedWorkout {
-                        // Row 3: Workout steps
-                        if let template = template, session.shouldShowWorkoutSteps(template: template) {
-                            let steps = workoutLibrary.stepSummaries(
-                                for: session.templateId,
-                                sport: session.sport,
-                                ftp: ftp,
-                                vma: vma,
-                                css: css
-                            )
-                            if !steps.isEmpty {
-                                WorkoutStepsView(steps: steps)
-                            }
-                        }
-
-                        // Row 4: Intensity graph
-                        if template != nil {
-                            let segments = workoutLibrary.flattenedSegments(for: session.templateId)
-                            if !segments.isEmpty {
-                                let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-                                WorkoutGraphView(
-                                    segments: segments,
-                                    totalDurationMinutes: totalDuration,
-                                    sport: session.sport,
-                                    ftp: ftp,
-                                    vma: vma
-                                )
-                            }
-                        }
-
-                        // Row 5: Swim distance (only for simple swims without steps/graph)
-                        if session.sport.lowercased() == "swim",
-                           let distance = swimDistance,
-                           template.map({ session.shouldShowWorkoutSteps(template: $0) }) != true {
-                            HStack(spacing: 6) {
-                                Image(systemName: "ruler")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("Est. Distance")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(PlanSession.formatDistance(distance))
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                            }
-                        }
+                        plannedWorkoutContent
                     }
                 }
 
             } else {
                 // PLANNED / MISSED LAYOUT: workout detail is always visible (no disclosure).
-
-                // Row 3: Workout steps (only if template has >1 segment or has repeats)
-                if let template = template, session.shouldShowWorkoutSteps(template: template) {
-                    let steps = workoutLibrary.stepSummaries(
-                        for: session.templateId,
-                        sport: session.sport,
-                        ftp: ftp,
-                        vma: vma,
-                        css: css
-                    )
-                    if !steps.isEmpty {
-                        WorkoutStepsView(steps: steps)
-                    }
-                }
-
-                // Row 4: Intensity graph (for all sessions with a template)
-                if template != nil {
-                    let segments = workoutLibrary.flattenedSegments(for: session.templateId)
-                    if !segments.isEmpty {
-                        let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-                        WorkoutGraphView(
-                            segments: segments,
-                            totalDurationMinutes: totalDuration,
-                            sport: session.sport,
-                            ftp: ftp,
-                            vma: vma
-                        )
-                    }
-                }
-
-                // Row 5: Swim distance (only for simple swims without steps/graph)
-                if session.sport.lowercased() == "swim",
-                   let distance = swimDistance,
-                   template.map({ session.shouldShowWorkoutSteps(template: $0) }) != true {
-                    HStack(spacing: 6) {
-                        Image(systemName: "ruler")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("Est. Distance")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(PlanSession.formatDistance(distance))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                    }
-                }
+                plannedWorkoutContent
             }
         }
         .padding(16)
@@ -244,6 +153,61 @@ struct SessionCardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Planned Workout Content
+
+    /// Shared planned workout rendering used by both the completed-card disclosure and
+    /// the always-visible planned/missed layout. Contains workout steps, intensity graph,
+    /// and swim distance (swim-only, simple sessions).
+    @ViewBuilder
+    private var plannedWorkoutContent: some View {
+        // Workout steps (only if template has >1 segment or has repeats)
+        if let template = template, session.shouldShowWorkoutSteps(template: template) {
+            let steps = workoutLibrary.stepSummaries(
+                for: session.templateId,
+                sport: session.sport,
+                ftp: ftp,
+                vma: vma,
+                css: css
+            )
+            if !steps.isEmpty {
+                WorkoutStepsView(steps: steps)
+            }
+        }
+
+        // Intensity graph (for all sessions with a template)
+        if template != nil {
+            let segments = workoutLibrary.flattenedSegments(for: session.templateId)
+            if !segments.isEmpty {
+                let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
+                WorkoutGraphView(
+                    segments: segments,
+                    totalDurationMinutes: totalDuration,
+                    sport: session.sport,
+                    ftp: ftp,
+                    vma: vma
+                )
+            }
+        }
+
+        // Swim distance (only for simple swims without steps/graph)
+        if session.sport.lowercased() == "swim",
+           let distance = swimDistance,
+           template.map({ session.shouldShowWorkoutSteps(template: $0) }) != true {
+            HStack(spacing: 6) {
+                Image(systemName: "ruler")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("Est. Distance")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(PlanSession.formatDistance(distance))
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+            }
+        }
     }
 
 }
