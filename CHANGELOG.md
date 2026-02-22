@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Session completion status** — Past sessions on the Home tab now show a green left border when completed (matched to a Strava activity) or a red border with dimming when missed. Future sessions remain unchanged. Completed sessions cannot be moved in edit mode. Status is computed client-side by matching plan sessions against synced Strava activities (same sport, same day, closest duration) (DRO-145)
 - **Strava integration** — Connect your Strava account to import activities. OAuth connection in Profile, auto-sync on app open, 90-day lookback on first sync. Activities synced with sport normalization (swim/bike/run) (DRO-139)
 - **Expandable sessions in Calendar Plan** — Tap any session in the Calendar tab to expand workout steps and intensity graph inline. Tap again to collapse. All sessions reset to collapsed when switching tabs (DRO-122)
 
