@@ -52,10 +52,6 @@ struct HomeView: View {
     /// Populated by `loadCompletionStatuses(plan:)` after fetching Strava activities.
     @State private var completionStatuses: [UUID: SessionCompletionStatus] = [:]
 
-    /// Tracks which completed session cards are expanded (for Phase 3 detail reveal).
-    // Phase 3: expanded detail reveal
-    @State private var expandedCompletedIDs: Set<UUID> = []
-
     var body: some View {
         NavigationStack {
             Group {
@@ -147,7 +143,6 @@ struct HomeView: View {
                 // Task inside .onChange is acceptable — triggered by user action, not view lifecycle.
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
-                expandedCompletedIDs = []
                 Task { await loadCompletionStatuses(plan: plan) }
             }
             .onChange(of: lastVisibleWeekIndex) { _, _ in
@@ -223,21 +218,6 @@ struct HomeView: View {
 
                 ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
                     let status = completionStatuses[session.id] ?? .planned
-                    // Determine whether this completed card is expanded.
-                    let isExpanded = expandedCompletedIDs.contains(session.id)
-                    // Build the toggle closure only for completed sessions; nil suppresses the tap gesture.
-                    let toggleClosure: (() -> Void)? = {
-                        guard case .completed = status else { return nil }
-                        return {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                if expandedCompletedIDs.contains(session.id) {
-                                    expandedCompletedIDs.remove(session.id)
-                                } else {
-                                    expandedCompletedIDs.insert(session.id)
-                                }
-                            }
-                        }
-                    }()
 
                     HStack(spacing: 8) {
                         SessionCardView(
@@ -247,9 +227,7 @@ struct HomeView: View {
                             ftp: profileService.user?.ftp,
                             vma: profileService.user?.vma,
                             css: profileService.user?.cssSecondsPer100m,
-                            completionStatus: status,
-                            isExpanded: isExpanded,
-                            onToggleExpand: toggleClosure
+                            completionStatus: status
                         )
 
                         // Edit mode: hide move arrows for completed sessions (they cannot be rescheduled).
