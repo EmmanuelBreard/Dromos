@@ -151,9 +151,9 @@ Deno.serve(async (req) => {
             access_token,
             refresh_token,
             expires_at: expiresAtIso,
-            // scope is not returned by Strava on authorization_code exchange;
-            // set to null and populate it if Strava adds it in future responses.
-            scope: stravaData.scope ?? null,
+            // The scope we requested in the OAuth URL. Strava does not echo it back
+            // in the token exchange response, so we set it to the known requested value.
+            scope: "activity:read_all",
           },
           { onConflict: "user_id" }
         );
