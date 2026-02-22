@@ -47,7 +47,7 @@ function normalizeSportType(stravaType: string): NormalizedSport {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -182,7 +182,8 @@ Deno.serve(async (req) => {
     let accessToken: string = connection.access_token;
     const nowEpoch = Math.floor(Date.now() / 1000);
 
-    if (connection.expires_at <= nowEpoch + TOKEN_REFRESH_BUFFER_SECONDS) {
+    const expiresAtEpoch = Math.floor(new Date(connection.expires_at).getTime() / 1000);
+    if (expiresAtEpoch <= nowEpoch + TOKEN_REFRESH_BUFFER_SECONDS) {
       let newTokens: StravaTokenResponse;
       try {
         newTokens = await refreshStravaToken(
@@ -204,7 +205,7 @@ Deno.serve(async (req) => {
         .update({
           access_token: newTokens.access_token,
           refresh_token: newTokens.refresh_token,
-          expires_at: newTokens.expires_at,
+          expires_at: new Date(newTokens.expires_at * 1000).toISOString(),
         })
         .eq("user_id", userId);
 
