@@ -137,7 +137,6 @@ struct HomeView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            // Issue 2: Use .task { } instead of .onAppear { Task { } } so the task auto-cancels on disappear.
             .task {
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
@@ -151,7 +150,6 @@ struct HomeView: View {
                 expandedCompletedIDs = []
                 Task { await loadCompletionStatuses(plan: plan) }
             }
-            // Issue 4: Reload completion statuses when "Show next week" reveals additional weeks.
             .onChange(of: lastVisibleWeekIndex) { _, _ in
                 Task { await loadCompletionStatuses(plan: plan) }
             }
@@ -227,8 +225,6 @@ struct HomeView: View {
                     let status = completionStatuses[session.id] ?? .planned
 
                     HStack(spacing: 8) {
-                        // Issue 11: Remove tap gesture branching for Phase 2 — cards are rendered directly
-                        // for all statuses. onTapGesture will be added in Phase 3 when expanded view exists.
                         let card = SessionCardView(
                             session: session,
                             swimDistance: swimDistance(for: session),
@@ -443,7 +439,6 @@ struct HomeView: View {
     /// Returns true when the session has a confirmed Strava match.
     /// Used to suppress edit-mode move arrows on completed sessions.
     private func isCompleted(_ sessionId: UUID) -> Bool {
-        // Issue 10: Use optional pattern match (.completed?) instead of .completed for Optional<SessionCompletionStatus>.
         if case .completed? = completionStatuses[sessionId] { return true }
         return false
     }
@@ -462,11 +457,10 @@ struct HomeView: View {
         let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
         let visibleWeeks = Array(plan.planWeeks[currentWeekIndex...endIndex])
 
-        // Issue 6: Replace force-unwrap earliest!/latest! loop with safe flatMap + min/max.
         let allDates = visibleWeeks.flatMap { plan.daysForWeek($0) }.map(\.date)
         guard let fromDate = allDates.min(), let toDate = allDates.max() else { return }
 
-        // Issue 5: Pad the fetch window by 1 day on each side to handle UTC vs local timezone edge cases.
+        // Pad ±1 day to handle UTC vs local timezone edge cases at date boundaries.
         let paddedFrom = calendar.date(byAdding: .day, value: -1, to: fromDate)!
         let paddedTo = calendar.date(byAdding: .day, value: 1, to: toDate)!
 

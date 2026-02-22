@@ -35,7 +35,6 @@ enum SessionCompletionStatus {
 /// - Future/today sessions without a match remain `.planned`.
 struct SessionMatcher {
 
-    // Issue 3: Promote ISO8601DateFormatter to a static constant to avoid per-call allocation.
     private static let dayFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withFullDate]
@@ -62,7 +61,6 @@ struct SessionMatcher {
 
         // Step 2: Group activities by (normalizedSport, calendarDay) for O(1) lookup.
         // Key: "(sport)-(yyyy-MM-dd)" built from startDateLocal truncated to calendar day.
-        // Issue 7: Lowercase the sport on the activity side too for consistent casing.
         var activityGroups: [String: [StravaActivity]] = [:]
         for activity in autoActivities {
             guard let sport = activity.normalizedSport?.lowercased() else { continue }
@@ -72,7 +70,7 @@ struct SessionMatcher {
         }
 
         // Step 3: Classify each session.
-        // Issue 1: Track consumed activity IDs to prevent a single activity from matching multiple sessions.
+        // Track consumed activity IDs to prevent a single activity from matching multiple sessions.
         let todayStart = calendar.startOfDay(for: today)
         var consumedActivityIDs: Set<Int64> = []
         var result: [UUID: SessionCompletionStatus] = [:]
@@ -87,8 +85,7 @@ struct SessionMatcher {
             if !candidates.isEmpty {
                 // Step 4: Match found — pick the activity whose movingTime is closest to the planned duration.
                 let targetSeconds: Int = session.durationMinutes * 60
-                // Issue 9: Use guard instead of force-unwrap on .min() since candidates could be empty
-                // after filtering consumed IDs (guard here is also now logically necessary).
+                // guard-let instead of force-unwrap: candidates may be empty after consumed-ID filtering.
                 guard let best = candidates.min(by: { a, b in
                     let diffA = abs(a.movingTime - targetSeconds)
                     let diffB = abs(b.movingTime - targetSeconds)
