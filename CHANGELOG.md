@@ -7,7 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
-- **Session completion status** — Past sessions on the Home tab now show a green left border when completed (matched to a Strava activity) or a red border with dimming when missed. Tap a completed session header to expand actual performance metrics (duration, distance, power/pace/HR) and a GPS route map. Future sessions remain unchanged. Completed sessions cannot be moved in edit mode. Status is computed client-side by matching plan sessions against synced Strava activities (same sport, same day, closest duration) (DRO-145)
+- **Session completion status** — Past sessions on the Home tab now show a green left border when completed (matched to a Strava activity) or a red border with dimming when missed. Completed cards display actual performance metrics (duration, distance, power/pace/HR) and GPS route map as primary content. Planned workout details available behind a "Planned workout" collapsible disclosure. Future sessions remain unchanged. Completed sessions cannot be moved in edit mode. Status is computed client-side by matching plan sessions against synced Strava activities (same sport, same day, closest duration) (DRO-145, DRO-150)
 
 ### Fixed
 - **Strava OAuth** — Use web authorize endpoint (`/oauth/authorize`) instead of mobile endpoint which broke callback interception when native Strava app was installed (DRO-145)
