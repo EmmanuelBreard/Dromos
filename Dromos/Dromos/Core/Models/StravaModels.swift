@@ -29,6 +29,7 @@ struct StravaActivity: Codable, Identifiable {
     let averageHeartrate: Double?
     let averageWatts: Double?
     let isManual: Bool
+    let summaryPolyline: String?   // Encoded GPS polyline from Strava map (nil for manual entries)
     let createdAt: Date
 }
 

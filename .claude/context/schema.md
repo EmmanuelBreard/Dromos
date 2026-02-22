@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-02-22 | Migrations: 001-011 + Strava tables
+> Last updated: 2026-02-22 | Migrations: 001-011 + Strava tables + summary_polyline
 
 ## Tables Overview
 
@@ -170,6 +170,7 @@ Synced Strava activities for a user. Written by the `strava-sync` Edge Function.
 | `average_heartrate` | DOUBLE PRECISION | | BPM |
 | `average_watts` | DOUBLE PRECISION | | Watts |
 | `is_manual` | BOOLEAN | NOT NULL, DEFAULT FALSE | |
+| `summary_polyline` | TEXT | | Encoded polyline from Strava map |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
 
 **UNIQUE:** `(user_id, strava_activity_id)` — upsert conflict target.
