@@ -11,7 +11,7 @@
 
 -- Add strava_athlete_id to users for quick athlete lookup without joining strava_connections
 ALTER TABLE public.users
-    ADD COLUMN strava_athlete_id BIGINT;
+    ADD COLUMN strava_athlete_id BIGINT UNIQUE;
 
 COMMENT ON COLUMN public.users.strava_athlete_id IS 'Strava athlete ID, set on OAuth connect and cleared on disconnect. Mirrors strava_connections.strava_athlete_id for fast lookup.';
 
@@ -36,7 +36,7 @@ COMMENT ON COLUMN public.strava_connections.strava_athlete_id IS 'Strava athlete
 COMMENT ON COLUMN public.strava_connections.access_token IS 'Short-lived Strava access token (refreshed automatically by Edge Function)';
 COMMENT ON COLUMN public.strava_connections.refresh_token IS 'Long-lived Strava refresh token';
 COMMENT ON COLUMN public.strava_connections.expires_at IS 'UTC expiry time of the current access_token';
-COMMENT ON COLUMN public.strava_connections.scope IS 'OAuth scopes granted by the athlete (e.g. activity:read_all)';
+COMMENT ON COLUMN public.strava_connections.scope IS 'Comma-separated OAuth scopes granted by the athlete (e.g. "activity:read_all"). Edge Function must verify activity:read_all is present before syncing.';
 COMMENT ON COLUMN public.strava_connections.last_sync_at IS 'Timestamp of the last successful activity sync from Strava';
 
 -- Enable RLS on strava_connections with NO client-facing policies
@@ -57,17 +57,17 @@ CREATE TABLE public.strava_activities (
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     strava_activity_id BIGINT NOT NULL,
     sport_type TEXT NOT NULL,
-    normalized_sport TEXT,
+    normalized_sport TEXT CHECK (normalized_sport IN ('swim', 'bike', 'run')),
     name TEXT,
     start_date TIMESTAMPTZ NOT NULL,
     start_date_local TIMESTAMPTZ NOT NULL,
-    elapsed_time INT NOT NULL,
-    moving_time INT NOT NULL,
-    distance DECIMAL(10,2),
-    total_elevation_gain DECIMAL(8,2),
-    average_speed DECIMAL(6,3),
-    average_heartrate DECIMAL(5,1),
-    average_watts DECIMAL(6,1),
+    elapsed_time INT NOT NULL CHECK (elapsed_time >= 0),
+    moving_time INT NOT NULL CHECK (moving_time >= 0),
+    distance DECIMAL(10,2) CHECK (distance >= 0),
+    total_elevation_gain DECIMAL(8,2) CHECK (total_elevation_gain >= 0),
+    average_speed DECIMAL(6,3) CHECK (average_speed >= 0),
+    average_heartrate DECIMAL(4,1) CHECK (average_heartrate > 0),
+    average_watts DECIMAL(6,1) CHECK (average_watts >= 0),
     is_manual BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(user_id, strava_activity_id)
@@ -76,7 +76,7 @@ CREATE TABLE public.strava_activities (
 COMMENT ON TABLE public.strava_activities IS 'Strava activities imported per user. Written by service_role via Edge Function sync; readable by the owning user via RLS.';
 COMMENT ON COLUMN public.strava_activities.strava_activity_id IS 'Strava-assigned activity ID (unique per athlete on Strava)';
 COMMENT ON COLUMN public.strava_activities.sport_type IS 'Raw sport type string from Strava API (e.g. Ride, Run, Swim)';
-COMMENT ON COLUMN public.strava_activities.normalized_sport IS 'Dromos-normalised sport category (bike, run, swim, other)';
+COMMENT ON COLUMN public.strava_activities.normalized_sport IS 'Dromos-normalised sport category: swim, bike, run, or NULL for unsupported sports';
 COMMENT ON COLUMN public.strava_activities.elapsed_time IS 'Total elapsed time in seconds (includes stopped time)';
 COMMENT ON COLUMN public.strava_activities.moving_time IS 'Moving time in seconds (excludes stopped time)';
 COMMENT ON COLUMN public.strava_activities.distance IS 'Distance in metres';
@@ -89,7 +89,7 @@ COMMENT ON COLUMN public.strava_activities.is_manual IS 'True if the activity wa
 ALTER TABLE public.strava_activities ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Users can SELECT their own activities
-CREATE POLICY "select_own"
+CREATE POLICY "Users can read own activities"
     ON public.strava_activities
     FOR SELECT
     USING (auth.uid() = user_id);
@@ -101,7 +101,7 @@ CREATE INDEX idx_strava_activities_user_date ON public.strava_activities(user_id
 -- DOWN MIGRATION (run manually if rollback needed)
 -- ============================================================================
 -- DROP INDEX IF EXISTS idx_strava_activities_user_date;
--- DROP POLICY IF EXISTS "select_own" ON public.strava_activities;
+-- DROP POLICY IF EXISTS "Users can read own activities" ON public.strava_activities;
 -- DROP TABLE IF EXISTS public.strava_activities;
 -- DROP TRIGGER IF EXISTS update_strava_connections_updated_at ON public.strava_connections;
 -- DROP TABLE IF EXISTS public.strava_connections;
