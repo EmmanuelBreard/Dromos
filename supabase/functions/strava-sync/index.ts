@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
         average_heartrate: a.average_heartrate ?? null,
         average_watts: a.average_watts ?? null,
         is_manual: a.manual ?? false,
-        summary_polyline: a.map?.summary_polyline ?? null,
+        summary_polyline: a.map?.summary_polyline || null,
       }));
 
       const { error: upsertError } = await db
