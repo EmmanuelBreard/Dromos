@@ -1,6 +1,6 @@
 # DRO-145: Session Completion Status — Visual Adherence on Training Cards
 
-**Overall Progress:** `66%`
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -117,57 +117,57 @@ Show athletes whether each planned session was completed, missed, or still plann
 ### Phase 3: Expanded Detail View + GPS Map [QA-REQUIRED]
 **Blocked by:** Phase 2
 
-- [ ] 🟥 **3.1 Create `ActualMetricsView.swift`** (`Dromos/Features/Home/ActualMetricsView.swift`)
-  - [ ] 🟥 Accepts `activity: StravaActivity`
-  - [ ] 🟥 Layout: compact 2-column grid using `LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())])` or simple `HStack`/`VStack` layout
-  - [ ] 🟥 Each metric cell: label (caption, secondary) + value (subheadline, bold)
-  - [ ] 🟥 **Common metrics (all sports):**
+- [x] 🟩 **3.1 Create `ActualMetricsView.swift`** (`Dromos/Features/Home/ActualMetricsView.swift`)
+  - [x] 🟩 Accepts `activity: StravaActivity`
+  - [x] 🟩 Layout: compact 2-column grid using `LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())])` or simple `HStack`/`VStack` layout
+  - [x] 🟩 Each metric cell: label (caption, secondary) + value (subheadline, bold)
+  - [x] 🟩 **Common metrics (all sports):**
     - Duration: format `activity.movingTime` seconds → "Xh Xmin" or "X min"
     - Distance: format `activity.distance` meters → "X.X km" (or "X m" if < 1km)
-  - [ ] 🟥 **Cycling** (`normalizedSport == "bike"`):
+  - [x] 🟩 **Cycling** (`normalizedSport == "bike"`):
     - Avg Power: `activity.averageWatts` → "XXX W" (omit if nil)
     - Avg HR: `activity.averageHeartrate` → "XXX bpm" (omit if nil)
     - Avg Speed: `activity.averageSpeed` m/s → "XX.X km/h" (omit if nil)
-  - [ ] 🟥 **Running** (`normalizedSport == "run"`):
+  - [x] 🟩 **Running** (`normalizedSport == "run"`):
     - Avg Pace: `activity.averageSpeed` m/s → "X:XX /km" (omit if nil or 0)
     - Avg HR: `activity.averageHeartrate` → "XXX bpm" (omit if nil)
-  - [ ] 🟥 **Swimming** (`normalizedSport == "swim"`):
+  - [x] 🟩 **Swimming** (`normalizedSport == "swim"`):
     - Avg Pace: `activity.averageSpeed` m/s → "X:XX /100m" (omit if nil or 0)
     - Avg HR: `activity.averageHeartrate` → "XXX bpm" (omit if nil)
-  - [ ] 🟥 Nil metrics are **omitted entirely** from the grid (not shown as "N/A")
+  - [x] 🟩 Nil metrics are **omitted entirely** from the grid (not shown as "N/A")
 
-- [ ] 🟥 **3.2 Polyline decoder utility**
-  - [ ] 🟥 Add a static function (in `StravaRouteMapView.swift` or a shared utility) that decodes Google's encoded polyline format:
+- [x] 🟩 **3.2 Polyline decoder utility**
+  - [x] 🟩 Add a static function (in `StravaRouteMapView.swift` or a shared utility) that decodes Google's encoded polyline format:
     ```swift
     import CoreLocation
 
     static func decodePolyline(_ encoded: String) -> [CLLocationCoordinate2D]
     ```
-  - [ ] 🟥 Standard algorithm: iterate characters, subtract 63, extract 5-bit chunks, combine, apply sign, divide by 1e5. ~30 lines, no external dependency.
+  - [x] 🟩 Standard algorithm: iterate characters, subtract 63, extract 5-bit chunks, combine, apply sign, divide by 1e5. ~30 lines, no external dependency.
 
-- [ ] 🟥 **3.3 Create `StravaRouteMapView.swift`** (`Dromos/Features/Home/StravaRouteMapView.swift`)
-  - [ ] 🟥 Accepts `encodedPolyline: String`
-  - [ ] 🟥 Uses `Map` (SwiftUI MapKit, iOS 17+) with a `MapPolyline` overlay
-  - [ ] 🟥 Decode polyline → `[CLLocationCoordinate2D]` → `MKPolyline`
-  - [ ] 🟥 Auto-fit the map region to the polyline bounds with padding
-  - [ ] 🟥 Non-interactive: `.mapInteractionModes([])` — static visual snapshot
-  - [ ] 🟥 Fixed height: ~150pt. Rounded corners to match card style.
-  - [ ] 🟥 Polyline stroke: sport color from `PlanSession.sportColor` (or a fixed accent color)
+- [x] 🟩 **3.3 Create `StravaRouteMapView.swift`** (`Dromos/Features/Home/StravaRouteMapView.swift`)
+  - [x] 🟩 Accepts `encodedPolyline: String`
+  - [x] 🟩 Uses `Map` (SwiftUI MapKit, iOS 17+) with a `MapPolyline` overlay
+  - [x] 🟩 Decode polyline → `[CLLocationCoordinate2D]` → `MKPolyline`
+  - [x] 🟩 Auto-fit the map region to the polyline bounds with padding
+  - [x] 🟩 Non-interactive: `.mapInteractionModes([])` — static visual snapshot
+  - [x] 🟩 Fixed height: ~150pt. Rounded corners to match card style.
+  - [x] 🟩 Polyline stroke: sport color from `PlanSession.sportColor` (or a fixed accent color)
 
-- [ ] 🟥 **3.4 Integrate expanded section into SessionCardView**
-  - [ ] 🟥 Add `isExpanded: Bool = false` and `onToggleExpand: (() -> Void)? = nil` parameters
-  - [ ] 🟥 When `completionStatus` is `.completed(let activity)` and `isExpanded == true`, render below existing card content:
+- [x] 🟩 **3.4 Integrate expanded section into SessionCardView**
+  - [x] 🟩 Add `isExpanded: Bool = false` and `onToggleExpand: (() -> Void)? = nil` parameters
+  - [x] 🟩 When `completionStatus` is `.completed(let activity)` and `isExpanded == true`, render below existing card content:
     1. A thin `Divider()`
     2. Section header: "Actual Performance" (caption, secondary color)
     3. `ActualMetricsView(activity: activity)`
     4. If `activity.summaryPolyline != nil`: `StravaRouteMapView(encodedPolyline: polyline)`
-  - [ ] 🟥 Wrap the entire card in a `.onTapGesture` that calls `onToggleExpand?()` (only for completed status)
-  - [ ] 🟥 Expand/collapse with `withAnimation(.easeInOut(duration: 0.25))` — content appears/disappears smoothly
+  - [x] 🟩 Wrap the entire card in a `.onTapGesture` that calls `onToggleExpand?()` (only for completed status)
+  - [x] 🟩 Expand/collapse with `withAnimation(.easeInOut(duration: 0.25))` — content appears/disappears smoothly
 
-- [ ] 🟥 **3.5 Wire expand state from HomeView**
-  - [ ] 🟥 Pass `isExpanded: expandedCompletedIDs.contains(session.id)` to `SessionCardView`
-  - [ ] 🟥 Pass `onToggleExpand` closure that toggles the session ID in `expandedCompletedIDs` with animation
-  - [ ] 🟥 Reset `expandedCompletedIDs` on `scrollReset` change (same as tab re-selection behavior)
+- [x] 🟩 **3.5 Wire expand state from HomeView**
+  - [x] 🟩 Pass `isExpanded: expandedCompletedIDs.contains(session.id)` to `SessionCardView`
+  - [x] 🟩 Pass `onToggleExpand` closure that toggles the session ID in `expandedCompletedIDs` with animation
+  - [x] 🟩 Reset `expandedCompletedIDs` on `scrollReset` change (same as tab re-selection behavior)
 
-- [ ] 🟥 **3.6 Update architecture.md**
-  - [ ] 🟥 Add `ActualMetricsView` and `StravaRouteMapView` to Key Shared Components section
+- [x] 🟩 **3.6 Update architecture.md**
+  - [x] 🟩 Add `ActualMetricsView` and `StravaRouteMapView` to Key Shared Components section
