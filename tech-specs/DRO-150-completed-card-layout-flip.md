@@ -1,6 +1,6 @@
 # DRO-150: Completed Card Layout Flip
 
-**Overall Progress:** `66%`
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -41,5 +41,5 @@ For completed session cards, flip the layout so actual Strava data (metrics + GP
   - [x] 🟩 Remove the `let isExpanded = ...` and `let toggleClosure = ...` computations (lines 227-240)
   - [x] 🟩 Remove `isExpanded:` and `onToggleExpand:` parameters from the `SessionCardView(...)` initializer call (lines 251-252)
 
-- [ ] 🟥 **Step 3: Update context docs**
-  - [ ] 🟥 Update `architecture.md` — SessionCardView description: actual data always visible for completed cards, planned workout behind local `@State` disclosure, `isExpanded`/`onToggleExpand` removed from API
+- [x] 🟩 **Step 3: Update context docs**
+  - [x] 🟩 Update `architecture.md` — SessionCardView description: actual data always visible for completed cards, planned workout behind local `@State` disclosure, `isExpanded`/`onToggleExpand` removed from API
