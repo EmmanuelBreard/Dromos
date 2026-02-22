@@ -18,7 +18,7 @@ struct ActualMetricsView: View {
 
     /// A single labeled metric cell for the grid.
     private struct MetricCell: Identifiable {
-        let id = UUID()
+        var id: String { label }
         let label: String
         let value: String
     }
@@ -108,7 +108,7 @@ struct ActualMetricsView: View {
     // MARK: - Formatting Helpers
 
     /// Formats a duration in seconds into a human-readable string.
-    /// Examples: "45 min", "1h 30min", "2h 5min"
+    /// Examples: "<1 min", "45 min", "1h 30min", "2h 5min"
     private func formatDuration(_ seconds: Int) -> String {
         let totalMinutes = seconds / 60
         let hours = totalMinutes / 60
@@ -116,8 +116,10 @@ struct ActualMetricsView: View {
 
         if hours > 0 {
             return minutes > 0 ? "\(hours)h \(minutes)min" : "\(hours)h"
+        } else if totalMinutes > 0 {
+            return "\(totalMinutes) min"
         } else {
-            return "\(minutes) min"
+            return "<1 min"
         }
     }
 

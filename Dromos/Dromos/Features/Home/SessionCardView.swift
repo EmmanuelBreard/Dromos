@@ -49,6 +49,7 @@ struct SessionCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Sport icon + name + duration + type badge
+            // Tap gesture scoped here (not card-level) so graph bar taps work independently.
             HStack(spacing: 12) {
                 // Sport emoji with colored background
                 Text(session.sportEmoji)
@@ -56,20 +57,20 @@ struct SessionCardView: View {
                     .frame(width: 40, height: 40)
                     .background(session.sportColor.opacity(0.15))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     // Workout name
                     Text(session.displayName)
                         .font(.headline)
-                    
+
                     // Duration
                     Text(session.formattedDuration)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 // Type tag chip (moved to top-right)
                 Text(session.type.uppercased())
                     .font(.caption)
@@ -79,6 +80,10 @@ struct SessionCardView: View {
                     .padding(.vertical, 5)
                     .background(session.typeColor.opacity(0.15))
                     .clipShape(Capsule())
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onToggleExpand?()
             }
             
             // Row 2: Brick indicator (if applicable)
@@ -179,11 +184,6 @@ struct SessionCardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        // Tap gesture for expand/collapse — only wired for completed sessions.
-        // `onToggleExpand` is nil for planned/missed cards so no gesture is registered.
-        .onTapGesture {
-            onToggleExpand?()
-        }
     }
 
 }

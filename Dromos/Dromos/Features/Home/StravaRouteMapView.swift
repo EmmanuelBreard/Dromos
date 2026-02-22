@@ -20,9 +20,20 @@ struct StravaRouteMapView: View {
     /// Corner radius matching the parent session card style.
     private let cornerRadius: CGFloat = 12
 
-    var body: some View {
-        let coordinates = Self.decodePolyline(encodedPolyline)
+    /// Pre-decoded coordinates — computed once in init to avoid O(N) work on every body evaluation.
+    private let coordinates: [CLLocationCoordinate2D]
 
+    /// Pre-computed camera position — derived from coordinates in init.
+    private let cameraPosition: MapCameraPosition
+
+    init(encodedPolyline: String) {
+        self.encodedPolyline = encodedPolyline
+        let coords = Self.decodePolyline(encodedPolyline)
+        self.coordinates = coords
+        self.cameraPosition = Self.computeCameraPosition(for: coords)
+    }
+
+    var body: some View {
         if coordinates.isEmpty {
             // Graceful fallback: show a placeholder when decoding yields no coordinates.
             RoundedRectangle(cornerRadius: cornerRadius)
@@ -34,7 +45,7 @@ struct StravaRouteMapView: View {
                         .foregroundColor(.secondary)
                 )
         } else {
-            Map(initialPosition: mapCameraPosition(for: coordinates), interactionModes: []) {
+            Map(initialPosition: cameraPosition, interactionModes: []) {
                 MapPolyline(coordinates: coordinates)
                     .stroke(.blue, lineWidth: 3)
             }
@@ -46,7 +57,8 @@ struct StravaRouteMapView: View {
     // MARK: - Camera Fitting
 
     /// Computes a MapCameraPosition that frames all route coordinates with padding.
-    private func mapCameraPosition(for coordinates: [CLLocationCoordinate2D]) -> MapCameraPosition {
+    /// Static so it can be called from `init` before `self` is fully initialised.
+    static func computeCameraPosition(for coordinates: [CLLocationCoordinate2D]) -> MapCameraPosition {
         guard !coordinates.isEmpty else {
             return .automatic
         }

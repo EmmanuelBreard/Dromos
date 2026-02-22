@@ -180,7 +180,7 @@ All services follow:
 - **Phase 3 additions:**
   - Accepts `isExpanded: Bool` and `onToggleExpand: (() -> Void)?` parameters
   - When `.completed` and `isExpanded`: renders divider → "Actual Performance" header → `ActualMetricsView` → `StravaRouteMapView` (if polyline available)
-  - `.onTapGesture` attached unconditionally but only activates when `onToggleExpand` is non-nil (completed sessions only)
+  - `.onTapGesture` + `.contentShape(Rectangle())` scoped to the header row (Row 1 HStack) only — avoids conflict with `WorkoutGraphView` per-bar tap gestures; safely no-ops when `onToggleExpand` is nil
   - Animation controlled by caller (`HomeView`) via `withAnimation(.easeInOut(duration: 0.25))`
 
 ---
