@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Chat V0** — New Chat tab (4th, between Calendar and Profile) with AI coaching conversation agent powered by gpt-4o. Edge function (`chat-adjust`) validates JWT, fetches conversation history (last 50 messages), user profile, and active plan phase map, then returns structured coaching advice. V0 advisory mode — gathers training constraints (injury, illness, fatigue, equipment) and answers general coaching questions, but does not modify the plan. iOS UI with chat bubbles, typing indicator, optimistic send, keyboard dismiss, and clear history in Profile settings. Messages stored in `chat_messages` table (DRO-149)
 - **Session completion status** — Past sessions on the Home tab now show a green left border when completed (matched to a Strava activity) or a red border with dimming when missed. Completed cards display actual performance metrics (duration, distance, power/pace/HR) and GPS route map as primary content. Planned workout details available behind a "Planned workout" collapsible disclosure. Future sessions remain unchanged. Completed sessions cannot be moved in edit mode. Status is computed client-side by matching plan sessions against synced Strava activities (same sport, same day, closest duration) (DRO-145, DRO-150)
 
 ### Fixed
@@ -23,6 +24,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Sex, age, and weight fields removed from onboarding, profile edit, and database (DRO-125)
 
 ### Database Migrations
+- `013_create_chat_messages.sql` — Creates `chat_messages` table for AI coaching conversation history with RLS (user SELECT + DELETE, service_role INSERT) (DRO-149)
 - `20260222_add_summary_polyline.sql` — Adds `summary_polyline TEXT` column to `strava_activities` for GPS route data from Strava (DRO-145)
 - `010_drop_demographic_columns.sql` — Drops `sex`, `birth_date`, `weight_kg` columns and `check_weight_kg` constraint from `public.users` (DRO-125)
 - **Plan generation loading screen** — Replaced rotating text phrases with a 3-step progress bar showing pipeline stages (Periodizing → Structuring → Selecting), capped at 90% until the real response arrives (DRO-110)

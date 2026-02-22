@@ -9,7 +9,7 @@ Dromos/Dromos/
 ├── App/                              # App entry + root navigation
 │   ├── DromosApp.swift               # @main entry point
 │   ├── RootView.swift                # Auth → Onboarding → Plan → MainTab routing
-│   └── MainTabView.swift             # TabView (Home/Calendar/Profile) + PlanService/ProfileService owner
+│   └── MainTabView.swift             # TabView (Home/Calendar/Chat/Profile) + PlanService/ProfileService/ChatService owner
 │
 ├── Core/
 │   ├── Configuration.swift           # Reads from Secrets.swift (git-ignored)
@@ -20,14 +20,16 @@ Dromos/Dromos/
 │   │   ├── WorkoutTemplate.swift     # WorkoutTemplate, WorkoutSegment, WorkoutLibrary, FlatSegment, StepSummary
 │   │   ├── StravaModels.swift        # StravaActivity, SyncResult (Equatable), SyncResponse
 │   │   ├── SessionCompletionStatus.swift # SessionCompletionStatus enum + SessionMatcher (client-side matching engine)
-│   │   └── OnboardingData.swift      # Per-screen onboarding structs
+│   │   ├── OnboardingData.swift      # Per-screen onboarding structs
+│   │   └── ChatMessage.swift          # ChatMessage (Codable, Identifiable) + ChatResponse edge function DTO
 │   └── Services/
 │       ├── SupabaseClient.swift      # Singleton client with snake_case encoder/decoder
 │       ├── AuthService.swift         # Auth state, sign up/in/out, onboarding/plan status
 │       ├── PlanService.swift         # Plan generation (edge function) + fetching (nested query) + session reordering (RPC)
 │       ├── ProfileService.swift      # User profile CRUD + onboarding save
 │       ├── StravaService.swift       # Strava OAuth (ASWebAuthenticationSession), disconnect, sync, activity fetch
-│       └── WorkoutLibraryService.swift # Bundled JSON library, O(1) template lookup, flattenedSegments(), stepSummaries()
+│       ├── WorkoutLibraryService.swift # Bundled JSON library, O(1) template lookup, flattenedSegments(), stepSummaries()
+│       └── ChatService.swift          # @MainActor ObservableObject: fetchMessages(), sendMessage(), clearHistory()
 │
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
@@ -44,6 +46,8 @@ Dromos/Dromos/
 │   │   ├── CalendarPlanView.swift    # Plan tab main view (receives profileService for expanded details)
 │   │   ├── WeekHeaderView.swift      # Week nav + phase badge
 │   │   └── DaySessionRow.swift       # Day row with expandable sessions (steps + graph on tap)
+│   ├── Chat/
+│   │   └── ChatView.swift            # Chat UI: message list, bubbles, typing indicator, input bar, welcome state
 │   └── Profile/
 │       ├── ProfileView.swift         # User profile display/edit + Strava connect/disconnect/sync UI
 │       └── WebAuthPresentationContext.swift # ASWebAuthenticationPresentationContextProviding impl
@@ -68,7 +72,8 @@ Authenticated + plan → MainTabView
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
 - Home (house icon) → `HomeView` (receives shared `profileService` + `stravaService`; fetches activities and manages per-session completion status)
 - Calendar (calendar icon) → `CalendarPlanView` (receives shared `profileService`)
-- Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`)
+- Chat (bubble.left.fill icon) → `ChatView` (receives shared `chatService`)
+- Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService` + `chatService`)
 
 **Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Home or Calendar:
 - Home: toggles `homeScrollReset` → HomeView scrolls to today's day section and resets progressive disclosure
@@ -237,6 +242,9 @@ All services follow:
 | `generate-plan` | `supabase/functions/generate-plan/` | 3-step LLM pipeline for training plan generation |
 | `strava-auth` | `supabase/functions/strava-auth/` | POST: OAuth code exchange + token storage. DELETE: token revocation + full cleanup (strava_activities + strava_connections). JWT validated via `auth.getUser()`. |
 | `strava-sync` | `supabase/functions/strava-sync/` | POST: Paginated Strava activity fetch (up to 2000), token auto-refresh, upsert into `strava_activities`. JWT validated via `auth.getUser()`. |
+| `chat-adjust` | `supabase/functions/chat-adjust/` | POST: Auth → history fetch → OpenAI gpt-4o → DB write (both user & assistant messages). JWT validated via `auth.getUser()`. Returns `{ response_text, status, constraint_summary? }`. |
+
+**Deployment:** All functions are deployed with `--no-verify-jwt` (gateway JWT check disabled — each function validates JWTs itself via `auth.getUser()`). Use `scripts/deploy-functions.sh` to deploy one or all functions with the correct flags.
 
 See `ai-pipeline.md` for `generate-plan` pipeline documentation.
 

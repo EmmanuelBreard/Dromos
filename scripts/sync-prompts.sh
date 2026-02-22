@@ -10,12 +10,14 @@ SOURCES=(
   "ai/prompts/step1-macro-plan.txt"
   "ai/prompts/step2-md-to-json.txt"
   "ai/prompts/step3-workout-block.txt"
+  "ai/prompts/adjust-step1-v0.txt"
 )
 
 TARGETS=(
   "supabase/functions/generate-plan/prompts/step1-macro-plan-prompt.ts"
   "supabase/functions/generate-plan/prompts/step2-md-to-json-prompt.ts"
   "supabase/functions/generate-plan/prompts/step3-workout-block-prompt.ts"
+  "supabase/functions/chat-adjust/prompts/adjust-step1-v0-prompt.ts"
 )
 
 echo "Syncing prompts from ai/prompts/ to edge function..."
