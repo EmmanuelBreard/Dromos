@@ -9,12 +9,13 @@ import SwiftUI
 
 /// Tabs available in the main navigation.
 enum AppTab: Hashable {
-    case home, calendar, profile
+    case home, calendar, chat, profile
 }
 
 /// Main tab navigation for authenticated users.
-/// Provides access to Home, Calendar, and Profile sections.
-/// Owns the PlanService, ProfileService, and StravaService, sharing them between tabs.
+/// Provides access to Home, Calendar, Chat, and Profile sections.
+/// Owns the PlanService, ProfileService, StravaService, and ChatService,
+/// sharing them between tabs.
 struct MainTabView: View {
     @ObservedObject var authService: AuthService
 
@@ -29,6 +30,10 @@ struct MainTabView: View {
     /// Shared Strava service for OAuth, sync, and activity access.
     /// Owned here so it persists across tab switches and can auto-sync on launch.
     @StateObject private var stravaService = StravaService()
+
+    /// Shared chat service for the coaching conversation agent.
+    /// Owned here so the message list persists across tab switches.
+    @StateObject private var chatService = ChatService()
 
     /// Tracks the currently selected tab for scroll-reset on Home re-selection.
     @State private var selectedTab: AppTab = .home
@@ -67,14 +72,24 @@ struct MainTabView: View {
             }
 
             Tab("Calendar", systemImage: "calendar", value: .calendar) {
-                CalendarPlanView(authService: authService, planService: planService, profileService: profileService, calendarReset: $calendarReset)
+                CalendarPlanView(
+                    authService: authService,
+                    planService: planService,
+                    profileService: profileService,
+                    calendarReset: $calendarReset
+                )
+            }
+
+            Tab("Chat", systemImage: "bubble.left.fill", value: .chat) {
+                ChatView(chatService: chatService)
             }
 
             Tab("Profile", systemImage: "person", value: .profile) {
                 ProfileView(
                     authService: authService,
                     profileService: profileService,
-                    stravaService: stravaService
+                    stravaService: stravaService,
+                    chatService: chatService
                 )
             }
         }
@@ -82,9 +97,9 @@ struct MainTabView: View {
             await loadData()
         }
     }
-    
+
     // MARK: - Private Methods
-    
+
     /// Loads training plan, user profile, and triggers Strava auto-sync if connected.
     private func loadData() async {
         guard let userId = authService.currentUserId else { return }
@@ -101,7 +116,7 @@ struct MainTabView: View {
             await stravaService.syncActivities()
         }
     }
-    
+
     /// Loads the training plan.
     private func loadPlan(userId: UUID) async {
         do {
@@ -110,7 +125,7 @@ struct MainTabView: View {
             // Error is already captured in planService.errorMessage
         }
     }
-    
+
     /// Loads the user profile.
     private func loadProfile(userId: UUID) async {
         do {
@@ -124,4 +139,3 @@ struct MainTabView: View {
 #Preview {
     MainTabView(authService: AuthService())
 }
-
