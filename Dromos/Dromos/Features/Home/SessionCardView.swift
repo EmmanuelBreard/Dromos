@@ -19,12 +19,9 @@ struct SessionCardView: View {
     let css: Int?
     /// Completion status drives visual treatment: green border (completed), red border + dim (missed), no change (planned).
     var completionStatus: SessionCompletionStatus = .planned
-    /// Whether the expanded detail section (actual metrics + GPS map) is visible.
-    /// Only has an effect when `completionStatus` is `.completed`.
-    var isExpanded: Bool = false
-    /// Called when the user taps a completed card to toggle its expanded state.
-    /// Nil for non-completed cards — no tap gesture is attached in that case.
-    var onToggleExpand: (() -> Void)? = nil
+
+    /// Controls visibility of the planned workout disclosure (completed cards only).
+    @State private var showPlannedWorkout = false
 
     /// Shared workout library service for segment operations
     private let workoutLibrary = WorkoutLibraryService.shared
@@ -49,7 +46,6 @@ struct SessionCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Sport icon + name + duration + type badge
-            // Tap gesture scoped here (not card-level) so graph bar taps work independently.
             HStack(spacing: 12) {
                 // Sport emoji with colored background
                 Text(session.sportEmoji)
@@ -81,11 +77,7 @@ struct SessionCardView: View {
                     .background(session.typeColor.opacity(0.15))
                     .clipShape(Capsule())
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                onToggleExpand?()
-            }
-            
+
             // Row 2: Brick indicator (if applicable)
             if session.isBrick {
                 HStack(spacing: 4) {
@@ -102,72 +94,48 @@ struct SessionCardView: View {
                 .clipShape(Capsule())
             }
             
-            // Row 3: Workout steps (only if template has >1 segment or has repeats)
-            if let template = template, session.shouldShowWorkoutSteps(template: template) {
-                let steps = workoutLibrary.stepSummaries(
-                    for: session.templateId,
-                    sport: session.sport,
-                    ftp: ftp,
-                    vma: vma,
-                    css: css
-                )
-                
-                if !steps.isEmpty {
-                    WorkoutStepsView(steps: steps)
-                }
-            }
-            
-            // Row 4: Intensity graph (for all sessions with a template)
-            if template != nil {
-                let segments = workoutLibrary.flattenedSegments(for: session.templateId)
-                
-                if !segments.isEmpty {
-                    let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-                    WorkoutGraphView(
-                        segments: segments,
-                        totalDurationMinutes: totalDuration,
-                        sport: session.sport,
-                        ftp: ftp,
-                        vma: vma
-                    )
-                }
-            }
-            
-            // Row 5: Swim distance (only for simple swims without steps/graph)
-            if session.sport.lowercased() == "swim",
-               let distance = swimDistance,
-               template.map({ session.shouldShowWorkoutSteps(template: $0) }) != true {
-                HStack(spacing: 6) {
-                    Image(systemName: "ruler")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            if case .completed(let activity) = completionStatus {
+                // COMPLETED LAYOUT: actual Strava data is primary content, planned workout is collapsible.
 
-                    Text("Est. Distance")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Text(PlanSession.formatDistance(distance))
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                }
-            }
-
-            // Row 6: Expanded actual performance section (completed sessions only)
-            // Shown when isExpanded == true and a matched Strava activity is available.
-            if case .completed(let activity) = completionStatus, isExpanded {
                 Divider()
 
-                Text("Actual Performance")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
+                // Actual metrics always visible for completed sessions
                 ActualMetricsView(activity: activity)
 
-                // GPS map only when a non-empty encoded polyline is available
+                // GPS map when a non-empty encoded polyline is available
                 if let polyline = activity.summaryPolyline, !polyline.isEmpty {
                     StravaRouteMapView(encodedPolyline: polyline)
                 }
+
+                // "Planned workout" disclosure — only when a template exists
+                if template != nil {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showPlannedWorkout.toggle()
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "doc.on.clipboard")
+                                .font(.caption)
+                            Text("Planned workout")
+                                .font(.subheadline)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .rotationEffect(.degrees(showPlannedWorkout ? 90 : 0))
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+
+                    if showPlannedWorkout {
+                        plannedWorkoutContent
+                    }
+                }
+
+            } else {
+                // PLANNED / MISSED LAYOUT: workout detail is always visible (no disclosure).
+                plannedWorkoutContent
             }
         }
         .padding(16)
@@ -184,6 +152,61 @@ struct SessionCardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Planned Workout Content
+
+    /// Shared planned workout rendering used by both the completed-card disclosure and
+    /// the always-visible planned/missed layout. Contains workout steps, intensity graph,
+    /// and swim distance (swim-only, simple sessions).
+    @ViewBuilder
+    private var plannedWorkoutContent: some View {
+        // Workout steps (only if template has >1 segment or has repeats)
+        if let template = template, session.shouldShowWorkoutSteps(template: template) {
+            let steps = workoutLibrary.stepSummaries(
+                for: session.templateId,
+                sport: session.sport,
+                ftp: ftp,
+                vma: vma,
+                css: css
+            )
+            if !steps.isEmpty {
+                WorkoutStepsView(steps: steps)
+            }
+        }
+
+        // Intensity graph (for all sessions with a template)
+        if template != nil {
+            let segments = workoutLibrary.flattenedSegments(for: session.templateId)
+            if !segments.isEmpty {
+                let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
+                WorkoutGraphView(
+                    segments: segments,
+                    totalDurationMinutes: totalDuration,
+                    sport: session.sport,
+                    ftp: ftp,
+                    vma: vma
+                )
+            }
+        }
+
+        // Swim distance (only for simple swims without steps/graph)
+        if session.sport.lowercased() == "swim",
+           let distance = swimDistance,
+           template.map({ session.shouldShowWorkoutSteps(template: $0) }) != true {
+            HStack(spacing: 6) {
+                Image(systemName: "ruler")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("Est. Distance")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(PlanSession.formatDistance(distance))
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+            }
+        }
     }
 
 }

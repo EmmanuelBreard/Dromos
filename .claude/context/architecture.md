@@ -34,7 +34,7 @@ Dromos/Dromos/
 │   ├── Onboarding/                   # 6-screen onboarding flow
 │   ├── Home/                         # Multi-week rolling dashboard
 │   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today + edit mode (session reordering) + completion status display
-│   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status; tappable expand for completed sessions
+│   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status; completed cards always show Strava data with planned workout behind local disclosure
 │   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
 │   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering a GPS route from encoded polyline
 │   │   ├── WorkoutStepsView.swift    # Workout step list with intensity dots (Phase 2)
@@ -178,10 +178,9 @@ All services follow:
 - Passes sport + athlete metrics to graph for tap popover formatting
 - Swim exception: simple swims (1 segment, no repeats) → show distance only
 - **Phase 3 additions:**
-  - Accepts `isExpanded: Bool` and `onToggleExpand: (() -> Void)?` parameters
-  - When `.completed` and `isExpanded`: renders divider → "Actual Performance" header → `ActualMetricsView` → `StravaRouteMapView` (if polyline available)
-  - `.onTapGesture` + `.contentShape(Rectangle())` scoped to the header row (Row 1 HStack) only — avoids conflict with `WorkoutGraphView` per-bar tap gestures; safely no-ops when `onToggleExpand` is nil
-  - Animation controlled by caller (`HomeView`) via `withAnimation(.easeInOut(duration: 0.25))`
+  - When `.completed`: actual Strava data (`ActualMetricsView` + `StravaRouteMapView`) is always visible as primary content
+  - Planned workout (steps + intensity graph + swim distance) behind a local `@State` disclosure button ("Planned workout" with rotating chevron), default collapsed
+  - No parent-controlled expand/collapse — disclosure state is fully local to `SessionCardView`
 
 ---
 
@@ -202,7 +201,7 @@ All services follow:
 
 ## Key Shared Components
 
-**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph; tappable expand/collapse for completed sessions
+**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph; completed cards show actual Strava data first with planned workout behind local disclosure
 **ActualMetricsView** — Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
 **StravaRouteMapView** — Non-interactive MapKit view rendering a GPS route from encoded polyline (iOS 17+); includes static `decodePolyline(_:)` for Google-encoded polyline format
 **WorkoutStepsView** — Workout step list with intensity-colored dots (Phase 2)
