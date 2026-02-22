@@ -141,7 +141,7 @@ struct SessionCardView: View {
         .padding(16)
         // NB: opacity before background intentionally dims content only, not the card fill.
         .opacity(contentOpacity)
-        .background(Color(.systemBackground))
+        .background(Color.cardSurface)
         // Left border overlay: a 4pt colored rectangle anchored to the leading edge.
         // clipShape applied AFTER overlay so the border inherits the card's rounded corners.
         .overlay(alignment: .leading) {
@@ -233,7 +233,7 @@ struct RestDayCardView: View {
             Spacer()
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
@@ -270,7 +270,7 @@ struct RaceDayCardView: View {
             Spacer()
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }

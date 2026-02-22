@@ -132,7 +132,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.pageSurface)
             .task {
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
