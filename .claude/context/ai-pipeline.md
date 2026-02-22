@@ -166,3 +166,41 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 | Step 1 | gpt-4o | 16,384 | 0.2 | Complex planning requires strong reasoning |
 | Step 2 | gpt-4o-mini | 16,384 | 0 | Deterministic JSON conversion (cheap) |
 | Step 3 | gpt-4o | 4,096 | 0.2 | Template matching needs reasoning per block |
+
+---
+
+## Chat Adjust Pipeline (V0)
+
+**Feature:** DRO-149 Chat V0
+**Edge Function:** `supabase/functions/chat-adjust/index.ts`
+
+Single-step pipeline — no multi-step orchestration needed. The agent both converses and classifies in one turn.
+
+### Prompt
+| File | Purpose |
+|------|---------|
+| `ai/prompts/adjust-step1-v0.txt` | V0 fork of conversation prompt — advisory mode (no plan modification) |
+| `supabase/functions/chat-adjust/prompts/adjust-step1-v0-prompt.ts` | Auto-generated TS module. Run `scripts/sync-prompts.sh` to regenerate. |
+
+### Flow
+1. Extract and validate JWT via `auth.getUser()`
+2. Parse `{ message: string }` body (max 1000 chars)
+3. Fetch in parallel: last 50 chat messages (chronological), user profile, active plan weeks
+4. Render prompt by replacing `{{athlete_profile}}` and `{{phase_map}}` placeholders
+5. Call OpenAI `gpt-4o` with history + new message (temperature 0, max_tokens 1024)
+6. Parse response: extract outermost JSON block if present, else treat as `need_info`
+7. Insert user message then assistant message via service_role
+8. Return `{ response_text, status, constraint_summary? }`
+
+### Model
+| Step | Model | Max Tokens | Temperature | Why |
+|------|-------|-----------|-------------|-----|
+| Intake agent | gpt-4o | 1,024 | 0 | Deterministic classification; short response |
+
+### Statuses
+| Status | Meaning |
+|--------|---------|
+| `need_info` | Agent still gathering required fields; plain text reply |
+| `ready` | All required fields collected; constraint summary present |
+| `no_action` | Not a training disruption (chitchat, gratitude) |
+| `escalate` | Disruption too severe to modify plan; recommend plan regeneration |
