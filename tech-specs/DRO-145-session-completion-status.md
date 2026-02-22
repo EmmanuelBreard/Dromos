@@ -1,6 +1,6 @@
 # DRO-145: Session Completion Status — Visual Adherence on Training Cards
 
-**Overall Progress:** `33%`
+**Overall Progress:** `66%`
 
 ## TLDR
 
@@ -60,8 +60,8 @@ Show athletes whether each planned session was completed, missed, or still plann
 ### Phase 2: Matching Engine + Card States [QA-REQUIRED]
 **Blocked by:** Phase 1
 
-- [ ] 🟥 **2.1 Create `SessionCompletionStatus.swift`** (`Dromos/Core/Models/SessionCompletionStatus.swift`)
-  - [ ] 🟥 Define enum:
+- [x] 🟩 **2.1 Create `SessionCompletionStatus.swift`** (`Dromos/Core/Models/SessionCompletionStatus.swift`)
+  - [x] 🟩 Define enum:
     ```swift
     enum SessionCompletionStatus {
         case planned
@@ -69,15 +69,9 @@ Show athletes whether each planned session was completed, missed, or still plann
         case missed
     }
     ```
-  - [ ] 🟥 Define `SessionMatcher` struct with static method:
+  - [x] 🟩 Define `SessionMatcher` struct with static method:
     ```swift
     struct SessionMatcher {
-        /// Matches plan sessions against Strava activities.
-        /// - Parameters:
-        ///   - sessions: Tuples of (session, resolvedDate) for each visible session
-        ///   - activities: All Strava activities in the visible date range
-        ///   - today: Reference date for planned vs missed cutoff (defaults to Date())
-        /// - Returns: Dictionary mapping session ID to completion status
         static func match(
             sessions: [(session: PlanSession, date: Date)],
             activities: [StravaActivity],
@@ -85,7 +79,7 @@ Show athletes whether each planned session was completed, missed, or still plann
         ) -> [UUID: SessionCompletionStatus]
     }
     ```
-  - [ ] 🟥 Implementation logic:
+  - [x] 🟩 Implementation logic:
     1. Filter out activities where `isManual == true`
     2. Group remaining activities by `(normalizedSport, calendarDay)` using `startDateLocal` truncated to date
     3. For each session, look up the group matching `(session.sport, sessionDate)`
@@ -93,37 +87,32 @@ Show athletes whether each planned session was completed, missed, or still plann
     5. If no match and `sessionDate < Calendar.current.startOfDay(for: today)` → `.missed`
     6. Otherwise → `.planned`
 
-- [ ] 🟥 **2.2 Wire stravaService into HomeView**
-  - [ ] 🟥 `MainTabView.swift` (line 60-65): Add `stravaService: stravaService` to `HomeView` initializer
-  - [ ] 🟥 `HomeView.swift`: Add `@ObservedObject var stravaService: StravaService` parameter
-  - [ ] 🟥 Add `@State private var completionStatuses: [UUID: SessionCompletionStatus] = [:]` state
-  - [ ] 🟥 Add `@State private var expandedCompletedIDs: Set<UUID> = []` for expand/collapse tracking
-  - [ ] 🟥 In `contentView(plan:)` `.onAppear` block: call a new private method `loadCompletionStatuses(plan:)` that:
-    1. Checks `profileService.user?.isStravaConnected == true` — if not, return early (all planned)
-    2. Computes earliest and latest visible dates from visible weeks
-    3. Calls `await stravaService.fetchActivities(from: earliest, to: latest)`
-    4. Builds `[(PlanSession, Date)]` tuples for all visible sessions using `Weekday.date(relativeTo:)`
-    5. Calls `SessionMatcher.match(sessions:activities:)` and assigns result to `completionStatuses`
-  - [ ] 🟥 Also call `loadCompletionStatuses` in `.onChange(of: scrollReset)` to refresh on tab re-selection
+- [x] 🟩 **2.2 Wire stravaService into HomeView**
+  - [x] 🟩 `MainTabView.swift`: Add `stravaService: stravaService` to `HomeView` initializer
+  - [x] 🟩 `HomeView.swift`: Add `@ObservedObject var stravaService: StravaService` parameter
+  - [x] 🟩 Add `@State private var completionStatuses: [UUID: SessionCompletionStatus] = [:]` state
+  - [x] 🟩 Add `@State private var expandedCompletedIDs: Set<UUID> = []` for expand/collapse tracking
+  - [x] 🟩 Private `loadCompletionStatuses(plan:)` method: gates on `isStravaConnected`, computes visible date range, fetches activities, builds session tuples, runs matcher
+  - [x] 🟩 Called in `.onAppear` and `.onChange(of: scrollReset)` — also resets `expandedCompletedIDs` on tab re-selection
 
-- [ ] 🟥 **2.3 Update SessionCardView for completion states**
-  - [ ] 🟥 Add new parameter: `completionStatus: SessionCompletionStatus = .planned`
-  - [ ] 🟥 **Green left border (completed):** Wrap existing card content in an `HStack(spacing: 0)` with a leading `RoundedRectangle` (width: 4pt, color: `.green`, corner radius on left side only). Alternative: use `.overlay(alignment: .leading)` with a thin green rectangle inside the rounded rect clip.
-  - [ ] 🟥 **Red left border + dimming (missed):** Same border approach with `.red`. Apply `.opacity(0.5)` to the entire card content.
-  - [ ] 🟥 **Planned:** No changes — render exactly as today.
+- [x] 🟩 **2.3 Update SessionCardView for completion states**
+  - [x] 🟩 Add new parameter: `completionStatus: SessionCompletionStatus = .planned`
+  - [x] 🟩 **Green left border (completed):** `.overlay(alignment: .leading)` with a 4pt `Rectangle` filled with `.green`, clipped by the card's `RoundedRectangle`
+  - [x] 🟩 **Red left border + dimming (missed):** Same overlay with `.red`. `.opacity(0.5)` applied before `.background()`.
+  - [x] 🟩 **Planned:** No changes.
 
-- [ ] 🟥 **2.4 Update HomeView card rendering**
-  - [ ] 🟥 In `daySectionView` (line 207-251): pass `completionStatus: completionStatuses[session.id] ?? .planned` to each `SessionCardView`
-  - [ ] 🟥 Wrap completed cards in a `Button` / `.onTapGesture` that toggles `expandedCompletedIDs` membership
-  - [ ] 🟥 Missed cards: no tap gesture (already not tappable — just don't wrap them)
+- [x] 🟩 **2.4 Update HomeView card rendering**
+  - [x] 🟩 In `daySectionView`: pass `completionStatus: completionStatuses[session.id] ?? .planned` to each `SessionCardView`
+  - [x] 🟩 Completed cards wrapped in `.onTapGesture` toggling `expandedCompletedIDs` with `.easeInOut` animation
+  - [x] 🟩 Missed and planned cards: not interactive
 
-- [ ] 🟥 **2.5 Edit mode constraints**
-  - [ ] 🟥 In `daySectionView` edit mode block (line 218-249): check if `completionStatuses[session.id]` is `.completed` — if so, hide the move arrows entirely (don't render the `VStack` with chevrons)
-  - [ ] 🟥 Completed sessions should not be draggable/movable
+- [x] 🟩 **2.5 Edit mode constraints**
+  - [x] 🟩 Move arrows `VStack` only rendered when `isEditMode && !isCompleted(session.id)`
+  - [x] 🟩 `isCompleted(_:)` helper uses pattern match on `completionStatuses[sessionId]`
 
-- [ ] 🟥 **2.6 Update architecture.md**
-  - [ ] 🟥 Add `SessionCompletionStatus.swift` to Models section
-  - [ ] 🟥 Update HomeView description: now receives `stravaService`, fetches activities, manages completion state
+- [x] 🟩 **2.6 Update architecture.md**
+  - [x] 🟩 Added `SessionCompletionStatus.swift` to Models section in folder structure
+  - [x] 🟩 Updated HomeView description: now receives `stravaService`, fetches activities, manages completion state
 
 ### Phase 3: Expanded Detail View + GPS Map [QA-REQUIRED]
 **Blocked by:** Phase 2

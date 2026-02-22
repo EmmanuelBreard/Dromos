@@ -9,6 +9,7 @@ import SwiftUI
 
 /// Rich session card for the Home tab.
 /// Displays sport icon, workout name, duration, type tag, workout steps, and intensity graph.
+/// Renders visual completion state via a colored left border and optional dimming.
 struct SessionCardView: View {
     let session: PlanSession
     let swimDistance: Int?
@@ -16,10 +17,29 @@ struct SessionCardView: View {
     let ftp: Int?
     let vma: Double?
     let css: Int?
-    
+    /// Completion status drives visual treatment: green border (completed), red border + dim (missed), no change (planned).
+    var completionStatus: SessionCompletionStatus = .planned
+
     /// Shared workout library service for segment operations
     private let workoutLibrary = WorkoutLibraryService.shared
-    
+
+    // MARK: - Computed visual properties
+
+    /// Left border color: green for completed, red for missed, nil for planned (no border).
+    private var borderColor: Color? {
+        switch completionStatus {
+        case .completed: return .green
+        case .missed: return .red
+        case .planned: return nil
+        }
+    }
+
+    /// Content opacity: 0.5 for missed sessions to visually de-emphasize them.
+    private var contentOpacity: Double {
+        if case .missed = completionStatus { return 0.5 }
+        return 1.0
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Sport icon + name + duration + type badge
@@ -123,10 +143,20 @@ struct SessionCardView: View {
             }
         }
         .padding(16)
+        .opacity(contentOpacity)
         .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        // Left border overlay: clipped by the card's RoundedRectangle, so it inherits rounded corners.
+        // A 4pt wide colored rectangle anchored to the leading edge provides the completion indicator.
+        .overlay(alignment: .leading) {
+            if let color = borderColor {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 4)
+            }
+        }
     }
-    
+
 }
 
 // MARK: - Rest Day Card
