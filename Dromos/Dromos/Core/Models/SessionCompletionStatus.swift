@@ -80,7 +80,7 @@ struct SessionMatcher {
             let key = groupKey(sport: session.sport.lowercased(), day: sessionDayStart)
 
             // Filter candidates to exclude already-consumed activities.
-            let candidates = (activityGroups[key] ?? []).filter { !consumedActivityIDs.contains($0.id) }
+            let candidates = (activityGroups[key] ?? []).filter { !consumedActivityIDs.contains($0.stravaActivityId) }
 
             if !candidates.isEmpty {
                 // Step 4: Match found — pick the activity whose movingTime is closest to the planned duration.
@@ -93,7 +93,7 @@ struct SessionMatcher {
                 }) else { continue }
 
                 // Mark this activity as consumed so it cannot match another session.
-                consumedActivityIDs.insert(best.id)
+                consumedActivityIDs.insert(best.stravaActivityId)
                 result[session.id] = .completed(activity: best)
 
             } else if sessionDayStart < todayStart {
