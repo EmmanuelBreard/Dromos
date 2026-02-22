@@ -34,11 +34,10 @@ struct StravaRouteMapView: View {
                         .foregroundColor(.secondary)
                 )
         } else {
-            Map(initialPosition: mapCameraPosition(for: coordinates)) {
+            Map(initialPosition: mapCameraPosition(for: coordinates), interactionModes: []) {
                 MapPolyline(coordinates: coordinates)
                     .stroke(.blue, lineWidth: 3)
             }
-            .mapInteractionModes([])
             .frame(height: 150)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         }
