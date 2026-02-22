@@ -24,6 +24,7 @@ struct ChatView: View {
 
     /// Current text in the message input field.
     @State private var messageText = ""
+    @FocusState private var isInputFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -119,6 +120,9 @@ struct ChatView: View {
                     }
                 }
             }
+            .onTapGesture {
+                isInputFocused = false
+            }
         }
     }
 
@@ -129,6 +133,7 @@ struct ChatView: View {
     private var inputBar: some View {
         HStack(alignment: .bottom, spacing: 8) {
             TextField("Message your coach...", text: $messageText, axis: .vertical)
+                .focused($isInputFocused)
                 .lineLimit(1...5)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
@@ -168,6 +173,7 @@ struct ChatView: View {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         messageText = ""
+        isInputFocused = false
         Task {
             await chatService.sendMessage(text)
         }
