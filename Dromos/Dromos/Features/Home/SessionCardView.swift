@@ -143,6 +143,7 @@ struct SessionCardView: View {
             }
         }
         .padding(16)
+        // NB: opacity before background intentionally dims content only, not the card fill.
         .opacity(contentOpacity)
         .background(Color(.systemBackground))
         // Left border overlay: a 4pt colored rectangle anchored to the leading edge.

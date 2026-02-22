@@ -30,9 +30,17 @@ enum SessionCompletionStatus {
 /// - Activities are grouped by `(normalizedSport, calendarDay)` using `startDateLocal`.
 /// - A session matches if both sport and calendar day align.
 /// - When multiple activities match, the closest duration (by `movingTime`) wins.
+/// - Each activity can only be matched once — consumed activities are tracked to prevent double-counting.
 /// - Past sessions without a match are marked `.missed`.
 /// - Future/today sessions without a match remain `.planned`.
 struct SessionMatcher {
+
+    // Issue 3: Promote ISO8601DateFormatter to a static constant to avoid per-call allocation.
+    private static let dayFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withFullDate]
+        return f
+    }()
 
     /// Matches plan sessions against Strava activities to determine per-session completion status.
     ///
@@ -54,30 +62,41 @@ struct SessionMatcher {
 
         // Step 2: Group activities by (normalizedSport, calendarDay) for O(1) lookup.
         // Key: "(sport)-(yyyy-MM-dd)" built from startDateLocal truncated to calendar day.
+        // Issue 7: Lowercase the sport on the activity side too for consistent casing.
         var activityGroups: [String: [StravaActivity]] = [:]
         for activity in autoActivities {
-            guard let sport = activity.normalizedSport else { continue }
+            guard let sport = activity.normalizedSport?.lowercased() else { continue }
             let dayStart = calendar.startOfDay(for: activity.startDateLocal)
             let key = groupKey(sport: sport, day: dayStart)
             activityGroups[key, default: []].append(activity)
         }
 
         // Step 3: Classify each session.
+        // Issue 1: Track consumed activity IDs to prevent a single activity from matching multiple sessions.
         let todayStart = calendar.startOfDay(for: today)
+        var consumedActivityIDs: Set<Int64> = []
         var result: [UUID: SessionCompletionStatus] = [:]
 
         for (session, sessionDate) in sessions {
             let sessionDayStart = calendar.startOfDay(for: sessionDate)
             let key = groupKey(sport: session.sport.lowercased(), day: sessionDayStart)
 
-            if let candidates = activityGroups[key], !candidates.isEmpty {
+            // Filter candidates to exclude already-consumed activities.
+            let candidates = (activityGroups[key] ?? []).filter { !consumedActivityIDs.contains($0.id) }
+
+            if !candidates.isEmpty {
                 // Step 4: Match found — pick the activity whose movingTime is closest to the planned duration.
                 let targetSeconds: Int = session.durationMinutes * 60
-                let best = candidates.min { a, b in
+                // Issue 9: Use guard instead of force-unwrap on .min() since candidates could be empty
+                // after filtering consumed IDs (guard here is also now logically necessary).
+                guard let best = candidates.min(by: { a, b in
                     let diffA = abs(a.movingTime - targetSeconds)
                     let diffB = abs(b.movingTime - targetSeconds)
                     return diffA < diffB
-                }!
+                }) else { continue }
+
+                // Mark this activity as consumed so it cannot match another session.
+                consumedActivityIDs.insert(best.id)
                 result[session.id] = .completed(activity: best)
 
             } else if sessionDayStart < todayStart {
@@ -98,8 +117,6 @@ struct SessionMatcher {
     /// Builds a stable dictionary key from a normalized sport name and a calendar day start date.
     /// Format: "swim-2026-02-17", "bike-2026-02-18", "run-2026-02-19".
     private static func groupKey(sport: String, day: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        return "\(sport)-\(formatter.string(from: day))"
+        return "\(sport)-\(Self.dayFormatter.string(from: day))"
     }
 }
