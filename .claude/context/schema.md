@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-02-22 | Migrations: 001-011 + Strava tables + summary_polyline
+> Last updated: 2026-02-22 | Migrations: 001-013 + summary_polyline
 
 ## Tables Overview
 
@@ -194,3 +194,26 @@ Synced Strava activities for a user. Written by the `strava-sync` Edge Function.
 - **No soft deletes:** Hard deletes with CASCADE
 - **No custom enums:** Validation via CHECK constraints on TEXT columns
 - **Write pattern:** Edge Function writes via `service_role` key (bypasses RLS); iOS reads via user JWT; session reordering uses `reorder_sessions` RPC (SECURITY DEFINER with per-row ownership validation)
+
+---
+
+## `public.chat_messages`
+
+Stores the conversation history between athletes and the AI coaching agent. Single continuous thread per user (no sessions). Created by migration `013_create_chat_messages.sql`.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | UUID | PK, DEFAULT `gen_random_uuid()` | |
+| `user_id` | UUID | NOT NULL, FK → `users(id)` CASCADE | |
+| `role` | TEXT | NOT NULL, CHECK IN ('user', 'assistant') | Message sender |
+| `content` | TEXT | NOT NULL | Message text |
+| `status` | TEXT | CHECK IN ('ready', 'need_info', 'no_action', 'escalate') OR NULL | Only set on assistant messages |
+| `constraint_summary` | JSONB | | Structured constraint data when status='ready' or 'escalate' |
+| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
+
+**Index:** `idx_chat_messages_user_id_created_at` on `(user_id, created_at)` — optimises per-user history fetch.
+
+**RLS:**
+- SELECT: `auth.uid() = user_id` (iOS reads own messages)
+- DELETE: `auth.uid() = user_id` (iOS clear history)
+- INSERT: No authenticated policy — `chat-adjust` Edge Function writes via `service_role`
