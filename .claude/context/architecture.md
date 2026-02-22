@@ -18,12 +18,14 @@ Dromos/Dromos/
 │   │   ├── TrainingPlan.swift        # TrainingPlan, PlanWeek, PlanSession, Weekday, DayInfo
 │   │   ├── User.swift               # User profile + RaceObjective enum
 │   │   ├── WorkoutTemplate.swift     # WorkoutTemplate, WorkoutSegment, WorkoutLibrary, FlatSegment, StepSummary
+│   │   ├── StravaModels.swift        # StravaActivity, SyncResult (Equatable), SyncResponse
 │   │   └── OnboardingData.swift      # Per-screen onboarding structs
 │   └── Services/
 │       ├── SupabaseClient.swift      # Singleton client with snake_case encoder/decoder
 │       ├── AuthService.swift         # Auth state, sign up/in/out, onboarding/plan status
 │       ├── PlanService.swift         # Plan generation (edge function) + fetching (nested query) + session reordering (RPC)
 │       ├── ProfileService.swift      # User profile CRUD + onboarding save
+│       ├── StravaService.swift       # Strava OAuth (ASWebAuthenticationSession), disconnect, sync, activity fetch
 │       └── WorkoutLibraryService.swift # Bundled JSON library, O(1) template lookup, flattenedSegments(), stepSummaries()
 │
 ├── Features/
@@ -40,7 +42,8 @@ Dromos/Dromos/
 │   │   ├── WeekHeaderView.swift      # Week nav + phase badge
 │   │   └── DaySessionRow.swift       # Day row with expandable sessions (steps + graph on tap)
 │   └── Profile/
-│       └── ProfileView.swift         # User profile display/edit (receives shared ProfileService)
+│       ├── ProfileView.swift         # User profile display/edit + Strava connect/disconnect/sync UI
+│       └── WebAuthPresentationContext.swift # ASWebAuthenticationPresentationContextProviding impl
 │
 └── Resources/
     ├── Assets.xcassets/              # Icons, colors
@@ -62,7 +65,7 @@ Authenticated + plan → MainTabView
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
 - Home (house icon) → `HomeView` (receives shared `profileService`)
 - Calendar (calendar icon) → `CalendarPlanView` (receives shared `profileService`)
-- Profile (person icon) → `ProfileView` (receives shared `profileService`)
+- Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`)
 
 **Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Home or Calendar:
 - Home: toggles `homeScrollReset` → HomeView scrolls to today's day section and resets progressive disclosure
@@ -221,5 +224,17 @@ All services follow:
 | Function | Location | Purpose |
 |----------|----------|---------|
 | `generate-plan` | `supabase/functions/generate-plan/` | 3-step LLM pipeline for training plan generation |
+| `strava-auth` | `supabase/functions/strava-auth/` | POST: OAuth code exchange + token storage. DELETE: token revocation + full cleanup (strava_activities + strava_connections). JWT validated via `auth.getUser()`. |
+| `strava-sync` | `supabase/functions/strava-sync/` | POST: Paginated Strava activity fetch (up to 2000), token auto-refresh, upsert into `strava_activities`. JWT validated via `auth.getUser()`. |
 
-See `ai-pipeline.md` for detailed pipeline documentation.
+See `ai-pipeline.md` for `generate-plan` pipeline documentation.
+
+## Strava Integration
+
+**Auth flow**: `StravaService.startOAuth()` → `ASWebAuthenticationSession` (ephemeral, `prefersEphemeralWebBrowserSession = true`) → callback → `exchangeCode()` → `strava-auth` Edge Function. `isConnecting` is set to `true` before the browser launches and cleared via `defer` inside `exchangeCode`.
+
+**Disconnect flow**: `StravaService.disconnect()` → `strava-auth` DELETE → revokes token with Strava, deletes `strava_activities` rows, deletes `strava_connections` row, nulls `users.strava_athlete_id`.
+
+**Sync flow**: `StravaService.syncActivities()` → `strava-sync` POST → token refresh if needed → paginated Strava API fetch → upsert `strava_activities` → update `last_sync_at`.
+
+**Activity storage**: `strava_activities` table. Synced from `StravaActivity` model (camelCase, auto-decoded from snake_case via global decoder).

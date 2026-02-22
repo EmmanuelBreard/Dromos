@@ -96,12 +96,20 @@ struct User: Codable, Identifiable, Equatable {
     /// Indicates whether the user has completed the onboarding flow
     var onboardingCompleted: Bool
 
+    // MARK: - Strava Integration
+
+    /// Strava athlete ID, present when the user has connected their Strava account
+    let stravaAthleteId: Int64?
+
     // MARK: - Timestamps
 
     let createdAt: Date
     let updatedAt: Date
 
     // MARK: - Computed Properties
+
+    /// Whether the user has a connected Strava account
+    var isStravaConnected: Bool { stravaAthleteId != nil }
 
     /// Formats the CSS pace as a string (e.g., "1:45" for 1 min 45 sec per 100m)
     /// Derives minutes:seconds from total seconds

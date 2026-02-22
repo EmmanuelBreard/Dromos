@@ -5,18 +5,20 @@
 //  Created by Emmanuel Breard on 25/01/2026.
 //
 
+import AuthenticationServices
 import SwiftUI
 
-/// User profile view displaying and editing user information in 3 organized sections.
+/// User profile view displaying and editing user information in 4 organized sections.
 ///
 /// Sections:
 /// 1. Goals - Race objectives and targets
 /// 2. Metrics - Performance metrics (VMA, CSS, FTP, experience)
 /// 3. Settings - Personal information (name, email)
+/// 4. Strava - OAuth connection status and sync controls
 struct ProfileView: View {
     @ObservedObject var authService: AuthService
-    // FIX #6: Receive shared ProfileService instead of creating a new instance
     @ObservedObject var profileService: ProfileService
+    @ObservedObject var stravaService: StravaService
 
     /// Local copy of user for immediate UI updates during editing.
     /// Separate from profileService.user to avoid race conditions during save.
@@ -27,6 +29,10 @@ struct ProfileView: View {
     @State private var errorMessage = ""
     @State private var showValidationError = false
     @State private var validationMessage = ""
+    @State private var showDisconnectAlert = false
+
+    /// Provides the key UIWindow for ASWebAuthenticationSession presentation.
+    private let authSessionContext = WebAuthPresentationContext()
 
     // MARK: - Edit State
 
@@ -86,6 +92,9 @@ struct ProfileView: View {
                             }
                         }
 
+                        // SECTION 4: STRAVA
+                        stravaSection
+
                         // Sign Out section
                         Section {
                             Button("Sign Out", role: .destructive) {
@@ -134,6 +143,104 @@ struct ProfileView: View {
             Button("OK") { }
         } message: {
             Text(validationMessage)
+        }
+        .onChange(of: stravaService.isConnecting) { oldValue, newValue in
+            // OAuth completed: isConnecting transitioned true → false
+            if oldValue && !newValue && stravaService.errorMessage == nil {
+                Task {
+                    if let userId = authService.currentUserId {
+                        do {
+                            user = try await profileService.fetchProfile(userId: userId)
+                        } catch {
+                            errorMessage = mapSaveError(error)
+                            showError = true
+                        }
+                    }
+                    // Trigger first sync to pull activities after connecting
+                    if profileService.user?.isStravaConnected == true {
+                        await stravaService.syncActivities()
+                    }
+                }
+            }
+        }
+        .alert("Disconnect Strava?", isPresented: $showDisconnectAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Disconnect", role: .destructive) {
+                Task {
+                    await stravaService.disconnect()
+                    // Refresh profile so isStravaConnected reflects the cleared stravaAthleteId
+                    if let userId = authService.currentUserId {
+                        do {
+                            user = try await profileService.fetchProfile(userId: userId)
+                        } catch {
+                            errorMessage = mapSaveError(error)
+                            showError = true
+                        }
+                    }
+                }
+            }
+        } message: {
+            Text("Your Strava account will be unlinked and activity sync will stop.")
+        }
+    }
+
+    // MARK: - Strava Section
+
+    /// Strava integration section — shows connect button or connected status depending on state.
+    @ViewBuilder
+    private var stravaSection: some View {
+        if profileService.user?.isStravaConnected == true {
+            Section("Strava") {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    if let result = stravaService.lastSyncResult {
+                        Text("Connected (\(result.totalActivities) activities)")
+                    } else {
+                        Text("Connected")
+                    }
+                    Spacer()
+                    if stravaService.isSyncing {
+                        ProgressView()
+                    }
+                }
+
+                Button(role: .destructive) {
+                    showDisconnectAlert = true
+                } label: {
+                    HStack {
+                        Image(systemName: "xmark.circle")
+                        Text("Disconnect Strava")
+                    }
+                }
+            }
+        } else {
+            Section("Strava") {
+                Button {
+                    stravaService.startOAuth(from: authSessionContext)
+                } label: {
+                    HStack {
+                        Image(systemName: "link")
+                        Text("Connect Strava")
+                    }
+                }
+                .disabled(stravaService.isConnecting)
+
+                if stravaService.isConnecting {
+                    HStack {
+                        ProgressView()
+                            .padding(.trailing, 4)
+                        Text("Connecting…")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let error = stravaService.errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
         }
     }
 
@@ -542,7 +649,10 @@ struct ProfileView: View {
     }
 }
 
-// FIX #6: Update preview to create and pass ProfileService
 #Preview {
-    ProfileView(authService: AuthService(), profileService: ProfileService())
+    ProfileView(
+        authService: AuthService(),
+        profileService: ProfileService(),
+        stravaService: StravaService()
+    )
 }
