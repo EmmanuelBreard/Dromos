@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-02-22 | Migrations: 001-011 + Strava tables + summary_polyline
+> Last updated: 2026-02-22 | Migrations: 001-013 + summary_polyline
 
 ## Tables Overview
 

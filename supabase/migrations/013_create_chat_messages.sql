@@ -32,3 +32,6 @@ CREATE POLICY "Users can delete own messages"
 
 -- Edge function inserts via service_role (bypasses RLS)
 -- No INSERT policy needed for authenticated users
+
+-- DOWN MIGRATION (run manually if rollback needed)
+-- DROP TABLE IF EXISTS public.chat_messages;

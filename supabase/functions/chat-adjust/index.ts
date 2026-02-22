@@ -32,9 +32,9 @@ interface UserProfile {
   race_objective?: string | null;
   experience_years?: number | null;
   vma?: number | null;
-  css?: number | null;
+  css_seconds_per100m?: number | null;
   ftp?: number | null;
-  weekly_hours?: number | null;
+  current_weekly_hours?: number | null;
   swim_days?: string[] | null;
   bike_days?: string[] | null;
   run_days?: string[] | null;
@@ -42,8 +42,8 @@ interface UserProfile {
 
 interface PlanWeek {
   week_number: number;
-  phase: string | null;
-  is_recovery: boolean | null;
+  phase: string;
+  is_recovery: boolean;
 }
 
 interface ParsedAIResponse {
@@ -66,9 +66,13 @@ function formatAthleteProfile(profile: UserProfile | null): string {
   if (profile.race_objective) lines.push(`Race objective: ${profile.race_objective}`);
   if (profile.experience_years != null) lines.push(`Experience: ${profile.experience_years} years`);
   if (profile.vma != null) lines.push(`VMA: ${profile.vma} km/h`);
-  if (profile.css != null) lines.push(`CSS: ${profile.css} min/100m`);
+  if (profile.css_seconds_per100m != null) {
+    const minutes = Math.floor(profile.css_seconds_per100m / 60);
+    const seconds = profile.css_seconds_per100m % 60;
+    lines.push(`CSS: ${minutes}:${String(seconds).padStart(2, "0")}/100m`);
+  }
   if (profile.ftp != null) lines.push(`FTP: ${profile.ftp} W`);
-  if (profile.weekly_hours != null) lines.push(`Weekly training hours: ${profile.weekly_hours}h`);
+  if (profile.current_weekly_hours != null) lines.push(`Weekly training hours: ${profile.current_weekly_hours}h`);
   if (profile.swim_days?.length) lines.push(`Swim days: ${profile.swim_days.join(", ")}`);
   if (profile.bike_days?.length) lines.push(`Bike days: ${profile.bike_days.join(", ")}`);
   if (profile.run_days?.length) lines.push(`Run days: ${profile.run_days.join(", ")}`);
@@ -144,7 +148,10 @@ function parseAIResponse(rawResponse: string): ParsedAIResponse {
   const jsonBlock = extractJsonBlock(rawResponse);
 
   if (jsonBlock && typeof jsonBlock["status"] === "string") {
-    const status = jsonBlock["status"] as ParsedAIResponse["status"];
+    const validStatuses = new Set(["ready", "need_info", "no_action", "escalate"]);
+    const status: ParsedAIResponse["status"] = validStatuses.has(jsonBlock["status"] as string)
+      ? (jsonBlock["status"] as ParsedAIResponse["status"])
+      : "need_info";
     const response_text =
       typeof jsonBlock["response_text"] === "string"
         ? jsonBlock["response_text"]
@@ -190,6 +197,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Missing OpenAI environment variable" }, 500);
   }
 
+  // V0: No per-user rate limiting. Acceptable for small user base.
+  // TODO(V1): Add rate limit check before OpenAI call.
+
   // 4. Validate JWT — exact same pattern as strava-auth
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
@@ -210,6 +220,9 @@ Deno.serve(async (req) => {
   const db = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   try {
+    // V0: No server-side concurrency guard. Client disables send button during requests.
+    // If two requests race, both will get valid responses but may duplicate context.
+
     // 5. Parse and validate request body
     let body: { message?: string };
     try {
@@ -240,7 +253,7 @@ Deno.serve(async (req) => {
       db
         .from("users")
         .select(
-          "race_objective, experience_years, vma, css, ftp, weekly_hours, swim_days, bike_days, run_days"
+          "race_objective, experience_years, vma, css_seconds_per100m, ftp, current_weekly_hours, swim_days, bike_days, run_days"
         )
         .eq("id", userId)
         .single(),
@@ -255,6 +268,20 @@ Deno.serve(async (req) => {
         .single(),
     ]);
 
+    // Check for critical errors — losing history context is unacceptable
+    if (historyResult.error) {
+      console.error("chat_messages history fetch error:", historyResult.error.message);
+      return jsonResponse({ error: "Failed to load chat history" }, 500);
+    }
+
+    // Non-critical: log but continue with graceful fallbacks
+    if (profileResult.error) {
+      console.error("user profile fetch warning:", profileResult.error.message);
+    }
+    if (phaseMapResult.error) {
+      console.error("phase map fetch warning:", phaseMapResult.error.message);
+    }
+
     // Reverse history to get chronological order (oldest first for context window)
     const historyMessages: ChatMessage[] = (
       (historyResult.data as ChatMessage[] | null) ?? []
@@ -268,37 +295,8 @@ Deno.serve(async (req) => {
       ? (planWeeksRaw as PlanWeek[])
       : [];
 
-    // 7. Build rendered prompt — replace template placeholders
-    const renderedPrompt = promptTemplate
-      .replace("{{athlete_profile}}", formatAthleteProfile(userProfile))
-      .replace("{{phase_map}}", formatPhaseMap(planWeeks));
-
-    // 8. Build OpenAI messages array
-    const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: renderedPrompt },
-      ...historyMessages.map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      })),
-      { role: "user", content: message },
-    ];
-
-    // 9. Call OpenAI — gpt-4o, temperature 0 for deterministic classification
-    const openai = new OpenAI({ apiKey: openaiApiKey });
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0,
-      max_tokens: 1024,
-      messages: openAiMessages,
-    });
-
-    const rawResponse = completion.choices[0]?.message?.content ?? "";
-
-    // 10. Parse structured response (JSON block) or treat as conversational
-    const { response_text, status, constraint_summary } = parseAIResponse(rawResponse);
-
-    // 11. Write both messages to DB sequentially (service_role, bypasses RLS)
-    // a) Insert user message first
+    // 7. Insert user message BEFORE OpenAI call — ensures message is persisted
+    // and in history for any subsequent requests, even if AI call fails.
     const { error: userInsertError } = await db.from("chat_messages").insert({
       user_id: userId,
       role: "user",
@@ -309,7 +307,41 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Failed to save user message" }, 500);
     }
 
-    // b) Insert assistant message with parsed metadata
+    // 8. Build rendered prompt — replace template placeholders
+    const renderedPrompt = promptTemplate
+      .replace("{{athlete_profile}}", formatAthleteProfile(userProfile))
+      .replace("{{phase_map}}", formatPhaseMap(planWeeks));
+
+    // 9. Build OpenAI messages array
+    const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: "system", content: renderedPrompt },
+      ...historyMessages.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+      { role: "user", content: message },
+    ];
+
+    // 10. Call OpenAI — gpt-4o, temperature 0 for deterministic classification
+    const openai = new OpenAI({ apiKey: openaiApiKey });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0,
+      max_tokens: 1024,
+      messages: openAiMessages,
+    });
+
+    const rawResponse = completion.choices[0]?.message?.content ?? "";
+
+    if (!rawResponse) {
+      console.error("OpenAI returned empty response for user:", userId);
+      return jsonResponse({ error: "AI returned an empty response. Please try again." }, 502);
+    }
+
+    // 11. Parse structured response (JSON block) or treat as conversational
+    const { response_text, status, constraint_summary } = parseAIResponse(rawResponse);
+
+    // 12. Insert assistant message with parsed metadata
     const { error: assistantInsertError } = await db.from("chat_messages").insert({
       user_id: userId,
       role: "assistant",
@@ -322,7 +354,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Failed to save assistant message" }, 500);
     }
 
-    // 12. Return structured response to iOS client
+    // 13. Return structured response to iOS client
     return jsonResponse({
       response_text,
       status,
