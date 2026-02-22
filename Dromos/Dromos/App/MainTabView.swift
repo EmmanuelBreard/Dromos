@@ -14,17 +14,21 @@ enum AppTab: Hashable {
 
 /// Main tab navigation for authenticated users.
 /// Provides access to Home, Calendar, and Profile sections.
-/// Owns the PlanService and ProfileService, sharing them between tabs.
+/// Owns the PlanService, ProfileService, and StravaService, sharing them between tabs.
 struct MainTabView: View {
     @ObservedObject var authService: AuthService
 
     /// Shared plan service for fetching and caching training plan data.
     /// Owned here so both Home and Calendar tabs share the same data.
     @StateObject private var planService = PlanService()
-    
+
     /// Shared profile service for fetching and caching user profile data.
     /// Owned here so tabs can access athlete metrics (FTP, VMA, CSS).
     @StateObject private var profileService = ProfileService()
+
+    /// Shared Strava service for OAuth, sync, and activity access.
+    /// Owned here so it persists across tab switches and can auto-sync on launch.
+    @StateObject private var stravaService = StravaService()
 
     /// Tracks the currently selected tab for scroll-reset on Home re-selection.
     @State private var selectedTab: AppTab = .home
@@ -66,8 +70,11 @@ struct MainTabView: View {
             }
 
             Tab("Profile", systemImage: "person", value: .profile) {
-                // FIX #6: Pass shared profileService to ProfileView
-                ProfileView(authService: authService, profileService: profileService)
+                ProfileView(
+                    authService: authService,
+                    profileService: profileService,
+                    stravaService: stravaService
+                )
             }
         }
         .task {
@@ -77,15 +84,21 @@ struct MainTabView: View {
     
     // MARK: - Private Methods
     
-    /// Loads both training plan and user profile if user is authenticated.
+    /// Loads training plan, user profile, and triggers Strava auto-sync if connected.
     private func loadData() async {
         guard let userId = authService.currentUserId else { return }
-        
+
         // Load plan and profile in parallel
         async let planLoad: () = loadPlan(userId: userId)
         async let profileLoad: () = loadProfile(userId: userId)
-        
+
         _ = await (planLoad, profileLoad)
+
+        // Auto-sync Strava activities on app open if the user has connected Strava.
+        // Profile must be loaded first so isStravaConnected reflects the DB state.
+        if profileService.user?.isStravaConnected == true {
+            await stravaService.syncActivities()
+        }
     }
     
     /// Loads the training plan.
@@ -110,3 +123,4 @@ struct MainTabView: View {
 #Preview {
     MainTabView(authService: AuthService())
 }
+
