@@ -1,6 +1,6 @@
 # DRO-139: Strava Integration — OAuth + Activity Sync
 
-**Overall Progress:** `0%`
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -48,11 +48,11 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
 
 ### Phase 1: Database Schema
 
-- [ ] 🟥 **Step 1: Create migration `012_strava_tables.sql`**
+- [x] 🟩 **Step 1: Create migration `012_strava_tables.sql`**
 
-  - [ ] 🟥 Add `strava_athlete_id BIGINT` column to `public.users` (nullable)
+  - [x] 🟩 Add `strava_athlete_id BIGINT` column to `public.users` (nullable)
 
-  - [ ] 🟥 Create `public.strava_connections` table:
+  - [x] 🟩 Create `public.strava_connections` table:
     ```sql
     CREATE TABLE public.strava_connections (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -74,7 +74,7 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
         FOR EACH ROW EXECUTE FUNCTION update_updated_at();
     ```
 
-  - [ ] 🟥 Create `public.strava_activities` table:
+  - [x] 🟩 Create `public.strava_activities` table:
     ```sql
     CREATE TABLE public.strava_activities (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -105,7 +105,7 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
         ON strava_activities(user_id, start_date DESC);
     ```
 
-  - [ ] 🟥 `normalized_sport` mapping logic (in Edge Function, not DB):
+  - [x] 🟩 `normalized_sport` mapping logic (in Edge Function, not DB):
     ```
     Run, TrailRun, VirtualRun → 'run'
     Ride, GravelRide, MountainBikeRide, VirtualRide → 'bike'
@@ -117,9 +117,9 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
 
 ### Phase 2: Edge Function — `strava-auth`
 
-- [ ] 🟥 **Step 2: Create `supabase/functions/strava-auth/index.ts`**
+- [x] 🟩 **Step 2: Create `supabase/functions/strava-auth/index.ts`**
 
-  - [ ] 🟥 Handle `POST` — OAuth token exchange:
+  - [x] 🟩 Handle `POST` — OAuth token exchange:
     1. Extract `user_id` from JWT (same pattern as `generate-plan`: manual decode, `--no-verify-jwt`)
     2. Read `code` from request body
     3. Call `POST https://www.strava.com/oauth/token` with:
@@ -132,17 +132,17 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
     6. Update `users.strava_athlete_id` = `athlete.id`
     7. Return `{ success: true, strava_athlete_id: athlete.id }`
 
-  - [ ] 🟥 Handle `DELETE` — Disconnect Strava:
+  - [x] 🟩 Handle `DELETE` — Disconnect Strava:
     1. Extract `user_id` from JWT
     2. Delete from `strava_connections` WHERE `user_id`
     3. Set `users.strava_athlete_id` = NULL
     4. Return `{ success: true }`
 
-  - [ ] 🟥 Error handling: Strava API errors (invalid code, expired code), missing env vars
+  - [x] 🟩 Error handling: Strava API errors (invalid code, expired code), missing env vars
 
-  - [ ] 🟥 CORS headers (same pattern as `generate-plan`)
+  - [x] 🟩 CORS headers (same pattern as `generate-plan`)
 
-  - [ ] 🟥 Set Supabase secrets:
+  - [x] 🟩 Set Supabase secrets:
     ```bash
     supabase secrets set STRAVA_CLIENT_ID=<value>
     supabase secrets set STRAVA_CLIENT_SECRET=<value>
@@ -152,9 +152,9 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
 
 ### Phase 3: Edge Function — `strava-sync`
 
-- [ ] 🟥 **Step 3: Create `supabase/functions/strava-sync/index.ts`**
+- [x] 🟩 **Step 3: Create `supabase/functions/strava-sync/index.ts`**
 
-  - [ ] 🟥 `POST` handler:
+  - [x] 🟩 `POST` handler:
     1. Extract `user_id` from JWT
     2. Fetch `strava_connections` row for user (error if not connected)
     3. Check `expires_at` — if expired, refresh token:
@@ -171,15 +171,15 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
     8. Update `strava_connections.last_sync_at` = `now()`
     9. Return `{ synced_count: N, total_activities: M }`
 
-  - [ ] 🟥 Rate limit awareness: if Strava returns 429, stop pagination and return partial result with `{ rate_limited: true }`
+  - [x] 🟩 Rate limit awareness: if Strava returns 429, stop pagination and return partial result with `{ rate_limited: true }`
 
-  - [ ] 🟥 Token refresh helper function (shared between auth and sync — inline in sync, not a separate module)
+  - [x] 🟩 Token refresh helper function (shared between auth and sync — inline in sync, not a separate module)
 
 ---
 
 ### Phase 4: iOS Models + Service
 
-- [ ] 🟥 **Step 4: Create `Dromos/Dromos/Core/Models/StravaModels.swift`**
+- [x] 🟩 **Step 4: Create `Dromos/Dromos/Core/Models/StravaModels.swift`**
   ```swift
   struct StravaActivity: Codable, Identifiable {
       let id: UUID
@@ -202,7 +202,7 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
   }
   ```
 
-- [ ] 🟥 **Step 5: Add `stravaAthleteId` to `User` model**
+- [x] 🟩 **Step 5: Add `stravaAthleteId` to `User` model**
   - In `Dromos/Dromos/Core/Models/User.swift`, add:
     ```swift
     let stravaAthleteId: Int64?  // Non-nil = Strava connected
@@ -212,7 +212,7 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
     var isStravaConnected: Bool { stravaAthleteId != nil }
     ```
 
-- [ ] 🟥 **Step 6: Create `Dromos/Dromos/Core/Services/StravaService.swift`**
+- [x] 🟩 **Step 6: Create `Dromos/Dromos/Core/Services/StravaService.swift`**
   ```swift
   @MainActor final class StravaService: ObservableObject {
       private let client = SupabaseClientProvider.client
@@ -244,7 +244,7 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
   - `syncActivities()`: calls `strava-sync` Edge Function, updates `isSyncing`/`lastSyncResult`
   - `fetchActivities()`: direct Supabase query on `strava_activities` table (RLS allows SELECT)
 
-- [ ] 🟥 **Step 7: Update `Configuration.swift` + `Secrets.swift`**
+- [x] 🟩 **Step 7: Update `Configuration.swift` + `Secrets.swift`**
   - `Secrets.swift`: add `static let stravaClientId = "<value>"`
   - `Secrets.example`: add placeholder
   - `Configuration.swift`: add `static var stravaClientId: String { Secrets.stravaClientId }`
@@ -253,11 +253,11 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
 
 ### Phase 5: iOS URL Scheme + OAuth Callback
 
-- [ ] 🟥 **Step 8: Register URL scheme in Xcode**
+- [x] 🟩 **Step 8: Register URL scheme in Xcode**
   - Add URL scheme `dromos` to the app target (Target → Info → URL Types)
   - Add `strava` to `LSApplicationQueriesSchemes` (for canOpenURL check)
 
-- [ ] 🟥 **Step 9: Handle OAuth callback in `DromosApp.swift`**
+- [x] 🟩 **Step 9: Handle OAuth callback in `DromosApp.swift`**
   - Add `.onOpenURL` modifier on the `WindowGroup`:
     ```swift
     .onOpenURL { url in
@@ -271,14 +271,14 @@ Connect Dromos to Strava so we can pull athlete activities. Users connect via OA
 
 ### Phase 6: iOS Profile UI — Strava Section
 
-- [ ] 🟥 **Step 10: Add Strava section to `ProfileView.swift`**
+- [x] 🟩 **Step 10: Add Strava section to `ProfileView.swift`**
   - New `Section("Strava")` in the Form, positioned before "Sign Out":
     - **Not connected**: "Connect Strava" button → triggers `stravaService.startOAuth()`
     - **Connected**: Show Strava athlete ID + last sync time + "Disconnect" button (with confirmation alert)
     - **Syncing**: Show progress indicator with "Syncing activities..."
     - **Sync result**: Brief text "X activities synced" (dismisses after 3s)
 
-- [ ] 🟥 **Step 11: Auto-sync on app open**
+- [x] 🟩 **Step 11: Auto-sync on app open**
   - In `MainTabView.swift` or `RootView.swift`, trigger `stravaService.syncActivities()` in `.task {}` when user is authenticated and `isStravaConnected`:
     ```swift
     .task {

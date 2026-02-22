@@ -190,10 +190,13 @@ struct ProfileView: View {
     @ViewBuilder
     private var stravaSection: some View {
         if profileService.user?.isStravaConnected == true {
-            Section("Strava") {
+            Section {
                 HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                    Image("StravaLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
                     if let result = stravaService.lastSyncResult {
                         Text("Connected (\(result.totalActivities) activities)")
                     } else {
@@ -213,18 +216,25 @@ struct ProfileView: View {
                         Text("Disconnect Strava")
                     }
                 }
+            } header: {
+                Text("Strava")
             }
         } else {
-            Section("Strava") {
-                Button {
-                    stravaService.startOAuth(from: authSessionContext)
-                } label: {
-                    HStack {
-                        Image(systemName: "link")
-                        Text("Connect Strava")
+            Section {
+                Image("StravaConnectButton")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 48)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if !stravaService.isConnecting {
+                            stravaService.startOAuth(from: authSessionContext)
+                        }
                     }
-                }
-                .disabled(stravaService.isConnecting)
+                    .opacity(stravaService.isConnecting ? 0.5 : 1.0)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
 
                 if stravaService.isConnecting {
                     HStack {
@@ -233,13 +243,17 @@ struct ProfileView: View {
                         Text("Connecting…")
                             .foregroundStyle(.secondary)
                     }
+                    .listRowBackground(Color.clear)
                 }
 
                 if let error = stravaService.errorMessage {
                     Text(error)
                         .font(.caption)
                         .foregroundStyle(.red)
+                        .listRowBackground(Color.clear)
                 }
+            } header: {
+                Text("Strava")
             }
         }
     }
