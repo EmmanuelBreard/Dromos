@@ -44,7 +44,7 @@ final class StravaService: ObservableObject {
         let redirectUri = "dromos://strava-callback"
         let scope = "activity:read_all"
 
-        var components = URLComponents(string: "https://www.strava.com/oauth/mobile/authorize")!
+        var components = URLComponents(string: "https://www.strava.com/oauth/authorize")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: redirectUri),
