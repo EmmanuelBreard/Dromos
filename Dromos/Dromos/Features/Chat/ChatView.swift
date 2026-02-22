@@ -90,7 +90,7 @@ struct ChatView: View {
                                 .padding(.vertical, 10)
                                 .background(Color(.systemGray6))
                                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .frame(maxWidth: UIScreen.main.bounds.width * 0.8, alignment: .leading)
+                                .frame(maxWidth: 280, alignment: .leading)
                             Spacer()
                         }
                         .padding(.horizontal)
@@ -198,7 +198,7 @@ private struct ChatBubbleView: View {
                     .foregroundStyle(isUser ? Color.white : Color.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .frame(
-                        maxWidth: UIScreen.main.bounds.width * 0.8,
+                        maxWidth: 280,
                         alignment: isUser ? .trailing : .leading
                     )
 
@@ -218,7 +218,7 @@ private struct ChatBubbleView: View {
 // MARK: - TypingIndicator
 
 /// Animated three-dot indicator displayed while the assistant is generating a reply.
-struct TypingIndicator: View {
+private struct TypingIndicator: View {
 
     @State private var animating = false
 

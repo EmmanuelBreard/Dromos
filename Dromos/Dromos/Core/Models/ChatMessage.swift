@@ -43,4 +43,9 @@ struct ChatResponse: Codable {
     /// - "no_action": no constraint detected
     /// - "escalate": severity requires human attention / plan regeneration
     let status: String
+
+    private enum CodingKeys: String, CodingKey {
+        case responseText = "response_text"
+        case status
+    }
 }

@@ -46,6 +46,7 @@ final class ChatService: ObservableObject {
         }
 
         isLoading = true
+        errorMessage = nil
         defer { isLoading = false }
 
         do {
@@ -75,12 +76,15 @@ final class ChatService: ObservableObject {
     ///
     /// - Parameter text: The message text (max 1000 chars, enforced in the UI).
     func sendMessage(_ text: String) async {
+        guard !isLoading else { return }
+
         guard let userId = try? await client.auth.session.user.id else {
             errorMessage = "Unable to send message. Please sign in again."
             return
         }
 
         isLoading = true
+        errorMessage = nil
         defer { isLoading = false }
 
         // --- Optimistic user bubble ---
@@ -132,6 +136,10 @@ final class ChatService: ObservableObject {
             return
         }
 
+
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
         do {
             try await client
                 .from("chat_messages")
