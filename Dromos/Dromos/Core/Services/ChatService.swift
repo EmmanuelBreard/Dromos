@@ -136,7 +136,6 @@ final class ChatService: ObservableObject {
             return
         }
 
-
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
