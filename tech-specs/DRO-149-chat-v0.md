@@ -1,6 +1,6 @@
 # DRO-149: Chat V0 — Conversation Agent + Message Storage
 
-**Overall Progress:** `80%`
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -36,8 +36,8 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
 
 ## Tasks
 
-- [x] 🟨 **Step 1: Database Migration**
-  - [ ] 🟥 Create `supabase/migrations/013_create_chat_messages.sql`:
+- [x] 🟩 **Step 1: Database Migration**
+  - [x] 🟩 Create `supabase/migrations/013_create_chat_messages.sql`:
     ```sql
     -- UP
     CREATE TABLE public.chat_messages (
@@ -68,11 +68,11 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
     -- Edge function inserts via service_role (bypasses RLS)
     -- No INSERT policy needed for authenticated users
     ```
-  - [ ] 🟥 Apply migration to Supabase project
+  - [x] 🟩 Apply migration to Supabase project
 
-- [x] 🟨 **Step 2: V0 Prompt**
-  - [ ] 🟥 Duplicate `ai/prompts/adjust-step1-conversation.txt` → `ai/prompts/adjust-step1-v0.txt`
-  - [ ] 🟥 Add V0 advisory mode section after "## Your Role":
+- [x] 🟩 **Step 2: V0 Prompt**
+  - [x] 🟩 Duplicate `ai/prompts/adjust-step1-conversation.txt` → `ai/prompts/adjust-step1-v0.txt`
+  - [x] 🟩 Add V0 advisory mode section after "## Your Role":
     ```
     ## V0 Advisory Mode
 
@@ -83,15 +83,15 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
     week", "stick to Zone 1-2"), and let the athlete know that automatic
     plan adjustments are coming soon. Do not promise to modify their plan.
     ```
-  - [ ] 🟥 Update `response_text` examples in JSON output section to use transparent V0 language:
+  - [x] 🟩 Update `response_text` examples in JSON output section to use transparent V0 language:
     - Ready: `"I've noted your knee injury. Plan adjustments are coming soon — for now, I'd suggest skipping your run sessions this week and focusing on swimming and easy biking."`
     - Escalate: `"Given the severity, I'd recommend generating a fresh plan once you're recovered. You can do that from your Profile tab."`
-  - [ ] 🟥 Update `scripts/sync-prompts.sh` — add mapping:
+  - [x] 🟩 Update `scripts/sync-prompts.sh` — add mapping:
     - Source: `ai/prompts/adjust-step1-v0.txt`
     - Target: `supabase/functions/chat-adjust/prompts/adjust-step1-v0-prompt.ts`
 
-- [x] 🟨 **Step 3: Edge Function — `chat-adjust`**
-  - [ ] 🟥 Create `supabase/functions/chat-adjust/index.ts`:
+- [x] 🟩 **Step 3: Edge Function — `chat-adjust`**
+  - [x] 🟩 Create `supabase/functions/chat-adjust/index.ts`:
     - **Auth**: Extract JWT from `Authorization` header, validate via `authClient.auth.getUser(jwt)`. Return 401 on failure.
     - **CORS**: Inline `corsHeaders` + OPTIONS handler (same pattern as `strava-auth`).
     - **Input validation**: Parse body as `{ message: string }`. Reject if missing or > 1000 chars.
@@ -114,12 +114,12 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
       1. INSERT user message: `{ user_id, role: 'user', content: message }`
       2. INSERT assistant message: `{ user_id, role: 'assistant', content: response_text, status, constraint_summary }`
     - **Return**: `{ response_text, status, constraint_summary? }`
-  - [ ] 🟥 Run `scripts/sync-prompts.sh` to generate the prompt `.ts` file
-  - [ ] 🟥 Deploy: `supabase functions deploy chat-adjust`
-  - [ ] 🟥 Set `OPENAI_API_KEY` secret if not already available to the function
+  - [x] 🟩 Run `scripts/sync-prompts.sh` to generate the prompt `.ts` file
+  - [x] 🟩 Deploy: `supabase functions deploy chat-adjust`
+  - [x] 🟩 Set `OPENAI_API_KEY` secret if not already available to the function
 
-- [x] 🟨 **Step 4: iOS Model**
-  - [ ] 🟥 Create `Dromos/Dromos/Core/Models/ChatMessage.swift`:
+- [x] 🟩 **Step 4: iOS Model**
+  - [x] 🟩 Create `Dromos/Dromos/Core/Models/ChatMessage.swift`:
     ```swift
     struct ChatMessage: Codable, Identifiable {
         let id: UUID
@@ -130,7 +130,7 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
     }
     ```
     - Only decode fields needed for display. `status` and `constraint_summary` are server-side storage only — not sent to client.
-  - [ ] 🟥 Create response type for edge function:
+  - [x] 🟩 Create response type for edge function:
     ```swift
     struct ChatResponse: Codable {
         let responseText: String
@@ -138,8 +138,8 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
     }
     ```
 
-- [x] 🟨 **Step 5: iOS Service**
-  - [ ] 🟥 Create `Dromos/Dromos/Core/Services/ChatService.swift` following existing service pattern:
+- [x] 🟩 **Step 5: iOS Service**
+  - [x] 🟩 Create `Dromos/Dromos/Core/Services/ChatService.swift` following existing service pattern:
     ```swift
     @MainActor final class ChatService: ObservableObject {
         private let client = SupabaseClientProvider.client
@@ -148,35 +148,35 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
         @Published var errorMessage: String?
     }
     ```
-  - [ ] 🟥 `fetchMessages()` — SELECT from `chat_messages` WHERE user_id = currentUserId ORDER BY created_at ASC. Populates `messages`.
-  - [ ] 🟥 `sendMessage(_ text: String) async` — Calls `client.functions.invoke("chat-adjust", options: .init(body: ["message": text]))`. Parses `ChatResponse`. Appends both user message (optimistic) and bot response to `messages`. On error, removes optimistic message and sets `errorMessage`.
-  - [ ] 🟥 `clearHistory() async` — DELETE from `chat_messages` WHERE user_id = currentUserId. Clears `messages` array.
+  - [x] 🟩 `fetchMessages()` — SELECT from `chat_messages` WHERE user_id = currentUserId ORDER BY created_at ASC. Populates `messages`.
+  - [x] 🟩 `sendMessage(_ text: String) async` — Calls `client.functions.invoke("chat-adjust", options: .init(body: ["message": text]))`. Parses `ChatResponse`. Appends both user message (optimistic) and bot response to `messages`. On error, removes optimistic message and sets `errorMessage`.
+  - [x] 🟩 `clearHistory() async` — DELETE from `chat_messages` WHERE user_id = currentUserId. Clears `messages` array.
 
-- [x] 🟨 **Step 6: Chat UI**
-  - [ ] 🟥 Create `Dromos/Dromos/Features/Chat/ChatView.swift`:
+- [x] 🟩 **Step 6: Chat UI**
+  - [x] 🟩 Create `Dromos/Dromos/Features/Chat/ChatView.swift`:
     - **Message list**: `ScrollViewReader` wrapping `ScrollView` → `LazyVStack`. Each message rendered as a bubble (`ChatBubbleView`). Auto-scroll to bottom via `.onChange(of: chatService.messages.count)`.
     - **Chat bubbles**: User messages right-aligned with accent background + white text. Bot messages left-aligned with `Color(.systemGray6)` background. Rounded corners (16pt). Timestamp below each bubble (relative format).
     - **Typing indicator**: When `chatService.isLoading`, show a bot-side bubble with 3 animated dots (simple `withAnimation(.easeInOut.repeatForever())` on opacity).
     - **Input bar**: `HStack` with `TextField("Message your coach...", text: $messageText)` + send button (`Image(systemName: "arrow.up.circle.fill")`). Send button disabled when `messageText.isEmpty || chatService.isLoading`. TextField disabled when `chatService.isLoading`. Enforce 1000 char limit via `.onChange(of: messageText)` truncation.
     - **Welcome state**: When `chatService.messages.isEmpty && !chatService.isLoading`, show centered text: "Tell me what's going on with your training — injury, illness, fatigue, or schedule changes. I'm here to help."
     - **Error display**: If `chatService.errorMessage` is set, show inline system message in red. Clear on next successful send.
-  - [ ] 🟥 Wrap in `NavigationStack` with `.navigationTitle("Chat")`
-  - [ ] 🟥 Load messages on appear: `.task { await chatService.fetchMessages() }`
+  - [x] 🟩 Wrap in `NavigationStack` with `.navigationTitle("Chat")`
+  - [x] 🟩 Load messages on appear: `.task { await chatService.fetchMessages() }`
 
-- [x] 🟨 **Step 7: Tab Integration**
-  - [ ] 🟥 Add `case chat` to `AppTab` enum in `MainTabView.swift`
-  - [ ] 🟥 Create `@StateObject private var chatService = ChatService()` in `MainTabView`
-  - [ ] 🟥 Add Chat tab between Calendar and Profile:
+- [x] 🟩 **Step 7: Tab Integration**
+  - [x] 🟩 Add `case chat` to `AppTab` enum in `MainTabView.swift`
+  - [x] 🟩 Create `@StateObject private var chatService = ChatService()` in `MainTabView`
+  - [x] 🟩 Add Chat tab between Calendar and Profile:
     ```swift
     Tab("Chat", systemImage: "bubble.left.fill", value: .chat) {
         ChatView(chatService: chatService)
     }
     ```
-  - [ ] 🟥 Pass `chatService` to `ProfileView` (needed for clear history count/state)
+  - [x] 🟩 Pass `chatService` to `ProfileView` (needed for clear history count/state)
 
-- [x] 🟨 **Step 8: Clear Chat History in Settings**
-  - [ ] 🟥 Add `@ObservedObject var chatService: ChatService` parameter to `ProfileView`
-  - [ ] 🟥 Add new "Data" section in `ProfileView` Form, between Strava section and Sign Out section:
+- [x] 🟩 **Step 8: Clear Chat History in Settings**
+  - [x] 🟩 Add `@ObservedObject var chatService: ChatService` parameter to `ProfileView`
+  - [x] 🟩 Add new "Data" section in `ProfileView` Form, between Strava section and Sign Out section:
     ```swift
     Section("Data") {
         Button("Clear Chat History", role: .destructive) {
@@ -184,7 +184,7 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
         }
     }
     ```
-  - [ ] 🟥 Add `@State private var showClearChatAlert = false` and confirmation alert:
+  - [x] 🟩 Add `@State private var showClearChatAlert = false` and confirmation alert:
     ```swift
     .alert("Clear Chat History?", isPresented: $showClearChatAlert) {
         Button("Cancel", role: .cancel) {}
@@ -195,8 +195,8 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
         Text("This will delete all your chat messages. This action cannot be undone.")
     }
     ```
-  - [ ] 🟥 Update `MainTabView` to pass `chatService` to `ProfileView`
+  - [x] 🟩 Update `MainTabView` to pass `chatService` to `ProfileView`
 
-- [ ] 🟥 **Step 9: Context Doc Updates**
-  - [ ] 🟥 Update `.claude/context/schema.md` — add `chat_messages` table definition
-  - [ ] 🟥 Update `.claude/context/architecture.md` — add `Features/Chat/` folder, `ChatService`, `chat-adjust` edge function, update tab list to 4 tabs
+- [x] 🟩 **Step 9: Context Doc Updates**
+  - [x] 🟩 Update `.claude/context/schema.md` — add `chat_messages` table definition
+  - [x] 🟩 Update `.claude/context/architecture.md` — add `Features/Chat/` folder, `ChatService`, `chat-adjust` edge function, update tab list to 4 tabs

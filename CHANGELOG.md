@@ -7,7 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
-- **Chat V0 backend** — AI coaching conversation agent powered by gpt-4o. Edge function (`chat-adjust`) validates JWT, fetches conversation history (last 50 messages), user profile, and active plan phase map, then returns structured coaching advice. V0 advisory mode — gathers training constraints (injury, illness, fatigue, equipment) but does not modify the plan. Messages stored in `chat_messages` table (DRO-149)
+- **Chat V0** — New Chat tab (4th, between Calendar and Profile) with AI coaching conversation agent powered by gpt-4o. Edge function (`chat-adjust`) validates JWT, fetches conversation history (last 50 messages), user profile, and active plan phase map, then returns structured coaching advice. V0 advisory mode — gathers training constraints (injury, illness, fatigue, equipment) and answers general coaching questions, but does not modify the plan. iOS UI with chat bubbles, typing indicator, optimistic send, keyboard dismiss, and clear history in Profile settings. Messages stored in `chat_messages` table (DRO-149)
 - **Session completion status** — Past sessions on the Home tab now show a green left border when completed (matched to a Strava activity) or a red border with dimming when missed. Completed cards display actual performance metrics (duration, distance, power/pace/HR) and GPS route map as primary content. Planned workout details available behind a "Planned workout" collapsible disclosure. Future sessions remain unchanged. Completed sessions cannot be moved in edit mode. Status is computed client-side by matching plan sessions against synced Strava activities (same sport, same day, closest duration) (DRO-145, DRO-150)
 
 ### Fixed

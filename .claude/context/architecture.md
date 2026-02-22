@@ -244,6 +244,8 @@ All services follow:
 | `strava-sync` | `supabase/functions/strava-sync/` | POST: Paginated Strava activity fetch (up to 2000), token auto-refresh, upsert into `strava_activities`. JWT validated via `auth.getUser()`. |
 | `chat-adjust` | `supabase/functions/chat-adjust/` | POST: Auth → history fetch → OpenAI gpt-4o → DB write (both user & assistant messages). JWT validated via `auth.getUser()`. Returns `{ response_text, status, constraint_summary? }`. |
 
+**Deployment:** All functions are deployed with `--no-verify-jwt` (gateway JWT check disabled — each function validates JWTs itself via `auth.getUser()`). Use `scripts/deploy-functions.sh` to deploy one or all functions with the correct flags.
+
 See `ai-pipeline.md` for `generate-plan` pipeline documentation.
 
 ## Strava Integration
