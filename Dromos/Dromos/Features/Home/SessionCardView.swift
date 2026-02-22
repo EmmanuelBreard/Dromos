@@ -123,10 +123,10 @@ struct SessionCardView: View {
             }
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
-    
+
 }
 
 // MARK: - Rest Day Card
@@ -151,7 +151,7 @@ struct RestDayCardView: View {
             Spacer()
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
@@ -188,7 +188,7 @@ struct RaceDayCardView: View {
             Spacer()
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
@@ -242,7 +242,7 @@ struct RaceDayCardView: View {
         css: nil
     )
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.pageSurface)
 }
 
 #Preview("Session Card - Run Tempo") {
@@ -292,7 +292,7 @@ struct RaceDayCardView: View {
         css: nil
     )
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.pageSurface)
 }
 
 #Preview("Session Card - Swim Intervals") {
@@ -359,7 +359,7 @@ struct RaceDayCardView: View {
         css: 105
     )
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.pageSurface)
 }
 
 #Preview("Session Card - Swim (Simple)") {
@@ -397,7 +397,7 @@ struct RaceDayCardView: View {
         css: 105
     )
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.pageSurface)
 }
 
 #Preview("Session Card - Long Ride (3h+)") {
@@ -447,7 +447,7 @@ struct RaceDayCardView: View {
         css: nil
     )
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.pageSurface)
 }
 
 #Preview("Session Card - No FTP/VMA (Percentages)") {
@@ -497,5 +497,5 @@ struct RaceDayCardView: View {
         css: nil
     )
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Color.pageSurface)
 }

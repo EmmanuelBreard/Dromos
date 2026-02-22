@@ -125,7 +125,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.pageSurface)
             .onAppear {
                 // Initial load: reset to current + next week and scroll to today
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
