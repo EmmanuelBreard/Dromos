@@ -145,9 +145,8 @@ struct SessionCardView: View {
         .padding(16)
         .opacity(contentOpacity)
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        // Left border overlay: clipped by the card's RoundedRectangle, so it inherits rounded corners.
-        // A 4pt wide colored rectangle anchored to the leading edge provides the completion indicator.
+        // Left border overlay: a 4pt colored rectangle anchored to the leading edge.
+        // clipShape applied AFTER overlay so the border inherits the card's rounded corners.
         .overlay(alignment: .leading) {
             if let color = borderColor {
                 Rectangle()
@@ -155,6 +154,7 @@ struct SessionCardView: View {
                     .frame(width: 4)
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
 }

@@ -72,10 +72,12 @@ struct SessionMatcher {
 
             if let candidates = activityGroups[key], !candidates.isEmpty {
                 // Step 4: Match found — pick the activity whose movingTime is closest to the planned duration.
-                let targetSeconds = session.durationMinutes * 60
-                let best = candidates.min(by: {
-                    abs($0.movingTime - targetSeconds) < abs($1.movingTime - targetSeconds)
-                })!
+                let targetSeconds: Int = session.durationMinutes * 60
+                let best = candidates.min { a, b in
+                    let diffA = abs(a.movingTime - targetSeconds)
+                    let diffB = abs(b.movingTime - targetSeconds)
+                    return diffA < diffB
+                }!
                 result[session.id] = .completed(activity: best)
 
             } else if sessionDayStart < todayStart {
