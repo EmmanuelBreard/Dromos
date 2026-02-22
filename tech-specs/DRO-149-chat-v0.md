@@ -1,6 +1,6 @@
 # DRO-149: Chat V0 — Conversation Agent + Message Storage
 
-**Overall Progress:** `33%`
+**Overall Progress:** `80%`
 
 ## TLDR
 
@@ -118,7 +118,7 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
   - [ ] 🟥 Deploy: `supabase functions deploy chat-adjust`
   - [ ] 🟥 Set `OPENAI_API_KEY` secret if not already available to the function
 
-- [ ] 🟥 **Step 4: iOS Model**
+- [x] 🟨 **Step 4: iOS Model**
   - [ ] 🟥 Create `Dromos/Dromos/Core/Models/ChatMessage.swift`:
     ```swift
     struct ChatMessage: Codable, Identifiable {
@@ -138,7 +138,7 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
     }
     ```
 
-- [ ] 🟥 **Step 5: iOS Service**
+- [x] 🟨 **Step 5: iOS Service**
   - [ ] 🟥 Create `Dromos/Dromos/Core/Services/ChatService.swift` following existing service pattern:
     ```swift
     @MainActor final class ChatService: ObservableObject {
@@ -152,7 +152,7 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
   - [ ] 🟥 `sendMessage(_ text: String) async` — Calls `client.functions.invoke("chat-adjust", options: .init(body: ["message": text]))`. Parses `ChatResponse`. Appends both user message (optimistic) and bot response to `messages`. On error, removes optimistic message and sets `errorMessage`.
   - [ ] 🟥 `clearHistory() async` — DELETE from `chat_messages` WHERE user_id = currentUserId. Clears `messages` array.
 
-- [ ] 🟥 **Step 6: Chat UI**
+- [x] 🟨 **Step 6: Chat UI**
   - [ ] 🟥 Create `Dromos/Dromos/Features/Chat/ChatView.swift`:
     - **Message list**: `ScrollViewReader` wrapping `ScrollView` → `LazyVStack`. Each message rendered as a bubble (`ChatBubbleView`). Auto-scroll to bottom via `.onChange(of: chatService.messages.count)`.
     - **Chat bubbles**: User messages right-aligned with accent background + white text. Bot messages left-aligned with `Color(.systemGray6)` background. Rounded corners (16pt). Timestamp below each bubble (relative format).
@@ -163,7 +163,7 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
   - [ ] 🟥 Wrap in `NavigationStack` with `.navigationTitle("Chat")`
   - [ ] 🟥 Load messages on appear: `.task { await chatService.fetchMessages() }`
 
-- [ ] 🟥 **Step 7: Tab Integration**
+- [x] 🟨 **Step 7: Tab Integration**
   - [ ] 🟥 Add `case chat` to `AppTab` enum in `MainTabView.swift`
   - [ ] 🟥 Create `@StateObject private var chatService = ChatService()` in `MainTabView`
   - [ ] 🟥 Add Chat tab between Calendar and Profile:
@@ -174,7 +174,7 @@ New Chat tab (4th, between Calendar and Profile) with an AI conversation agent t
     ```
   - [ ] 🟥 Pass `chatService` to `ProfileView` (needed for clear history count/state)
 
-- [ ] 🟥 **Step 8: Clear Chat History in Settings**
+- [x] 🟨 **Step 8: Clear Chat History in Settings**
   - [ ] 🟥 Add `@ObservedObject var chatService: ChatService` parameter to `ProfileView`
   - [ ] 🟥 Add new "Data" section in `ProfileView` Form, between Strava section and Sign Out section:
     ```swift
