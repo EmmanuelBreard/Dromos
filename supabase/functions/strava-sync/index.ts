@@ -67,6 +67,22 @@ interface StravaTokenResponse {
   expires_at: number; // Unix epoch seconds
 }
 
+interface StravaApiActivity {
+  id: number;
+  sport_type?: string;
+  name?: string;
+  start_date?: string;
+  start_date_local?: string;
+  elapsed_time?: number;
+  moving_time?: number;
+  distance?: number;
+  total_elevation_gain?: number;
+  average_speed?: number;
+  average_heartrate?: number;
+  average_watts?: number;
+  manual?: boolean;
+}
+
 /**
  * Refresh a Strava access token using the stored refresh token.
  * Returns the new token data on success, throws on failure.
@@ -134,23 +150,15 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Missing Strava environment variables" }, 500);
   }
 
-  // Decode JWT payload (manual base64 — deployed with --no-verify-jwt)
+  // Cryptographically validate the JWT via auth.getUser()
   const jwt = authHeader.replace("Bearer ", "");
-  const payloadBase64 = jwt.split(".")[1];
-  if (!payloadBase64) {
-    return jsonResponse({ error: "Invalid Authorization token" }, 401);
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? supabaseServiceRoleKey;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
+  if (authError || !user) {
+    return jsonResponse({ error: "Invalid token" }, 401);
   }
-
-  let userId: string;
-  try {
-    const payload = JSON.parse(
-      atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"))
-    );
-    userId = payload.sub;
-    if (!userId) throw new Error("missing sub");
-  } catch {
-    return jsonResponse({ error: "Invalid token: could not decode payload" }, 401);
-  }
+  const userId = user.id;
 
   // ---------------------------------------------------------------------------
   // 2. Service-role DB client
@@ -240,8 +248,7 @@ Deno.serve(async (req) => {
     // 6. Paginated activity fetch from Strava
     // -------------------------------------------------------------------------
 
-    // deno-lint-ignore no-explicit-any
-    const allActivities: any[] = [];
+    const allActivities: StravaApiActivity[] = [];
     let rateLimited = false;
 
     for (let page = 1; page <= MAX_PAGES; page++) {
@@ -270,8 +277,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      // deno-lint-ignore no-explicit-any
-      const activities: any[] = await res.json();
+      const activities: StravaApiActivity[] = await res.json();
 
       // Empty page means we have fetched everything
       if (activities.length === 0) break;
@@ -287,17 +293,21 @@ Deno.serve(async (req) => {
     // -------------------------------------------------------------------------
 
     if (allActivities.length > 0) {
-      // deno-lint-ignore no-explicit-any
-      const rows = allActivities.map((a: any) => ({
+      // Filter out activities missing required NOT NULL date fields
+      const validActivities = allActivities.filter(
+        (a) => a.start_date != null && a.start_date_local != null
+      );
+
+      const rows = validActivities.map((a) => ({
         user_id: userId,
-        strava_activity_id: String(a.id),
-        sport_type: a.sport_type ?? null,
+        strava_activity_id: a.id,
+        sport_type: a.sport_type ?? "Unknown",
         normalized_sport: normalizeSportType(a.sport_type ?? ""),
         name: a.name ?? null,
-        start_date: a.start_date ?? null,
-        start_date_local: a.start_date_local ?? null,
-        elapsed_time: a.elapsed_time ?? null,
-        moving_time: a.moving_time ?? null,
+        start_date: a.start_date,
+        start_date_local: a.start_date_local,
+        elapsed_time: a.elapsed_time ?? 0,
+        moving_time: a.moving_time ?? 0,
         distance: a.distance ?? null,
         total_elevation_gain: a.total_elevation_gain ?? null,
         average_speed: a.average_speed ?? null,
@@ -357,6 +367,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("strava-sync unhandled error:", message);
-    return jsonResponse({ error: `Internal server error: ${message}` }, 500);
+    return jsonResponse({ error: "Internal server error" }, 500);
   }
 });

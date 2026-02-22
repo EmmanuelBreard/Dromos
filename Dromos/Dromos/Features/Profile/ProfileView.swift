@@ -17,7 +17,6 @@ import SwiftUI
 /// 4. Strava - OAuth connection status and sync controls
 struct ProfileView: View {
     @ObservedObject var authService: AuthService
-    // FIX #6: Receive shared ProfileService instead of creating a new instance
     @ObservedObject var profileService: ProfileService
     @ObservedObject var stravaService: StravaService
 
@@ -145,6 +144,25 @@ struct ProfileView: View {
         } message: {
             Text(validationMessage)
         }
+        .onChange(of: stravaService.isConnecting) { oldValue, newValue in
+            // OAuth completed: isConnecting transitioned true → false
+            if oldValue && !newValue && stravaService.errorMessage == nil {
+                Task {
+                    if let userId = authService.currentUserId {
+                        do {
+                            user = try await profileService.fetchProfile(userId: userId)
+                        } catch {
+                            errorMessage = mapSaveError(error)
+                            showError = true
+                        }
+                    }
+                    // Trigger first sync to pull activities after connecting
+                    if profileService.user?.isStravaConnected == true {
+                        await stravaService.syncActivities()
+                    }
+                }
+            }
+        }
         .alert("Disconnect Strava?", isPresented: $showDisconnectAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Disconnect", role: .destructive) {
@@ -152,7 +170,12 @@ struct ProfileView: View {
                     await stravaService.disconnect()
                     // Refresh profile so isStravaConnected reflects the cleared stravaAthleteId
                     if let userId = authService.currentUserId {
-                        user = try? await profileService.fetchProfile(userId: userId)
+                        do {
+                            user = try await profileService.fetchProfile(userId: userId)
+                        } catch {
+                            errorMessage = mapSaveError(error)
+                            showError = true
+                        }
                     }
                 }
             }
@@ -171,17 +194,15 @@ struct ProfileView: View {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text("Connected")
+                    if let result = stravaService.lastSyncResult {
+                        Text("Connected (\(result.totalActivities) activities)")
+                    } else {
+                        Text("Connected")
+                    }
                     Spacer()
                     if stravaService.isSyncing {
                         ProgressView()
                     }
-                }
-
-                if let result = stravaService.lastSyncResult {
-                    Text("\(result.totalActivities) activities synced")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
 
                 Button(role: .destructive) {
@@ -196,19 +217,7 @@ struct ProfileView: View {
         } else {
             Section("Strava") {
                 Button {
-                    Task {
-                        stravaService.startOAuth(from: authSessionContext)
-                        // ASWebAuthenticationSession runs asynchronously via its callback closure.
-                        // We poll isConnecting: it flips true→false once exchangeCode completes.
-                        // A short initial sleep ensures we don't exit before the session even starts.
-                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s for session startup
-                        while stravaService.isConnecting {
-                            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2s poll interval
-                        }
-                        if let userId = authService.currentUserId {
-                            user = try? await profileService.fetchProfile(userId: userId)
-                        }
-                    }
+                    stravaService.startOAuth(from: authSessionContext)
                 } label: {
                     HStack {
                         Image(systemName: "link")

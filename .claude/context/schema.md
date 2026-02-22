@@ -1,11 +1,13 @@
 # Database Schema Reference
 
-> Last updated: 2026-02-21 | Migrations: 001-011
+> Last updated: 2026-02-22 | Migrations: 001-011 + Strava tables
 
 ## Tables Overview
 
 ```
 auth.users → public.users (1:1) → training_plans (1:1 via UNIQUE) → plan_weeks (1:N) → plan_sessions (1:N)
+public.users (1:1) → strava_connections
+public.users (1:N) → strava_activities
 ```
 
 All foreign keys use ON DELETE CASCADE. All tables use RLS.
@@ -121,6 +123,66 @@ Individual training sessions within a week.
 | `handle_new_user()` | TRIGGER (AFTER INSERT on `auth.users`) | Auto-inserts `users` row with id/email/name |
 | `update_updated_at()` | TRIGGER (BEFORE UPDATE) | Sets `updated_at = now()` on `users` and `training_plans` |
 | `reorder_sessions(JSONB)` | RPC (SECURITY DEFINER) | Batch-updates `day`, `week_id`, `order_in_day` on `plan_sessions`. Validates per-row ownership via `auth.uid()`. GRANT EXECUTE TO authenticated. |
+
+---
+
+---
+
+## `public.strava_connections`
+
+One row per user. Stores OAuth tokens for Strava API access.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `user_id` | UUID | PK, FK → `users(id)` CASCADE | |
+| `strava_athlete_id` | BIGINT | NOT NULL | Strava athlete ID |
+| `access_token` | TEXT | NOT NULL | Short-lived token |
+| `refresh_token` | TEXT | NOT NULL | Long-lived token |
+| `expires_at` | TIMESTAMPTZ | NOT NULL | Token expiry |
+| `scope` | TEXT | NOT NULL | Granted OAuth scope (e.g. `activity:read_all`) |
+| `last_sync_at` | TIMESTAMPTZ | | NULL on first sync |
+| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
+| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
+
+**RLS:** Edge Functions use `service_role` (bypasses RLS). No direct client access.
+
+---
+
+## `public.strava_activities`
+
+Synced Strava activities for a user. Written by the `strava-sync` Edge Function.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | UUID | PK, DEFAULT `gen_random_uuid()` | |
+| `user_id` | UUID | NOT NULL, FK → `users(id)` CASCADE | |
+| `strava_activity_id` | BIGINT | NOT NULL | Strava activity ID |
+| `sport_type` | TEXT | NOT NULL | Raw Strava sport type (e.g. `Run`, `Ride`) |
+| `normalized_sport` | TEXT | CHECK IN ('run','bike','swim') OR NULL | Dromos canonical sport |
+| `name` | TEXT | | Activity title |
+| `start_date` | TIMESTAMPTZ | NOT NULL | UTC start |
+| `start_date_local` | TIMESTAMPTZ | NOT NULL | Local start |
+| `elapsed_time` | INT | NOT NULL | Seconds (0 if missing) |
+| `moving_time` | INT | NOT NULL | Seconds (0 if missing) |
+| `distance` | DOUBLE PRECISION | | Meters |
+| `total_elevation_gain` | DOUBLE PRECISION | | Meters |
+| `average_speed` | DOUBLE PRECISION | | m/s |
+| `average_heartrate` | DOUBLE PRECISION | | BPM |
+| `average_watts` | DOUBLE PRECISION | | Watts |
+| `is_manual` | BOOLEAN | NOT NULL, DEFAULT FALSE | |
+| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
+
+**UNIQUE:** `(user_id, strava_activity_id)` — upsert conflict target.
+
+**RLS:** Edge Functions use `service_role`. iOS reads via user JWT (SELECT own rows).
+
+---
+
+## `public.users` — additional Strava column
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `strava_athlete_id` | BIGINT | | Denormalised from `strava_connections`. NULL = not connected. |
 
 ---
 

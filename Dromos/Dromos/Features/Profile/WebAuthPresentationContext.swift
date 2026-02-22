@@ -17,6 +17,10 @@ final class WebAuthPresentationContext: NSObject, ASWebAuthenticationPresentatio
         let scene = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive }
-        return scene?.keyWindow ?? UIWindow()
+        guard let window = scene?.keyWindow else {
+            assertionFailure("No foreground window scene found for ASWebAuthenticationSession")
+            return UIWindow()
+        }
+        return window
     }
 }

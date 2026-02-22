@@ -16,34 +16,13 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-// Helper: Extract and validate user_id from JWT Authorization header.
-// The function is deployed with --no-verify-jwt; we still manually parse
-// the payload so we can identify the caller without a round-trip to Auth.
-function extractUserId(authHeader: string | null): { userId: string } | { error: Response } {
-  if (!authHeader) {
-    return { error: jsonResponse({ error: "Missing Authorization header" }, 401) };
-  }
-
-  const jwt = authHeader.replace("Bearer ", "");
-  const payloadBase64 = jwt.split(".")[1];
-  if (!payloadBase64) {
-    return { error: jsonResponse({ error: "Malformed token" }, 401) };
-  }
-
-  let payload: { sub?: string };
-  try {
-    payload = JSON.parse(
-      atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"))
-    );
-  } catch {
-    return { error: jsonResponse({ error: "Failed to decode token" }, 401) };
-  }
-
-  if (!payload.sub) {
-    return { error: jsonResponse({ error: "Invalid token: missing sub" }, 401) };
-  }
-
-  return { userId: payload.sub };
+// Strava token exchange response shape
+interface StravaTokenExchangeResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  athlete: { id: number };
+  message?: string;
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -75,12 +54,22 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Missing Strava environment variables" }, 500);
   }
 
-  // ── Extract user_id from JWT ───────────────────────────────────────────────
-  const authResult = extractUserId(req.headers.get("Authorization"));
-  if ("error" in authResult) {
-    return authResult.error;
+  // ── Validate JWT via auth.getUser() (cryptographic verification) ──────────
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return jsonResponse({ error: "Missing Authorization header" }, 401);
   }
-  const { userId } = authResult;
+  const jwt = authHeader.replace("Bearer ", "");
+
+  // Use an anon-key client just for auth validation — service role client
+  // is created below for DB writes.
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? supabaseServiceRoleKey;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
+  if (authError || !user) {
+    return jsonResponse({ error: "Invalid token" }, 401);
+  }
+  const userId = user.id;
 
   // Service-role client for DB operations (bypasses RLS)
   const db = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -117,7 +106,7 @@ Deno.serve(async (req) => {
         body: stravaParams.toString(),
       });
 
-      const stravaData = await stravaRes.json();
+      const stravaData = await stravaRes.json() as StravaTokenExchangeResponse;
 
       if (!stravaRes.ok) {
         // Forward Strava's error message so the client can surface it
@@ -159,7 +148,7 @@ Deno.serve(async (req) => {
         );
 
       if (upsertError) {
-        console.error("strava_connections upsert error:", upsertError);
+        console.error("strava_connections upsert error:", upsertError.message);
         return jsonResponse({ error: "Failed to save Strava connection" }, 500);
       }
 
@@ -170,7 +159,7 @@ Deno.serve(async (req) => {
         .eq("id", userId);
 
       if (userUpdateError) {
-        console.error("users update error:", userUpdateError);
+        console.error("users update error:", userUpdateError.message);
         return jsonResponse({ error: "Failed to update user profile" }, 500);
       }
 
@@ -181,6 +170,40 @@ Deno.serve(async (req) => {
     // DELETE — Disconnect Strava
     // ────────────────────────────────────────────────────────────────────────
     if (req.method === "DELETE") {
+      // Fetch the access_token before deleting the row so we can revoke it
+      const { data: connection } = await db
+        .from("strava_connections")
+        .select("access_token")
+        .eq("user_id", userId)
+        .single();
+
+      // Best-effort Strava token revocation (do not block disconnect on failure)
+      if (connection?.access_token) {
+        try {
+          const revokeRes = await fetch("https://www.strava.com/oauth/deauthorize", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ access_token: connection.access_token }),
+          });
+          if (!revokeRes.ok) {
+            console.error("Strava token revocation failed:", revokeRes.status);
+          }
+        } catch (revokeErr) {
+          console.error("Strava token revocation error:", revokeErr instanceof Error ? revokeErr.message : String(revokeErr));
+        }
+      }
+
+      // Delete all synced activities for this user
+      const { error: activitiesDeleteError } = await db
+        .from("strava_activities")
+        .delete()
+        .eq("user_id", userId);
+
+      if (activitiesDeleteError) {
+        console.error("strava_activities delete error:", activitiesDeleteError.message);
+        return jsonResponse({ error: "Failed to remove Strava activities" }, 500);
+      }
+
       // Remove the connection row
       const { error: deleteError } = await db
         .from("strava_connections")
@@ -188,7 +211,7 @@ Deno.serve(async (req) => {
         .eq("user_id", userId);
 
       if (deleteError) {
-        console.error("strava_connections delete error:", deleteError);
+        console.error("strava_connections delete error:", deleteError.message);
         return jsonResponse({ error: "Failed to remove Strava connection" }, 500);
       }
 
@@ -199,7 +222,7 @@ Deno.serve(async (req) => {
         .eq("id", userId);
 
       if (userUpdateError) {
-        console.error("users strava_athlete_id nullify error:", userUpdateError);
+        console.error("users strava_athlete_id nullify error:", userUpdateError.message);
         return jsonResponse({ error: "Failed to update user profile" }, 500);
       }
 

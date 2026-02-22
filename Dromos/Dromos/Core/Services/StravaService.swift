@@ -6,6 +6,7 @@
 //
 
 import AuthenticationServices
+import Combine
 import Foundation
 import Supabase
 
@@ -43,14 +44,17 @@ final class StravaService: ObservableObject {
         let redirectUri = "dromos://strava-callback"
         let scope = "activity:read_all"
 
-        guard let authURL = URL(string:
-            "https://www.strava.com/oauth/mobile/authorize" +
-            "?client_id=\(clientId)" +
-            "&redirect_uri=\(redirectUri)" +
-            "&response_type=code" +
-            "&scope=\(scope)" +
-            "&approval_prompt=auto"
-        ) else { return }
+        var components = URLComponents(string: "https://www.strava.com/oauth/mobile/authorize")!
+        components.queryItems = [
+            URLQueryItem(name: "client_id", value: clientId),
+            URLQueryItem(name: "redirect_uri", value: redirectUri),
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "scope", value: scope),
+            URLQueryItem(name: "approval_prompt", value: "auto"),
+        ]
+        guard let authURL = components.url else { return }
+
+        isConnecting = true
 
         let session = ASWebAuthenticationSession(
             url: authURL,
@@ -60,8 +64,12 @@ final class StravaService: ObservableObject {
             Task { @MainActor in
                 if let error {
                     // User-cancelled is not an error worth surfacing
-                    if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin { return }
+                    if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
+                        self.isConnecting = false
+                        return
+                    }
                     self.errorMessage = error.localizedDescription
+                    self.isConnecting = false
                     return
                 }
                 guard
@@ -70,12 +78,13 @@ final class StravaService: ObservableObject {
                         .queryItems?.first(where: { $0.name == "code" })?.value
                 else {
                     self.errorMessage = "Failed to get authorization code"
+                    self.isConnecting = false
                     return
                 }
                 await self.exchangeCode(code)
             }
         }
-        session.prefersEphemeralWebBrowserSession = false
+        session.prefersEphemeralWebBrowserSession = true
         session.presentationContextProvider = contextProvider
         session.start()
     }
@@ -83,7 +92,7 @@ final class StravaService: ObservableObject {
     /// Exchanges the OAuth authorization code for tokens via the `strava-auth` Edge Function.
     /// The Edge Function stores the tokens and updates `strava_athlete_id` on the user row.
     private func exchangeCode(_ code: String) async {
-        isConnecting = true
+        // isConnecting is already true — set in startOAuth before the browser phase
         errorMessage = nil
         defer { isConnecting = false }
 
@@ -150,7 +159,6 @@ final class StravaService: ObservableObject {
             var query = client
                 .from("strava_activities")
                 .select()
-                .order("start_date", ascending: false)
 
             if let startDate {
                 query = query.gte("start_date", value: startDate.ISO8601Format())
@@ -159,7 +167,9 @@ final class StravaService: ObservableObject {
                 query = query.lte("start_date", value: endDate.ISO8601Format())
             }
 
-            let activities: [StravaActivity] = try await query.execute().value
+            let activities: [StravaActivity] = try await query
+                .order("start_date", ascending: false)
+                .execute().value
             return activities
         } catch {
             errorMessage = "Failed to fetch activities: \(error.localizedDescription)"

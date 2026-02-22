@@ -35,7 +35,7 @@ struct StravaActivity: Codable, Identifiable {
 // MARK: - Sync Result
 
 /// Summary returned by the `strava-sync` Edge Function.
-struct SyncResult {
+struct SyncResult: Equatable {
     let syncedCount: Int
     let totalActivities: Int
     let rateLimited: Bool
