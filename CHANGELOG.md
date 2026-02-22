@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Strava integration** — Connect your Strava account to import activities. OAuth connection in Profile, auto-sync on app open, 90-day lookback on first sync. Activities synced with sport normalization (swim/bike/run) (DRO-139)
 - **Expandable sessions in Calendar Plan** — Tap any session in the Calendar tab to expand workout steps and intensity graph inline. Tap again to collapse. All sessions reset to collapsed when switching tabs (DRO-122)
 
 ### Changed
