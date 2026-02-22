@@ -10,11 +10,14 @@ import SwiftUI
 /// Home dashboard view displaying the current week's training sessions.
 /// Shows day-by-day view with rich session cards, auto-scrolling to today.
 /// Shares plan data with Calendar tab via the passed PlanService.
+/// Receives stravaService to fetch activities and compute per-session completion status.
 struct HomeView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var planService: PlanService
-    /// Shared profile service — provides athlete metrics (FTP, VMA, CSS) for session card details in Phase 2.
+    /// Shared profile service — provides athlete metrics (FTP, VMA, CSS) for session card details.
     @ObservedObject var profileService: ProfileService
+    /// Strava service used to fetch activities for the visible date range and compute completion status.
+    @ObservedObject var stravaService: StravaService
     /// Toggled by MainTabView each time the Home tab is re-selected.
     /// Using @Binding ensures the change propagates via Combine even when the tab is inactive.
     @Binding var scrollReset: Bool
@@ -45,6 +48,14 @@ struct HomeView: View {
     /// Whether edit mode is active (shows move arrows on session cards).
     @State private var isEditMode: Bool = false
 
+    /// Maps each session UUID to its computed completion status (planned/completed/missed).
+    /// Populated by `loadCompletionStatuses(plan:)` after fetching Strava activities.
+    @State private var completionStatuses: [UUID: SessionCompletionStatus] = [:]
+
+    /// Tracks which completed session cards are expanded (for Phase 3 detail reveal).
+    // Phase 3: expanded detail reveal
+    @State private var expandedCompletedIDs: Set<UUID> = []
+
     var body: some View {
         NavigationStack {
             Group {
@@ -70,9 +81,9 @@ struct HomeView: View {
             }
         }
     }
-    
+
     // MARK: - Loading View
-    
+
     /// Loading state with progress indicator.
     private var loadingView: some View {
         VStack(spacing: 16) {
@@ -83,7 +94,7 @@ struct HomeView: View {
                 .foregroundColor(.secondary)
         }
     }
-    
+
     // MARK: - Content View
 
     /// Main content view with multi-week scrollable sections.
@@ -126,19 +137,25 @@ struct HomeView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .onAppear {
-                // Initial load: reset to current + next week and scroll to today
+            .task {
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
+                await loadCompletionStatuses(plan: plan)
             }
             .onChange(of: scrollReset) { _, _ in
-                // Tab re-selection: reset weeks and scroll to today (matching first-load behavior)
+                // Tab re-selection: reset weeks and scroll to today (matching first-load behavior).
+                // Task inside .onChange is acceptable — triggered by user action, not view lifecycle.
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
+                expandedCompletedIDs = []
+                Task { await loadCompletionStatuses(plan: plan) }
+            }
+            .onChange(of: lastVisibleWeekIndex) { _, _ in
+                Task { await loadCompletionStatuses(plan: plan) }
             }
         }
     }
-    
+
     // MARK: - Week Section Header
 
     /// Week section header with title, date range, and phase badge.
@@ -185,7 +202,7 @@ struct HomeView: View {
         }
         .padding(.vertical, 8)
     }
-    
+
     // MARK: - Day Section
 
     /// A day section with header, session cards, and optional race day indicator.
@@ -205,6 +222,23 @@ struct HomeView: View {
                 let dayIndex = days.firstIndex(where: { $0.weekday == dayInfo.weekday }) ?? 0
 
                 ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
+                    let status = completionStatuses[session.id] ?? .planned
+                    // Determine whether this completed card is expanded.
+                    let isExpanded = expandedCompletedIDs.contains(session.id)
+                    // Build the toggle closure only for completed sessions; nil suppresses the tap gesture.
+                    let toggleClosure: (() -> Void)? = {
+                        guard case .completed = status else { return nil }
+                        return {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                if expandedCompletedIDs.contains(session.id) {
+                                    expandedCompletedIDs.remove(session.id)
+                                } else {
+                                    expandedCompletedIDs.insert(session.id)
+                                }
+                            }
+                        }
+                    }()
+
                     HStack(spacing: 8) {
                         SessionCardView(
                             session: session,
@@ -212,10 +246,14 @@ struct HomeView: View {
                             template: workoutLibrary.template(for: session.templateId),
                             ftp: profileService.user?.ftp,
                             vma: profileService.user?.vma,
-                            css: profileService.user?.cssSecondsPer100m
+                            css: profileService.user?.cssSecondsPer100m,
+                            completionStatus: status,
+                            isExpanded: isExpanded,
+                            onToggleExpand: toggleClosure
                         )
 
-                        if isEditMode {
+                        // Edit mode: hide move arrows for completed sessions (they cannot be rescheduled).
+                        if isEditMode && !isCompleted(session.id) {
                             VStack(spacing: 12) {
                                 // Up: reorder within day first, then cross to previous day
                                 Button {
@@ -262,7 +300,7 @@ struct HomeView: View {
     }
 
     // MARK: - Empty State
-    
+
     /// Empty state when no plan is available.
     private var emptyStateView: some View {
         VStack(spacing: 16) {
@@ -281,27 +319,27 @@ struct HomeView: View {
         }
         .padding()
     }
-    
+
     // MARK: - Error View
-    
+
     /// Error state with retry button.
     private func errorView(errorMessage: String) -> some View {
         VStack(spacing: 24) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 60))
                 .foregroundColor(.red)
-            
+
             VStack(spacing: 8) {
                 Text("Failed to Load Plan")
                     .font(.title2)
                     .fontWeight(.bold)
-                
+
                 Text(errorMessage)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
-            
+
             Button(action: {
                 Task {
                     if let userId = authService.currentUserId {
@@ -321,7 +359,7 @@ struct HomeView: View {
         }
         .padding()
     }
-    
+
     // MARK: - "Show Next Week" CTA
 
     /// Button to progressively reveal more weeks.
@@ -412,6 +450,58 @@ struct HomeView: View {
         return workoutLibrary.swimDistance(for: session.templateId)
     }
 
+    // MARK: - Completion Status
+
+    /// Returns true when the session has a confirmed Strava match.
+    /// Used to suppress edit-mode move arrows on completed sessions.
+    private func isCompleted(_ sessionId: UUID) -> Bool {
+        if case .completed? = completionStatuses[sessionId] { return true }
+        return false
+    }
+
+    /// Fetches Strava activities for the visible date range and builds the completion status map.
+    ///
+    /// Early-exits if the user has not connected Strava — all sessions remain `.planned`.
+    /// Covers the full range of currently visible weeks so completion state is always accurate.
+    /// Existing statuses remain visible during fetch; overwritten on completion.
+    private func loadCompletionStatuses(plan: TrainingPlan) async {
+        // Only compute when Strava is connected — avoids unnecessary network calls.
+        guard profileService.user?.isStravaConnected == true else { return }
+
+        let currentWeekIndex = plan.currentWeekIndex()
+        let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex)
+        let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
+        let visibleWeeks = Array(plan.planWeeks[currentWeekIndex...endIndex])
+
+        let allDates = visibleWeeks.flatMap { plan.daysForWeek($0) }.map(\.date)
+        guard let fromDate = allDates.min(), let toDate = allDates.max() else { return }
+
+        // Pad ±1 day to handle UTC vs local timezone edge cases at date boundaries.
+        let paddedFrom = calendar.date(byAdding: .day, value: -1, to: fromDate)!
+        let paddedTo = calendar.date(byAdding: .day, value: 1, to: toDate)!
+
+        // Fetch activities covering the padded visible range.
+        let activities = await stravaService.fetchActivities(from: paddedFrom, to: paddedTo)
+
+        // Build (session, resolvedDate) tuples for all visible sessions.
+        var sessionTuples: [(session: PlanSession, date: Date)] = []
+        for week in visibleWeeks {
+            guard let weekStartDate = week.startDateAsDate else { continue }
+            let days = plan.daysForWeek(week)
+            for dayInfo in days {
+                for session in dayInfo.sessions {
+                    let resolvedDate = Weekday(fullName: session.day)
+                        .map { $0.date(relativeTo: weekStartDate) }
+                        ?? dayInfo.date
+                    sessionTuples.append((session: session, date: resolvedDate))
+                }
+            }
+        }
+
+        // Run the matching engine and publish results.
+        completionStatuses = SessionMatcher.match(sessions: sessionTuples, activities: activities)
+    }
+
     // MARK: - Edit Mode Actions
 
     /// Moves a session up: reorders within the same day first, then crosses to the previous day.
@@ -474,6 +564,7 @@ struct HomeView: View {
         authService: AuthService(),
         planService: PlanService(),
         profileService: ProfileService(),
+        stravaService: StravaService(),
         scrollReset: .constant(false)
     )
 }

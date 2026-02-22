@@ -61,6 +61,7 @@ struct MainTabView: View {
                     authService: authService,
                     planService: planService,
                     profileService: profileService,
+                    stravaService: stravaService,
                     scrollReset: $homeScrollReset
                 )
             }

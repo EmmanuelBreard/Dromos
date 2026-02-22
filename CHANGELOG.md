@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Session completion status** — Past sessions on the Home tab now show a green left border when completed (matched to a Strava activity) or a red border with dimming when missed. Future sessions remain unchanged. Completed sessions cannot be moved in edit mode. Status is computed client-side by matching plan sessions against synced Strava activities (same sport, same day, closest duration) (DRO-145)
 - **Strava integration** — Connect your Strava account to import activities. OAuth connection in Profile, auto-sync on app open, 90-day lookback on first sync. Activities synced with sport normalization (swim/bike/run) (DRO-139)
 - **Expandable sessions in Calendar Plan** — Tap any session in the Calendar tab to expand workout steps and intensity graph inline. Tap again to collapse. All sessions reset to collapsed when switching tabs (DRO-122)
 
@@ -18,6 +19,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Sex, age, and weight fields removed from onboarding, profile edit, and database (DRO-125)
 
 ### Database Migrations
+- `20260222_add_summary_polyline.sql` — Adds `summary_polyline TEXT` column to `strava_activities` for GPS route data from Strava (DRO-145)
 - `010_drop_demographic_columns.sql` — Drops `sex`, `birth_date`, `weight_kg` columns and `check_weight_kg` constraint from `public.users` (DRO-125)
 - **Plan generation loading screen** — Replaced rotating text phrases with a 3-step progress bar showing pipeline stages (Periodizing → Structuring → Selecting), capped at 90% until the real response arrives (DRO-110)
 - **Onboarding inputs replaced with wheel Pickers** — All numeric TextFields across onboarding screens 1-3 replaced with native iOS wheel pickers, eliminating the keyboard entirely. All metrics mandatory with sensible defaults (DRO-103)

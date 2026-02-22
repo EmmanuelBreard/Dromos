@@ -9,6 +9,7 @@ import SwiftUI
 
 /// Rich session card for the Home tab.
 /// Displays sport icon, workout name, duration, type tag, workout steps, and intensity graph.
+/// Renders visual completion state via a colored left border and optional dimming.
 struct SessionCardView: View {
     let session: PlanSession
     let swimDistance: Int?
@@ -16,13 +17,39 @@ struct SessionCardView: View {
     let ftp: Int?
     let vma: Double?
     let css: Int?
-    
+    /// Completion status drives visual treatment: green border (completed), red border + dim (missed), no change (planned).
+    var completionStatus: SessionCompletionStatus = .planned
+    /// Whether the expanded detail section (actual metrics + GPS map) is visible.
+    /// Only has an effect when `completionStatus` is `.completed`.
+    var isExpanded: Bool = false
+    /// Called when the user taps a completed card to toggle its expanded state.
+    /// Nil for non-completed cards — no tap gesture is attached in that case.
+    var onToggleExpand: (() -> Void)? = nil
+
     /// Shared workout library service for segment operations
     private let workoutLibrary = WorkoutLibraryService.shared
-    
+
+    // MARK: - Computed visual properties
+
+    /// Left border color: green for completed, red for missed, nil for planned (no border).
+    private var borderColor: Color? {
+        switch completionStatus {
+        case .completed: return .green
+        case .missed: return .red
+        case .planned: return nil
+        }
+    }
+
+    /// Content opacity: 0.5 for missed sessions to visually de-emphasize them.
+    private var contentOpacity: Double {
+        if case .missed = completionStatus { return 0.5 }
+        return 1.0
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Sport icon + name + duration + type badge
+            // Tap gesture scoped here (not card-level) so graph bar taps work independently.
             HStack(spacing: 12) {
                 // Sport emoji with colored background
                 Text(session.sportEmoji)
@@ -30,20 +57,20 @@ struct SessionCardView: View {
                     .frame(width: 40, height: 40)
                     .background(session.sportColor.opacity(0.15))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     // Workout name
                     Text(session.displayName)
                         .font(.headline)
-                    
+
                     // Duration
                     Text(session.formattedDuration)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 // Type tag chip (moved to top-right)
                 Text(session.type.uppercased())
                     .font(.caption)
@@ -53,6 +80,10 @@ struct SessionCardView: View {
                     .padding(.vertical, 5)
                     .background(session.typeColor.opacity(0.15))
                     .clipShape(Capsule())
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onToggleExpand?()
             }
             
             // Row 2: Brick indicator (if applicable)
@@ -110,23 +141,51 @@ struct SessionCardView: View {
                     Image(systemName: "ruler")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text("Est. Distance")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text(PlanSession.formatDistance(distance))
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
                 }
             }
+
+            // Row 6: Expanded actual performance section (completed sessions only)
+            // Shown when isExpanded == true and a matched Strava activity is available.
+            if case .completed(let activity) = completionStatus, isExpanded {
+                Divider()
+
+                Text("Actual Performance")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                ActualMetricsView(activity: activity)
+
+                // GPS map only when a non-empty encoded polyline is available
+                if let polyline = activity.summaryPolyline, !polyline.isEmpty {
+                    StravaRouteMapView(encodedPolyline: polyline)
+                }
+            }
         }
         .padding(16)
+        // NB: opacity before background intentionally dims content only, not the card fill.
+        .opacity(contentOpacity)
         .background(Color(.systemBackground))
+        // Left border overlay: a 4pt colored rectangle anchored to the leading edge.
+        // clipShape applied AFTER overlay so the border inherits the card's rounded corners.
+        .overlay(alignment: .leading) {
+            if let color = borderColor {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 4)
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
-    
+
 }
 
 // MARK: - Rest Day Card

@@ -1,6 +1,6 @@
 # Architecture Reference
 
-> Last updated: 2026-02-14
+> Last updated: 2026-02-22
 
 ## Folder Structure
 
@@ -19,6 +19,7 @@ Dromos/Dromos/
 │   │   ├── User.swift               # User profile + RaceObjective enum
 │   │   ├── WorkoutTemplate.swift     # WorkoutTemplate, WorkoutSegment, WorkoutLibrary, FlatSegment, StepSummary
 │   │   ├── StravaModels.swift        # StravaActivity, SyncResult (Equatable), SyncResponse
+│   │   ├── SessionCompletionStatus.swift # SessionCompletionStatus enum + SessionMatcher (client-side matching engine)
 │   │   └── OnboardingData.swift      # Per-screen onboarding structs
 │   └── Services/
 │       ├── SupabaseClient.swift      # Singleton client with snake_case encoder/decoder
@@ -32,8 +33,10 @@ Dromos/Dromos/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 6-screen onboarding flow
 │   ├── Home/                         # Multi-week rolling dashboard
-│   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today + edit mode (session reordering)
-│   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView
+│   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today + edit mode (session reordering) + completion status display
+│   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status; tappable expand for completed sessions
+│   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
+│   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering a GPS route from encoded polyline
 │   │   ├── WorkoutStepsView.swift    # Workout step list with intensity dots (Phase 2)
 │   │   ├── WorkoutGraphView.swift    # Interactive intensity bar chart with tap-to-reveal popovers (Phase 2-3)
 │   │   └── IntensityColorHelper.swift # Shared intensity color gradient function (Phase 2)
@@ -63,7 +66,7 @@ Authenticated + plan → MainTabView
 ```
 
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
-- Home (house icon) → `HomeView` (receives shared `profileService`)
+- Home (house icon) → `HomeView` (receives shared `profileService` + `stravaService`; fetches activities and manages per-session completion status)
 - Calendar (calendar icon) → `CalendarPlanView` (receives shared `profileService`)
 - Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`)
 
@@ -87,7 +90,9 @@ Authenticated + plan → MainTabView
 
 No `@EnvironmentObject` — dependencies are passed as parameters.
 
-**ProfileService ownership**: Created in `MainTabView` and shared between `HomeView` and `ProfileView`. Home tab uses it for athlete metrics (FTP, VMA, CSS) in session card workout details.
+**ProfileService ownership**: Created in `MainTabView` and shared between `HomeView` and `ProfileView`. Home tab uses it for athlete metrics (FTP, VMA, CSS) in session card workout details, and to gate Strava activity fetching (`isStravaConnected`).
+
+**StravaService + completion status**: `HomeView` receives `stravaService` from `MainTabView`. On appear and tab re-selection, it calls `loadCompletionStatuses(plan:)` which fetches activities for the visible date range and runs `SessionMatcher.match()` to compute `[UUID: SessionCompletionStatus]`. Completed session cards show a green left border; missed cards show a red border and 0.5 opacity dimming. Completed sessions suppress edit-mode move arrows.
 
 ---
 
@@ -172,6 +177,11 @@ All services follow:
 - Shows `WorkoutGraphView` for all sessions with a template
 - Passes sport + athlete metrics to graph for tap popover formatting
 - Swim exception: simple swims (1 segment, no repeats) → show distance only
+- **Phase 3 additions:**
+  - Accepts `isExpanded: Bool` and `onToggleExpand: (() -> Void)?` parameters
+  - When `.completed` and `isExpanded`: renders divider → "Actual Performance" header → `ActualMetricsView` → `StravaRouteMapView` (if polyline available)
+  - `.onTapGesture` + `.contentShape(Rectangle())` scoped to the header row (Row 1 HStack) only — avoids conflict with `WorkoutGraphView` per-bar tap gestures; safely no-ops when `onToggleExpand` is nil
+  - Animation controlled by caller (`HomeView`) via `withAnimation(.easeInOut(duration: 0.25))`
 
 ---
 
@@ -192,7 +202,9 @@ All services follow:
 
 ## Key Shared Components
 
-**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph
+**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph; tappable expand/collapse for completed sessions
+**ActualMetricsView** — Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
+**StravaRouteMapView** — Non-interactive MapKit view rendering a GPS route from encoded polyline (iOS 17+); includes static `decodePolyline(_:)` for Google-encoded polyline format
 **WorkoutStepsView** — Workout step list with intensity-colored dots (Phase 2)
 **WorkoutGraphView** — Interactive horizontal intensity bar chart with tap-to-reveal popovers (Phase 2-3)
 **RestDayCardView** — Bed icon + "Rest Day" label
