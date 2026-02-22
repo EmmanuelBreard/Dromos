@@ -22,4 +22,11 @@ enum Configuration {
     static var supabaseAnonKey: String {
         Secrets.supabaseAnonKey
     }
+
+    // MARK: - Strava
+
+    /// Strava application client ID (public, safe for client-side use)
+    static var stravaClientId: String {
+        Secrets.stravaClientId
+    }
 }
