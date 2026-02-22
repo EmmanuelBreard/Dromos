@@ -46,7 +46,6 @@ struct SessionCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Sport icon + name + duration + type badge
-            // Tap gesture scoped here (not card-level) so graph bar taps work independently.
             HStack(spacing: 12) {
                 // Sport emoji with colored background
                 Text(session.sportEmoji)
