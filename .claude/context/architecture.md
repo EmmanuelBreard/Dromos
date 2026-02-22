@@ -34,7 +34,9 @@ Dromos/Dromos/
 │   ├── Onboarding/                   # 6-screen onboarding flow
 │   ├── Home/                         # Multi-week rolling dashboard
 │   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today + edit mode (session reordering) + completion status display
-│   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status
+│   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status; tappable expand for completed sessions
+│   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
+│   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering a GPS route from encoded polyline
 │   │   ├── WorkoutStepsView.swift    # Workout step list with intensity dots (Phase 2)
 │   │   ├── WorkoutGraphView.swift    # Interactive intensity bar chart with tap-to-reveal popovers (Phase 2-3)
 │   │   └── IntensityColorHelper.swift # Shared intensity color gradient function (Phase 2)
@@ -175,6 +177,11 @@ All services follow:
 - Shows `WorkoutGraphView` for all sessions with a template
 - Passes sport + athlete metrics to graph for tap popover formatting
 - Swim exception: simple swims (1 segment, no repeats) → show distance only
+- **Phase 3 additions:**
+  - Accepts `isExpanded: Bool` and `onToggleExpand: (() -> Void)?` parameters
+  - When `.completed` and `isExpanded`: renders divider → "Actual Performance" header → `ActualMetricsView` → `StravaRouteMapView` (if polyline available)
+  - `.onTapGesture` attached unconditionally but only activates when `onToggleExpand` is non-nil (completed sessions only)
+  - Animation controlled by caller (`HomeView`) via `withAnimation(.easeInOut(duration: 0.25))`
 
 ---
 
@@ -195,7 +202,9 @@ All services follow:
 
 ## Key Shared Components
 
-**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph
+**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph; tappable expand/collapse for completed sessions
+**ActualMetricsView** — Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
+**StravaRouteMapView** — Non-interactive MapKit view rendering a GPS route from encoded polyline (iOS 17+); includes static `decodePolyline(_:)` for Google-encoded polyline format
 **WorkoutStepsView** — Workout step list with intensity-colored dots (Phase 2)
 **WorkoutGraphView** — Interactive horizontal intensity bar chart with tap-to-reveal popovers (Phase 2-3)
 **RestDayCardView** — Bed icon + "Rest Day" label

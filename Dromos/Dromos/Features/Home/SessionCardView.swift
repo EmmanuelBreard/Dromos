@@ -19,6 +19,12 @@ struct SessionCardView: View {
     let css: Int?
     /// Completion status drives visual treatment: green border (completed), red border + dim (missed), no change (planned).
     var completionStatus: SessionCompletionStatus = .planned
+    /// Whether the expanded detail section (actual metrics + GPS map) is visible.
+    /// Only has an effect when `completionStatus` is `.completed`.
+    var isExpanded: Bool = false
+    /// Called when the user taps a completed card to toggle its expanded state.
+    /// Nil for non-completed cards — no tap gesture is attached in that case.
+    var onToggleExpand: (() -> Void)? = nil
 
     /// Shared workout library service for segment operations
     private let workoutLibrary = WorkoutLibraryService.shared
@@ -130,15 +136,32 @@ struct SessionCardView: View {
                     Image(systemName: "ruler")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text("Est. Distance")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text(PlanSession.formatDistance(distance))
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
+                }
+            }
+
+            // Row 6: Expanded actual performance section (completed sessions only)
+            // Shown when isExpanded == true and a matched Strava activity is available.
+            if case .completed(let activity) = completionStatus, isExpanded {
+                Divider()
+
+                Text("Actual Performance")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                ActualMetricsView(activity: activity)
+
+                // GPS map only when a non-empty encoded polyline is available
+                if let polyline = activity.summaryPolyline, !polyline.isEmpty {
+                    StravaRouteMapView(encodedPolyline: polyline)
                 }
             }
         }
@@ -156,6 +179,11 @@ struct SessionCardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        // Tap gesture for expand/collapse — only wired for completed sessions.
+        // `onToggleExpand` is nil for planned/missed cards so no gesture is registered.
+        .onTapGesture {
+            onToggleExpand?()
+        }
     }
 
 }

@@ -223,18 +223,34 @@ struct HomeView: View {
 
                 ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
                     let status = completionStatuses[session.id] ?? .planned
+                    // Determine whether this completed card is expanded.
+                    let isExpanded = expandedCompletedIDs.contains(session.id)
+                    // Build the toggle closure only for completed sessions; nil suppresses the tap gesture.
+                    let toggleClosure: (() -> Void)? = {
+                        guard case .completed = status else { return nil }
+                        return {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                if expandedCompletedIDs.contains(session.id) {
+                                    expandedCompletedIDs.remove(session.id)
+                                } else {
+                                    expandedCompletedIDs.insert(session.id)
+                                }
+                            }
+                        }
+                    }()
 
                     HStack(spacing: 8) {
-                        let card = SessionCardView(
+                        SessionCardView(
                             session: session,
                             swimDistance: swimDistance(for: session),
                             template: workoutLibrary.template(for: session.templateId),
                             ftp: profileService.user?.ftp,
                             vma: profileService.user?.vma,
                             css: profileService.user?.cssSecondsPer100m,
-                            completionStatus: status
+                            completionStatus: status,
+                            isExpanded: isExpanded,
+                            onToggleExpand: toggleClosure
                         )
-                        card  // render directly for all statuses
 
                         // Edit mode: hide move arrows for completed sessions (they cannot be rescheduled).
                         if isEditMode && !isCompleted(session.id) {
