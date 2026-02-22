@@ -285,9 +285,9 @@ struct TrainingPlan: Codable, Identifiable {
         // Find week containing today
         for (index, week) in planWeeks.enumerated() {
             guard let weekStart = week.startDateAsDate else { continue }
-            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+            let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart
 
-            if today >= weekStart && today <= weekEnd {
+            if today >= weekStart && today < nextWeekStart {
                 return index
             }
         }
