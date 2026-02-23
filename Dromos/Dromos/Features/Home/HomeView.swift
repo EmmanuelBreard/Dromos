@@ -148,6 +148,12 @@ struct HomeView: View {
             .onChange(of: lastVisibleWeekIndex) { _, _ in
                 Task { await loadCompletionStatuses(plan: plan) }
             }
+            .onChange(of: stravaService.isSyncing) { oldValue, newValue in
+                // Re-run matching after a Strava sync completes so newly synced activities are reflected.
+                if oldValue && !newValue {
+                    Task { await loadCompletionStatuses(plan: plan) }
+                }
+            }
         }
     }
 
@@ -448,7 +454,8 @@ struct HomeView: View {
         let currentWeekIndex = plan.currentWeekIndex()
         let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex)
         let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
-        let visibleWeeks = Array(plan.planWeeks[currentWeekIndex...endIndex])
+        // Start from week 0 so past weeks also get completion statuses (completed/missed).
+        let visibleWeeks = Array(plan.planWeeks[0...endIndex])
 
         let allDates = visibleWeeks.flatMap { plan.daysForWeek($0) }.map(\.date)
         guard let fromDate = allDates.min(), let toDate = allDates.max() else { return }
