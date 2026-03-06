@@ -23,6 +23,9 @@ struct SessionCardView: View {
     /// Controls visibility of the planned workout disclosure (completed cards only).
     @State private var showPlannedWorkout = false
 
+    /// Controls visibility of the coach feedback disclosure (completed cards only).
+    @State private var showFeedback = true
+
     /// Shared workout library service for segment operations
     private let workoutLibrary = WorkoutLibraryService.shared
 
@@ -111,6 +114,34 @@ struct SessionCardView: View {
                 // GPS map when a non-empty encoded polyline is available
                 if let polyline = activity.summaryPolyline, !polyline.isEmpty {
                     StravaRouteMapView(encodedPolyline: polyline)
+                }
+
+                // Coach feedback disclosure — only when feedback exists
+                if let feedback = session.feedback {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showFeedback.toggle()
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "lightbulb.fill")
+                                .font(.caption)
+                            Text("Coach feedback")
+                                .font(.subheadline)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .rotationEffect(.degrees(showFeedback ? 90 : 0))
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+
+                    if showFeedback {
+                        Text(feedback)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 // "Planned workout" disclosure — only when a template exists
