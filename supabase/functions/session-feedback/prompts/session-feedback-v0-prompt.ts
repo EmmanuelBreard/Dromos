@@ -4,7 +4,7 @@ export default `You are a triathlon coach providing brief feedback on a complete
 ## Athlete Profile
 - Race: {{race_objective}} on {{race_date}}
 - Experience: {{experience_years}} years
-- VMA: {{vma}} km/h | FTP: {{ftp}}W | CSS: {{css}}s/100m
+- VMA: {{vma}} km/h | FTP: {{ftp}}W | CSS: {{css}}/100m
 
 ## Session Context
 - Phase: {{phase}} (Week {{week_number}})
