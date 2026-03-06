@@ -146,6 +146,8 @@ function formatWeekSessions(
       const sessionDate = new Date(weekStart);
       sessionDate.setUTCDate(sessionDate.getUTCDate() + offset);
 
+      // V0 limitation: comparison uses UTC — may mis-label sessions near
+      // midnight in the athlete's local timezone. Acceptable for prompt context.
       let status: string;
       if (s.feedback != null) {
         status = "[completed]";
@@ -222,62 +224,53 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Missing required field: strava_activity_id" }, 400);
     }
 
-    // 6. Idempotency check — if feedback already exists, skip
-    const { data: existingSession, error: idempotencyError } = await db
+    // 6. Fetch plan session with joins (also serves as idempotency check)
+    const { data: sessionData, error: sessionFetchError } = await db
       .from("plan_sessions")
-      .select("feedback")
+      .select(
+        "id, day, sport, type, duration_minutes, feedback, order_in_day, week_id, " +
+        "plan_weeks!inner(id, phase, is_recovery, week_number, start_date, plan_id, " +
+        "training_plans!inner(user_id))"
+      )
       .eq("id", planSessionId)
       .single();
 
-    if (idempotencyError) {
-      console.error("Idempotency check error:", idempotencyError.message);
+    if (sessionFetchError || !sessionData) {
+      console.error("Session fetch error:", sessionFetchError?.message);
       return jsonResponse({ error: "Session not found" }, 404);
     }
 
-    if (existingSession.feedback != null) {
+    const session = sessionData as unknown as PlanSessionRow;
+
+    // Idempotency: if feedback already exists, skip
+    if (session.feedback != null) {
       return jsonResponse({ skipped: true });
     }
 
-    // 7. Fetch context in parallel
-    const [sessionResult, activityResult, profileResult, weekSessionsResult] = await Promise.all([
-      // a) Plan session + week context (with ownership info via training_plans)
-      db
-        .from("plan_sessions")
-        .select(
-          "id, day, sport, type, duration_minutes, feedback, order_in_day, week_id, " +
-          "plan_weeks!inner(id, phase, is_recovery, week_number, start_date, plan_id, " +
-          "training_plans!inner(user_id))"
-        )
-        .eq("id", planSessionId)
-        .single(),
+    // 7. Fetch remaining context in parallel (activity, profile, week sessions)
+    const weekId = session.plan_weeks.id;
 
-      // b) Strava activity
+    const [activityResult, profileResult, weekSessionsResult] = await Promise.all([
+      // a) Strava activity
       db
         .from("strava_activities")
         .select("id, user_id, normalized_sport, moving_time, distance, average_speed, average_heartrate, average_watts")
         .eq("id", stravaActivityId)
         .single(),
 
-      // c) User profile
+      // b) User profile
       db
         .from("users")
         .select("race_objective, race_date, experience_years, vma, css_seconds_per100m, ftp")
         .eq("id", userId)
         .single(),
 
-      // d) All week sessions — we need week_id first, but we can fetch by planSessionId's week
-      // We'll re-fetch after we have the session data. For now, use a subquery approach:
-      // Actually, we don't know week_id yet. We'll fetch this after getting session data.
-      Promise.resolve(null),
+      // c) All sessions in this week
+      db
+        .from("plan_sessions")
+        .select("id, day, sport, type, duration_minutes, feedback, order_in_day")
+        .eq("week_id", weekId),
     ]);
-
-    // Validate session fetch
-    if (sessionResult.error || !sessionResult.data) {
-      console.error("Session fetch error:", sessionResult.error?.message);
-      return jsonResponse({ error: "Session not found" }, 404);
-    }
-
-    const session = sessionResult.data as unknown as PlanSessionRow;
 
     // Validate activity fetch
     if (activityResult.error || !activityResult.data) {
@@ -302,19 +295,13 @@ Deno.serve(async (req) => {
     }
     const profile = profileResult.data as UserProfileRow | null;
 
-    // 9. Fetch all week sessions (now that we have week_id)
-    const weekId = session.plan_weeks.id;
-    const { data: weekSessionsData, error: weekSessionsError } = await db
-      .from("plan_sessions")
-      .select("id, day, sport, type, duration_minutes, feedback, order_in_day")
-      .eq("week_id", weekId);
-
-    if (weekSessionsError) {
-      console.error("Week sessions fetch warning:", weekSessionsError.message);
+    // Non-critical: log week sessions errors but continue
+    if (weekSessionsResult.error) {
+      console.error("Week sessions fetch warning:", weekSessionsResult.error.message);
     }
-    const weekSessions = (weekSessionsData as WeekSessionRow[] | null) ?? [];
+    const weekSessions = (weekSessionsResult.data as WeekSessionRow[] | null) ?? [];
 
-    // 10. Build the rendered prompt
+    // 9. Build the rendered prompt
     const weekStartDate = session.plan_weeks.start_date;
     const today = new Date();
 
@@ -322,7 +309,7 @@ Deno.serve(async (req) => {
     let cssFormatted = "N/A";
     if (profile?.css_seconds_per100m != null) {
       const cssMin = Math.floor(profile.css_seconds_per100m / 60);
-      const cssSec = profile.css_seconds_per100m % 60;
+      const cssSec = Math.round(profile.css_seconds_per100m % 60);
       cssFormatted = `${cssMin}:${String(cssSec).padStart(2, "0")}`;
     }
 
@@ -352,7 +339,7 @@ Deno.serve(async (req) => {
       .replace("{{formatted_pace}}", formattedPace)
       .replace("{{avg_watts}}", avgWatts);
 
-    // 11. Call OpenAI
+    // 10. Call OpenAI
     const openai = new OpenAI({ apiKey: openaiApiKey });
     let completion;
     try {
@@ -360,7 +347,10 @@ Deno.serve(async (req) => {
         model: "gpt-4o-mini",
         temperature: 0.7,
         max_tokens: 256,
-        messages: [{ role: "system", content: renderedPrompt }],
+        messages: [
+          { role: "system", content: renderedPrompt },
+          { role: "user", content: "Please provide feedback for this session." },
+        ],
       });
     } catch (err) {
       console.error("OpenAI error:", err instanceof Error ? err.message : String(err));
@@ -374,7 +364,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "AI returned an empty response. Please try again." }, 502);
     }
 
-    // 12. Write feedback to DB
+    // 11. Write feedback to DB
     const { error: updateError } = await db
       .from("plan_sessions")
       .update({
@@ -388,7 +378,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Failed to save feedback" }, 500);
     }
 
-    // 13. Return feedback
+    // 12. Return feedback
     return jsonResponse({ feedback: feedbackText });
   } catch (err) {
     console.error(
