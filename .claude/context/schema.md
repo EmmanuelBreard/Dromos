@@ -109,6 +109,8 @@ Individual training sessions within a week.
 | `is_brick` | BOOLEAN | NOT NULL, DEFAULT FALSE | |
 | `notes` | TEXT | | |
 | `order_in_day` | INT | NOT NULL, DEFAULT 0 | |
+| `feedback` | TEXT | | AI-generated coaching commentary |
+| `matched_activity_id` | UUID | FK → `strava_activities(id)` | Persists the Strava match for feedback |
 
 **RLS:** SELECT own sessions (via join to `plan_weeks` → `training_plans`). No direct UPDATE — all writes go through `reorder_sessions` RPC.
 
