@@ -308,7 +308,9 @@ struct RaceDayCardView: View {
         durationMinutes: 60,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock template using convenience initializer
@@ -358,7 +360,9 @@ struct RaceDayCardView: View {
         durationMinutes: 40,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock template using convenience initializer
@@ -408,7 +412,9 @@ struct RaceDayCardView: View {
         durationMinutes: 45,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock complex swim template (intervals with different paces)
@@ -475,7 +481,9 @@ struct RaceDayCardView: View {
         durationMinutes: 45,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock simple swim template (1 segment) using convenience initializer
@@ -513,7 +521,9 @@ struct RaceDayCardView: View {
         durationMinutes: 180,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock long ride template
@@ -563,7 +573,9 @@ struct RaceDayCardView: View {
         durationMinutes: 60,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock template using convenience initializer
