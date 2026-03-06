@@ -23,6 +23,9 @@ struct SessionCardView: View {
     /// Controls visibility of the planned workout disclosure (completed cards only).
     @State private var showPlannedWorkout = false
 
+    /// Controls whether coach feedback text is fully expanded (default: collapsed to 2 lines).
+    @State private var showFeedback = false
+
     /// Shared workout library service for segment operations
     private let workoutLibrary = WorkoutLibraryService.shared
 
@@ -111,6 +114,36 @@ struct SessionCardView: View {
                 // GPS map when a non-empty encoded polyline is available
                 if let polyline = activity.summaryPolyline, !polyline.isEmpty {
                     StravaRouteMapView(encodedPolyline: polyline)
+                }
+
+                // Coach feedback — always visible when present, truncated to 2 lines by default
+                if let feedback = session.feedback {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "message.fill")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Text("Coach feedback")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Text(feedback)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(showFeedback ? nil : 2)
+
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showFeedback.toggle()
+                            }
+                        } label: {
+                            Text(showFeedback ? "Show less" : "Show more")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 // "Planned workout" disclosure — only when a template exists
@@ -277,7 +310,9 @@ struct RaceDayCardView: View {
         durationMinutes: 60,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock template using convenience initializer
@@ -304,7 +339,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, workSegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,
@@ -327,7 +362,9 @@ struct RaceDayCardView: View {
         durationMinutes: 40,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock template using convenience initializer
@@ -354,7 +391,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, tempoSegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,
@@ -377,7 +414,9 @@ struct RaceDayCardView: View {
         durationMinutes: 45,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock complex swim template (intervals with different paces)
@@ -421,7 +460,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, repeatBlock, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: 1000,
         template: template,
@@ -444,7 +483,9 @@ struct RaceDayCardView: View {
         durationMinutes: 45,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock simple swim template (1 segment) using convenience initializer
@@ -459,7 +500,7 @@ struct RaceDayCardView: View {
         segments: [swimSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: 1800,
         template: template,
@@ -482,7 +523,9 @@ struct RaceDayCardView: View {
         durationMinutes: 180,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock long ride template
@@ -509,7 +552,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, steadySegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,
@@ -532,7 +575,9 @@ struct RaceDayCardView: View {
         durationMinutes: 60,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
     
     // Mock template using convenience initializer
@@ -559,7 +604,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, workSegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,

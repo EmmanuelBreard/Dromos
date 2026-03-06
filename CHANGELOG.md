@@ -17,6 +17,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Expandable sessions in Calendar Plan** — Tap any session in the Calendar tab to expand workout steps and intensity graph inline. Tap again to collapse. All sessions reset to collapsed when switching tabs (DRO-122)
 
 ### Changed
+- **Swim distance in session header** — Planned swim sessions now show estimated distance inline with duration (e.g., "45 min · 1.8 km") instead of a separate line. Works for all swim workout types including intervals (DRO-157)
 - **Redesigned login and sign-up screens** — New mobile-friendly auth UI with large typography, icon-prefixed input fields, custom full-width buttons, and brand-colored accent links. Content vertically centered (DRO-126)
 - **Lighter onboarding** — Removed the demographics screen (sex, age, weight) from onboarding, reducing the flow from 7 screens to 6. Race Goals is now the first screen (DRO-125)
 

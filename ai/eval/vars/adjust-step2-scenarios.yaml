@@ -1,0 +1,249 @@
+# Step 2 Coaching Brain — Test Scenarios
+#
+# Category C: Local Adjustments (volume ceiling, full stop, never double up, phase awareness)
+# Category D: Structural / Cascading (recovery week conflict, long injury, peak illness, travel equipment)
+# Category E: Context Continuity (recovery from injury, repeated fatigue)
+#
+# All scenarios use Alex Beginner Olympic plan (19 weeks, 6.5h/week).
+# Plan: Base W1-W8 (W4/W8 recovery), Build W9-W14 (W12 recovery),
+#        Peak W15-W17 (W17 recovery), Taper W18-W19, Race 2026-06-28
+
+# ──────────────────────────────────────────────
+# Category C: Local Adjustments
+# ──────────────────────────────────────────────
+
+- id: C1_volume_ceiling
+  constraint_summary:
+    type: equipment
+    affected_sports: [bike]
+    available_sports: [swim, run]
+    duration: "2 weeks"
+    severity: moderate
+    details: "Bike in the shop for repairs. Can swim and run."
+    phase_impact: local
+  current_week: 10
+  # W10 — Build: Total 6h | Swim 90min | Bike 150min | Run 120min
+  # Swim: Tempo 45min, Easy 45min
+  # Bike: Intervals 45min, Easy 90min
+  # Run: Tempo 30min, Easy 75min
+  validation:
+    - check: volume_ceiling_respected
+      description: "Run additional ≤ 15% of 120min (≤ 18min)"
+    - check: volume_ceiling_respected
+      description: "Swim additional ≤ 15% of 90min (≤ 13min)"
+    - check: bike_sessions_removed
+      description: "All bike sessions removed for affected weeks"
+    - check: deficit_accepted
+      description: "Total volume drops — not fully redistributed to swim/run"
+  notes: "Volume ceiling is the key rule. Must NOT dump 150min bike onto run/swim."
+
+- id: C2_illness_full_stop
+  constraint_summary:
+    type: illness
+    severity: severe
+    details: "Fever 39°C, chest congestion, below neck symptoms"
+    phase_impact: structural
+  current_week: 11
+  # W11 — Build: Total 6.5h | Swim 90min | Bike 150min | Run 150min
+  validation:
+    - check: all_sessions_removed
+      description: "ALL sessions removed for current week"
+    - check: no_substitution
+      description: "No sessions added as substitute"
+    - check: ramp_back_mentioned
+      description: "Macro diff includes ramp-back protocol for return"
+    - check: next_week_reduced
+      description: "Next week sessions removed or reduced"
+  notes: "Below-neck illness = zero training. No substitution. Must include ramp-back."
+
+- id: C3_no_double_up
+  constraint_summary:
+    type: fatigue
+    severity: moderate
+    details: "Family emergency caused extreme stress. All sessions this week were missed — the week is over. Athlete is asking about next week."
+    phase_impact: local
+  current_week: 11
+  # W10 sessions were missed (already past)
+  # W11 is the current/next loading week — must NOT add W10's missed sessions
+  validation:
+    - check: no_double_up
+      description: "Does NOT add W10's missed sessions to W11"
+    - check: skip_and_move_on
+      description: "Macro diff explicitly says to skip/move on, not catch up"
+  notes: "Never double up rule — Friel's principle. Missed = gone."
+
+- id: C4_phase_awareness_build_fatigue
+  constraint_summary:
+    type: fatigue
+    severity: moderate
+    details: "Exhausted all week, legs like lead, poor sleep quality"
+    phase_impact: local
+  current_week: 13
+  # W13 — Build: Total 6.5h | Swim 90min | Bike 150min | Run 150min
+  # Swim: Intervals 45min, Easy 45min
+  # Bike: Tempo 60min, Easy 90min
+  # Run: Intervals 30min, Easy 90min
+  validation:
+    - check: keeps_one_quality_session
+      description: "Keeps exactly 1 quality session (the most phase-relevant one)"
+    - check: converts_other_quality
+      description: "Converts other quality sessions (Intervals/Tempo) to Easy"
+    - check: volume_reduced
+      description: "Volume reduced roughly 20-30%"
+  notes: "Build phase fatigue: protect 1 quality session, convert rest to Easy"
+
+# ──────────────────────────────────────────────
+# Category D: Structural / Cascading
+# ──────────────────────────────────────────────
+
+- id: D1_fatigue_before_recovery_week
+  constraint_summary:
+    type: fatigue
+    severity: moderate
+    details: "Exhausted, everything feels hard, accumulated over the week"
+    phase_impact: structural
+  current_week: 11
+  # W11 — Build (loading): Total 6.5h
+  # W12 — Build (recovery): Total 4.5h
+  # W13 — Build (loading): Total 6.5h
+  # W14 — Build (loading): Total 6.5h
+  validation:
+    - check: current_week_reduced
+      description: "Current week (W11) reduced — easy + shorter sessions"
+    - check: no_back_to_back_easy
+      description: "Must NOT have two consecutive easy/recovery weeks (W11 reduced + W12 recovery)"
+    - check: recovery_repositioned
+      description: "Recovery week (W12) pushed to W13 or current week absorbs the recovery function"
+    - check: reasoning_explains_cascade
+      description: "Reasoning explains why recovery was moved/merged"
+  notes: "KEY SCENARIO: fatigue + next week is recovery = must cascade to avoid 2 easy weeks back-to-back"
+
+- id: D2_long_injury_compress_build
+  constraint_summary:
+    type: injury
+    affected_sports: [run]
+    available_sports: [swim, bike]
+    duration: "3 weeks"
+    severity: moderate
+    details: "Shin splints, can't run. Biking and swimming pain-free."
+    phase_impact: structural
+  current_week: 13
+  # W13 — Build: Run Intervals 30min, Easy 90min (150min run)
+  # W14 — Build: Run Intervals 30min, Easy 90min (150min run)
+  # W15 — Peak: Run Race-pace 30min, Easy 90min (150min run)
+  # W16 — Peak
+  # W17 — Peak (recovery)
+  # W18-W19 — Taper
+  validation:
+    - check: run_removed_affected_weeks
+      description: "Removes run sessions for weeks 13-15"
+    - check: substitution_within_ceiling
+      description: "Substitutes within volume ceiling (swim/bike ≤ +15%)"
+    - check: taper_preserved
+      description: "Does NOT shift taper/race timing"
+    - check: ramp_back_included
+      description: "Includes run ramp-back protocol starting around week 16"
+    - check: deficit_accepted
+      description: "Accepts fitness deficit, does not try to cram"
+  notes: "3-week injury during Build→Peak — must protect Taper timing, accept fitness deficit"
+
+- id: D3_peak_illness
+  constraint_summary:
+    type: illness
+    severity: severe
+    details: "Fever 38.2, body aches. Race in ~12 days."
+    phase_impact: structural
+  current_week: 16
+  # W16 — Peak: Total 6.5h
+  # W17 — Peak (recovery): Total 4.5h
+  # W18 — Taper: Total 4h
+  # W19 — Taper: Total 3h
+  # Race: 2026-06-28
+  validation:
+    - check: full_stop_current_week
+      description: "Full stop on all training this week"
+    - check: taper_merge
+      description: "Mentions merging into taper or extended taper"
+    - check: health_over_fitness
+      description: "Mentions 'arriving healthy > arriving sharp' or equivalent principle"
+    - check: no_intensity_before_race
+      description: "No intensity sessions in remaining plan — Z1 only"
+  notes: "Peak + severe illness 12 days from race = merge into taper. Race goal may need adjustment."
+
+- id: D4_equipment_travel
+  constraint_summary:
+    type: equipment
+    affected_sports: [swim]
+    available_sports: [run, bike]
+    duration: "March 16-22"
+    details: "Traveling. Hotel gym: treadmill + spin bike, no pool."
+    phase_impact: local
+  current_week: 5
+  # W5 — Base (2026-03-16): Total 4.5h | Swim 80min | Bike 105min | Run 90min
+  # Swim: Easy 40min, Easy 40min
+  # Bike: Tempo 30min, Easy 75min
+  # Run: Easy 30min, Easy 60min
+  validation:
+    - check: swim_removed
+      description: "Removes swim sessions for Week 5 only"
+    - check: substitution_within_ceiling
+      description: "Any substitution within volume ceiling"
+    - check: no_ramp_back
+      description: "Swim resumes immediately after return (no ramp-back — equipment, not injury)"
+    - check: equipment_acknowledged
+      description: "Accounts for available equipment (treadmill + spin bike)"
+  notes: "Equipment-based constraint — clean substitution, no cascading, no ramp-back needed"
+
+# ──────────────────────────────────────────────
+# Category E: Context Continuity
+# ──────────────────────────────────────────────
+
+- id: E1_context_recovery_from_injury
+  constraint_summary:
+    type: injury
+    affected_sports: []
+    available_sports: [swim, bike, run]
+    severity: mild
+    details: "Knee is better now, ready to resume running"
+    phase_impact: local
+  current_week: 11
+  chat_history:
+    - role: user
+      content: "My knee has been hurting, can't run"
+      created_at: "2026-04-15"
+    - role: assistant
+      content: "Got it — I've removed your run sessions for this week and next. Keeping swim and bike unchanged. When your knee improves, let me know and I'll ramp running back in gradually."
+      created_at: "2026-04-15"
+  validation:
+    - check: ramp_back_applied
+      description: "Reintroduces running with ramp-back (not at full volume)"
+    - check: ramp_back_starts_low
+      description: "Run ramp-back starts at <20min Z1"
+    - check: references_previous
+      description: "References the previous knee conversation or context"
+  notes: "Tests chat history context — AI must know about the previous injury and apply ramp-back"
+
+- id: E2_repeated_fatigue
+  constraint_summary:
+    type: fatigue
+    severity: moderate
+    details: "Still tired. Last week's volume reduction didn't help."
+    phase_impact: structural
+  current_week: 14
+  chat_history:
+    - role: user
+      content: "I'm exhausted all week"
+      created_at: "2026-05-13"
+    - role: assistant
+      content: "I hear you — I've reduced your volume by 25% this week, keeping your threshold bike as the one quality session. Everything else is easy. Let me know how you feel next week."
+      created_at: "2026-05-13"
+  validation:
+    - check: more_aggressive_than_first
+      description: "More aggressive reduction than previous (25% wasn't enough)"
+    - check: consider_full_recovery
+      description: "May convert current week to full recovery"
+    - check: references_previous
+      description: "References previous fatigue conversation"
+    - check: root_cause_flag
+      description: "Mentions investigating root cause (overtraining, sleep, life stress)"
+  notes: "Recurring fatigue — AI must escalate response, not repeat same reduction"
