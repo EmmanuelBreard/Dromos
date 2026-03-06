@@ -345,7 +345,7 @@ Deno.serve(async (req) => {
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1",
         temperature: 0.7,
         max_tokens: 150,
         messages: [
