@@ -146,6 +146,26 @@ final class StravaService: ObservableObject {
         }
     }
 
+    // MARK: - Session Feedback
+
+    /// Calls the `session-feedback` Edge Function to generate AI coaching feedback.
+    /// Returns the feedback text on success, nil on failure (silently — retry on next sync).
+    func generateSessionFeedback(sessionId: UUID, activityId: UUID) async -> String? {
+        do {
+            let response: FeedbackResponse = try await client.functions.invoke(
+                "session-feedback",
+                options: FunctionInvokeOptions(body: [
+                    "plan_session_id": sessionId.uuidString,
+                    "strava_activity_id": activityId.uuidString,
+                ])
+            )
+            return response.feedback
+        } catch {
+            print("Session feedback error: \(error)")
+            return nil
+        }
+    }
+
     // MARK: - Fetch Activities from DB
 
     /// Fetches Strava activities from the `strava_activities` table.

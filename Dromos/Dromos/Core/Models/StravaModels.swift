@@ -66,3 +66,12 @@ struct SyncResponse: Decodable {
         )
     }
 }
+
+// MARK: - Feedback Response
+
+/// Response from the `session-feedback` Edge Function.
+/// Uses explicit CodingKeys because Edge Function responses bypass the PostgREST snake_case decoder.
+struct FeedbackResponse: Decodable {
+    let feedback: String?
+    let skipped: Bool?
+}

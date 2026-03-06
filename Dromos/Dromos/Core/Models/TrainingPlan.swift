@@ -117,6 +117,8 @@ struct PlanSession: Codable, Identifiable {
     let isBrick: Bool
     let notes: String?
     var orderInDay: Int
+    let feedback: String?
+    let matchedActivityId: UUID?
 
     // MARK: - Computed Properties
 
