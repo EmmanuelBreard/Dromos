@@ -120,11 +120,11 @@ struct SessionCardView: View {
                 if let feedback = session.feedback {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 4) {
-                            Image(systemName: "lightbulb.fill")
-                                .font(.caption)
-                                .foregroundColor(.yellow)
+                            Image(systemName: "message.fill")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                             Text("Coach feedback")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
 
@@ -133,18 +133,16 @@ struct SessionCardView: View {
                             .foregroundColor(.secondary)
                             .lineLimit(showFeedback ? nil : 2)
 
-                        if !showFeedback {
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showFeedback = true
-                                }
-                            } label: {
-                                Text("Show more")
-                                    .font(.caption)
-                                    .foregroundColor(.accentColor)
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showFeedback.toggle()
                             }
-                            .buttonStyle(.plain)
+                        } label: {
+                            Text(showFeedback ? "Show less" : "Show more")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
 
