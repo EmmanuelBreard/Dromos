@@ -59,10 +59,16 @@ struct SessionCardView: View {
                     Text(session.displayName)
                         .font(.headline)
 
-                    // Duration
-                    Text(session.formattedDuration)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    // Duration (+ swim distance when available)
+                    if session.sport.lowercased() == "swim", let distance = swimDistance, distance > 0 {
+                        Text("\(session.formattedDuration) · \(PlanSession.formatDistance(distance))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(session.formattedDuration)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 Spacer()
@@ -190,23 +196,6 @@ struct SessionCardView: View {
             }
         }
 
-        // Swim distance (only for simple swims without steps/graph)
-        if session.sport.lowercased() == "swim",
-           let distance = swimDistance,
-           template.map({ session.shouldShowWorkoutSteps(template: $0) }) != true {
-            HStack(spacing: 6) {
-                Image(systemName: "ruler")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text("Est. Distance")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text(PlanSession.formatDistance(distance))
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-            }
-        }
     }
 
 }
