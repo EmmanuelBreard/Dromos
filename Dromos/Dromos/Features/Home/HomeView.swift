@@ -137,6 +137,7 @@ struct HomeView: View {
                 lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
                 scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
                 await loadCompletionStatuses(plan: plan)
+                await generatePendingFeedback(plan: plan)
             }
             .onChange(of: scrollReset) { _, _ in
                 // Tab re-selection: reset weeks and scroll to today (matching first-load behavior).
@@ -151,7 +152,10 @@ struct HomeView: View {
             .onChange(of: stravaService.isSyncing) { oldValue, newValue in
                 // Re-run matching after a Strava sync completes so newly synced activities are reflected.
                 if oldValue && !newValue {
-                    Task { await loadCompletionStatuses(plan: plan) }
+                    Task {
+                        await loadCompletionStatuses(plan: plan)
+                        await generatePendingFeedback(plan: plan)
+                    }
                 }
             }
         }
@@ -484,6 +488,42 @@ struct HomeView: View {
 
         // Run the matching engine and publish results.
         completionStatuses = SessionMatcher.match(sessions: sessionTuples, activities: activities)
+    }
+
+    // MARK: - Session Feedback
+
+    /// For each newly completed session that lacks feedback, trigger AI feedback generation.
+    /// Fires sequentially to avoid rate limits. Silently skips failures.
+    private func generatePendingFeedback(plan: TrainingPlan) async {
+        guard profileService.user?.isStravaConnected == true else { return }
+
+        var didGenerate = false
+
+        // Order is non-deterministic but acceptable — each call is idempotent
+        for (sessionId, status) in completionStatuses {
+            guard case .completed(let activity) = status else { continue }
+
+            // Find the PlanSession to check if feedback already exists
+            let session = plan.planWeeks
+                .flatMap(\.planSessions)
+                .first { $0.id == sessionId }
+            guard let session, session.feedback == nil else { continue }
+
+            // Fire Edge Function — result is written to DB
+            let feedback = await stravaService.generateSessionFeedback(
+                sessionId: sessionId,
+                activityId: activity.id
+            )
+
+            if feedback != nil {
+                didGenerate = true
+            }
+        }
+
+        // Refresh plan once at the end to pick up all new feedback without showing a spinner
+        if didGenerate {
+            await planService.refreshPlan(userId: plan.userId)
+        }
     }
 
     // MARK: - Edit Mode Actions
