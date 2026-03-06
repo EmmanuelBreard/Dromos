@@ -20,6 +20,7 @@ ALL_FUNCTIONS=(
   "strava-auth"
   "strava-sync"
   "chat-adjust"
+  "session-feedback"
 )
 
 deploy_function() {
