@@ -335,7 +335,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, workSegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,
@@ -385,7 +385,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, tempoSegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,
@@ -452,7 +452,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, repeatBlock, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: 1000,
         template: template,
@@ -490,7 +490,7 @@ struct RaceDayCardView: View {
         segments: [swimSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: 1800,
         template: template,
@@ -540,7 +540,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, steadySegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,
@@ -590,7 +590,7 @@ struct RaceDayCardView: View {
         segments: [warmupSegment, workSegment, cooldownSegment]
     )
     
-    return SessionCardView(
+    SessionCardView(
         session: session,
         swimDistance: nil,
         template: template,
