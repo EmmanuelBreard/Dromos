@@ -1,0 +1,400 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import OpenAI from "npm:openai@4";
+
+// Auto-generated prompt template — run scripts/sync-prompts.sh to regenerate
+import promptTemplate from "./prompts/session-feedback-v0-prompt.ts";
+
+// ── CORS headers ──────────────────────────────────────────────────────────────
+// Allow all origins; the mobile app uses JWT auth, not cookies.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+// Helper: build a JSON response with CORS headers
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface PlanSessionRow {
+  id: string;
+  day: string;
+  sport: string;
+  type: string;
+  duration_minutes: number;
+  feedback: string | null;
+  order_in_day: number;
+  week_id: string;
+  plan_weeks: {
+    id: string;
+    phase: string;
+    is_recovery: boolean;
+    week_number: number;
+    start_date: string;
+    plan_id: string;
+    training_plans: {
+      user_id: string;
+    };
+  };
+}
+
+interface StravaActivityRow {
+  id: string;
+  user_id: string;
+  normalized_sport: string | null;
+  moving_time: number;
+  distance: number | null;
+  average_speed: number | null;
+  average_heartrate: number | null;
+  average_watts: number | null;
+}
+
+interface UserProfileRow {
+  race_objective: string | null;
+  race_date: string | null;
+  experience_years: number | null;
+  vma: number | null;
+  css_seconds_per100m: number | null;
+  ftp: number | null;
+}
+
+interface WeekSessionRow {
+  id: string;
+  day: string;
+  sport: string;
+  type: string;
+  duration_minutes: number;
+  feedback: string | null;
+  order_in_day: number;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Map day name to offset from Monday (0-indexed). */
+const dayOffsets: Record<string, number> = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
+
+/**
+ * Format sport-specific pace from average_speed (m/s).
+ * - Run: min:sec/km
+ * - Bike: km/h
+ * - Swim: min:sec/100m
+ */
+function formatPace(sport: string, avgSpeedMs: number | null): string {
+  if (avgSpeedMs == null || avgSpeedMs <= 0) return "N/A";
+
+  switch (sport) {
+    case "run": {
+      // m/s → sec/km → min:sec/km
+      const secPerKm = 1000 / avgSpeedMs;
+      const min = Math.floor(secPerKm / 60);
+      const sec = Math.round(secPerKm % 60);
+      return `${min}:${String(sec).padStart(2, "0")}/km`;
+    }
+    case "bike": {
+      // m/s → km/h
+      const kmh = avgSpeedMs * 3.6;
+      return `${kmh.toFixed(1)} km/h`;
+    }
+    case "swim": {
+      // m/s → sec/100m → min:sec/100m
+      const secPer100m = 100 / avgSpeedMs;
+      const min = Math.floor(secPer100m / 60);
+      const sec = Math.round(secPer100m % 60);
+      return `${min}:${String(sec).padStart(2, "0")}/100m`;
+    }
+    default:
+      return "N/A";
+  }
+}
+
+/**
+ * Format weekly sessions context for the prompt.
+ * Each session: "Mon: Easy Swim 45 min [completed]" / "[missed]" / "[upcoming]"
+ */
+function formatWeekSessions(
+  sessions: WeekSessionRow[],
+  weekStartDate: string,
+  today: Date
+): string {
+  if (!sessions || sessions.length === 0) return "No sessions this week.";
+
+  // Parse week start date
+  const weekStart = new Date(weekStartDate + "T00:00:00Z");
+
+  const lines = sessions
+    .sort((a, b) => {
+      const dayDiff = (dayOffsets[a.day] ?? 0) - (dayOffsets[b.day] ?? 0);
+      return dayDiff !== 0 ? dayDiff : a.order_in_day - b.order_in_day;
+    })
+    .map((s) => {
+      const offset = dayOffsets[s.day] ?? 0;
+      const sessionDate = new Date(weekStart);
+      sessionDate.setUTCDate(sessionDate.getUTCDate() + offset);
+
+      let status: string;
+      if (s.feedback != null) {
+        status = "[completed]";
+      } else if (sessionDate < today) {
+        status = "[missed]";
+      } else {
+        status = "[upcoming]";
+      }
+
+      const sportLabel = s.sport.charAt(0).toUpperCase() + s.sport.slice(1);
+      return `${s.day}: ${s.type} ${sportLabel} ${s.duration_minutes} min ${status}`;
+    });
+
+  return lines.join("\n");
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
+
+Deno.serve(async (req) => {
+  // 1. CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // 2. Method guard — only POST accepted
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  // 3. Validate required environment variables
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return jsonResponse({ error: "Missing Supabase environment variables" }, 500);
+  }
+  if (!openaiApiKey) {
+    return jsonResponse({ error: "Missing OpenAI environment variable" }, 500);
+  }
+
+  // 4. Validate JWT — exact same pattern as chat-adjust
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return jsonResponse({ error: "Missing Authorization header" }, 401);
+  }
+  const jwt = authHeader.replace("Bearer ", "");
+
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? supabaseServiceRoleKey;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
+  if (authError || !user) {
+    return jsonResponse({ error: "Invalid token" }, 401);
+  }
+  const userId = user.id;
+
+  // Service-role client for all DB operations (bypasses RLS)
+  const db = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  try {
+    // 5. Parse and validate request body
+    let body: { plan_session_id?: string; strava_activity_id?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    const { plan_session_id: planSessionId, strava_activity_id: stravaActivityId } = body;
+    if (!planSessionId || typeof planSessionId !== "string") {
+      return jsonResponse({ error: "Missing required field: plan_session_id" }, 400);
+    }
+    if (!stravaActivityId || typeof stravaActivityId !== "string") {
+      return jsonResponse({ error: "Missing required field: strava_activity_id" }, 400);
+    }
+
+    // 6. Idempotency check — if feedback already exists, skip
+    const { data: existingSession, error: idempotencyError } = await db
+      .from("plan_sessions")
+      .select("feedback")
+      .eq("id", planSessionId)
+      .single();
+
+    if (idempotencyError) {
+      console.error("Idempotency check error:", idempotencyError.message);
+      return jsonResponse({ error: "Session not found" }, 404);
+    }
+
+    if (existingSession.feedback != null) {
+      return jsonResponse({ skipped: true });
+    }
+
+    // 7. Fetch context in parallel
+    const [sessionResult, activityResult, profileResult, weekSessionsResult] = await Promise.all([
+      // a) Plan session + week context (with ownership info via training_plans)
+      db
+        .from("plan_sessions")
+        .select(
+          "id, day, sport, type, duration_minutes, feedback, order_in_day, week_id, " +
+          "plan_weeks!inner(id, phase, is_recovery, week_number, start_date, plan_id, " +
+          "training_plans!inner(user_id))"
+        )
+        .eq("id", planSessionId)
+        .single(),
+
+      // b) Strava activity
+      db
+        .from("strava_activities")
+        .select("id, user_id, normalized_sport, moving_time, distance, average_speed, average_heartrate, average_watts")
+        .eq("id", stravaActivityId)
+        .single(),
+
+      // c) User profile
+      db
+        .from("users")
+        .select("race_objective, race_date, experience_years, vma, css_seconds_per100m, ftp")
+        .eq("id", userId)
+        .single(),
+
+      // d) All week sessions — we need week_id first, but we can fetch by planSessionId's week
+      // We'll re-fetch after we have the session data. For now, use a subquery approach:
+      // Actually, we don't know week_id yet. We'll fetch this after getting session data.
+      Promise.resolve(null),
+    ]);
+
+    // Validate session fetch
+    if (sessionResult.error || !sessionResult.data) {
+      console.error("Session fetch error:", sessionResult.error?.message);
+      return jsonResponse({ error: "Session not found" }, 404);
+    }
+
+    const session = sessionResult.data as unknown as PlanSessionRow;
+
+    // Validate activity fetch
+    if (activityResult.error || !activityResult.data) {
+      console.error("Activity fetch error:", activityResult.error?.message);
+      return jsonResponse({ error: "Activity not found" }, 404);
+    }
+
+    const activity = activityResult.data as StravaActivityRow;
+
+    // 8. Validate ownership
+    const planOwnerUserId = session.plan_weeks?.training_plans?.user_id;
+    if (planOwnerUserId !== userId) {
+      return jsonResponse({ error: "Session does not belong to this user" }, 403);
+    }
+    if (activity.user_id !== userId) {
+      return jsonResponse({ error: "Activity does not belong to this user" }, 403);
+    }
+
+    // Non-critical: log profile errors but continue
+    if (profileResult.error) {
+      console.error("User profile fetch warning:", profileResult.error.message);
+    }
+    const profile = profileResult.data as UserProfileRow | null;
+
+    // 9. Fetch all week sessions (now that we have week_id)
+    const weekId = session.plan_weeks.id;
+    const { data: weekSessionsData, error: weekSessionsError } = await db
+      .from("plan_sessions")
+      .select("id, day, sport, type, duration_minutes, feedback, order_in_day")
+      .eq("week_id", weekId);
+
+    if (weekSessionsError) {
+      console.error("Week sessions fetch warning:", weekSessionsError.message);
+    }
+    const weekSessions = (weekSessionsData as WeekSessionRow[] | null) ?? [];
+
+    // 10. Build the rendered prompt
+    const weekStartDate = session.plan_weeks.start_date;
+    const today = new Date();
+
+    // Format CSS for the prompt
+    let cssFormatted = "N/A";
+    if (profile?.css_seconds_per100m != null) {
+      const cssMin = Math.floor(profile.css_seconds_per100m / 60);
+      const cssSec = profile.css_seconds_per100m % 60;
+      cssFormatted = `${cssMin}:${String(cssSec).padStart(2, "0")}`;
+    }
+
+    const movingTimeMin = Math.round(activity.moving_time / 60);
+    const distanceKm = activity.distance != null ? (activity.distance / 1000).toFixed(2) : "N/A";
+    const avgHr = activity.average_heartrate != null ? Math.round(activity.average_heartrate).toString() : "N/A";
+    const formattedPace = formatPace(session.sport, activity.average_speed);
+    const avgWatts = activity.average_watts != null ? Math.round(activity.average_watts).toString() : "N/A";
+
+    const renderedPrompt = promptTemplate
+      .replace("{{race_objective}}", profile?.race_objective ?? "N/A")
+      .replace("{{race_date}}", profile?.race_date ?? "N/A")
+      .replace("{{experience_years}}", profile?.experience_years?.toString() ?? "N/A")
+      .replace("{{vma}}", profile?.vma?.toString() ?? "N/A")
+      .replace("{{ftp}}", profile?.ftp?.toString() ?? "N/A")
+      .replace("{{css}}", cssFormatted)
+      .replace("{{phase}}", session.plan_weeks.phase)
+      .replace("{{week_number}}", session.plan_weeks.week_number.toString())
+      .replace("{{is_recovery}}", session.plan_weeks.is_recovery ? "Yes" : "No")
+      .replace("{{week_sessions}}", formatWeekSessions(weekSessions, weekStartDate, today))
+      .replace("{{sport}}", session.sport)
+      .replace("{{type}}", session.type)
+      .replace("{{planned_duration}}", session.duration_minutes.toString())
+      .replace("{{moving_time_min}}", movingTimeMin.toString())
+      .replace("{{distance_km}}", distanceKm)
+      .replace("{{avg_hr}}", avgHr)
+      .replace("{{formatted_pace}}", formattedPace)
+      .replace("{{avg_watts}}", avgWatts);
+
+    // 11. Call OpenAI
+    const openai = new OpenAI({ apiKey: openaiApiKey });
+    let completion;
+    try {
+      completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        max_tokens: 256,
+        messages: [{ role: "system", content: renderedPrompt }],
+      });
+    } catch (err) {
+      console.error("OpenAI error:", err instanceof Error ? err.message : String(err));
+      return jsonResponse({ error: "AI service unavailable" }, 502);
+    }
+
+    const feedbackText = completion.choices[0]?.message?.content?.trim() ?? "";
+
+    if (!feedbackText) {
+      console.error("OpenAI returned empty response for session:", planSessionId);
+      return jsonResponse({ error: "AI returned an empty response. Please try again." }, 502);
+    }
+
+    // 12. Write feedback to DB
+    const { error: updateError } = await db
+      .from("plan_sessions")
+      .update({
+        feedback: feedbackText,
+        matched_activity_id: stravaActivityId,
+      })
+      .eq("id", planSessionId);
+
+    if (updateError) {
+      console.error("DB update error:", updateError.message);
+      return jsonResponse({ error: "Failed to save feedback" }, 500);
+    }
+
+    // 13. Return feedback
+    return jsonResponse({ feedback: feedbackText });
+  } catch (err) {
+    console.error(
+      "Unhandled error in session-feedback:",
+      err instanceof Error ? err.message : String(err)
+    );
+    return jsonResponse({ error: "Internal server error" }, 500);
+  }
+});
