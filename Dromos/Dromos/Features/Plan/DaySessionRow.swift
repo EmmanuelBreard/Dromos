@@ -202,10 +202,12 @@ struct DaySessionRow: View {
         durationMinutes: 60,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
 
-    return DaySessionRow(
+    DaySessionRow(
         weekday: .monday,
         date: Date(),
         sessions: [session],
@@ -239,7 +241,9 @@ struct DaySessionRow: View {
         durationMinutes: 50,
         isBrick: false,
         notes: nil,
-        orderInDay: 0
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
     )
 
     let session2 = PlanSession(
@@ -252,10 +256,12 @@ struct DaySessionRow: View {
         durationMinutes: 60,
         isBrick: true,
         notes: nil,
-        orderInDay: 1
+        orderInDay: 1,
+        feedback: nil,
+        matchedActivityId: nil
     )
 
-    return DaySessionRow(
+    DaySessionRow(
         weekday: .friday,
         date: Date(),
         sessions: [session1, session2],
