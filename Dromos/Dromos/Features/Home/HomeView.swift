@@ -495,6 +495,11 @@ struct HomeView: View {
     /// For each newly completed session that lacks feedback, trigger AI feedback generation.
     /// Fires sequentially to avoid rate limits. Silently skips failures.
     private func generatePendingFeedback(plan: TrainingPlan) async {
+        guard profileService.user?.isStravaConnected == true else { return }
+
+        var didGenerate = false
+
+        // Order is non-deterministic but acceptable — each call is idempotent
         for (sessionId, status) in completionStatuses {
             guard case .completed(let activity) = status else { continue }
 
@@ -510,10 +515,14 @@ struct HomeView: View {
                 activityId: activity.id
             )
 
-            // If feedback was generated, update local model to avoid re-triggering
             if feedback != nil {
-                try? await planService.fetchFullPlan(userId: plan.userId)
+                didGenerate = true
             }
+        }
+
+        // Refresh plan once at the end to pick up all new feedback without showing a spinner
+        if didGenerate {
+            await planService.refreshPlan(userId: plan.userId)
         }
     }
 
