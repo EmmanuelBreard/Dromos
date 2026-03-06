@@ -152,7 +152,8 @@ function formatWeekSessions(
       if (s.feedback != null) {
         status = "[completed]";
       } else if (sessionDate < today) {
-        status = "[missed]";
+        // "pending" rather than "missed" — the session may just not be synced yet
+        status = "[pending]";
       } else {
         status = "[upcoming]";
       }
@@ -346,7 +347,7 @@ Deno.serve(async (req) => {
       completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         temperature: 0.7,
-        max_tokens: 256,
+        max_tokens: 150,
         messages: [
           { role: "system", content: renderedPrompt },
           { role: "user", content: "Please provide feedback for this session." },
