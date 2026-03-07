@@ -12,7 +12,7 @@ prompts:
   - file://../prompts/step1-macro-plan.txt
 
 providers:
-  - id: openai:gpt-4o
+  - id: openai:gpt-4.1
     config:
       temperature: 0.3
       max_tokens: 16384

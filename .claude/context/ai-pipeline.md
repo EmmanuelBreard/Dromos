@@ -13,11 +13,11 @@ Dromos generates triathlon training plans via a 3-step LLM pipeline in a Supabas
 ```
 iOS App → POST /functions/v1/generate-plan (JWT auth)
     ↓
-Step 1 (gpt-4o): User profile → Markdown macro plan (periodized weeks)
+Step 1 (gpt-4.1): User profile → Markdown macro plan (periodized weeks)
     ↓
 Step 2 (gpt-4o-mini): Markdown → Structured JSON
     ↓
-Step 3 (gpt-4o): Per 4-week block → Template IDs + day assignments
+Step 3 (gpt-4.1): Per 4-week block → Template IDs + day assignments
     ↓
 Post-processing: 15 sequential fixer passes (no LLM)
     ↓
@@ -34,7 +34,7 @@ DB writes: training_plans → plan_weeks → plan_sessions
 
 **Prompt:** `ai/prompts/step1-macro-plan.txt`
 **Production:** `supabase/functions/generate-plan/prompts/step1-macro-plan-prompt.ts`
-**Model:** gpt-4o | 16K tokens | temp 0.2
+**Model:** gpt-4.1 | 16K tokens | temp 0.2
 
 **Input:** User profile (experience, race goal, availability, metrics)
 **Output:** Markdown plan with weeks, phases, session types, hours
@@ -69,7 +69,7 @@ Pure conversion, no transformation.
 
 **Prompt:** `ai/prompts/step3-workout-block.txt`
 **Production:** `supabase/functions/generate-plan/prompts/step3-workout-block-prompt.ts`
-**Model:** gpt-4o | 4K tokens | temp 0.2
+**Model:** gpt-4.1 | 4K tokens | temp 0.2
 
 **Input:** 4-week block + user constraints + previously used templates + workout library
 **Output:** Template IDs + day/time assignments per session
@@ -163,9 +163,9 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 
 | Step | Model | Max Tokens | Temperature | Why |
 |------|-------|-----------|-------------|-----|
-| Step 1 | gpt-4o | 16,384 | 0.2 | Complex planning requires strong reasoning |
+| Step 1 | gpt-4.1 | 16,384 | 0.2 | Complex planning requires strong reasoning |
 | Step 2 | gpt-4o-mini | 16,384 | 0 | Deterministic JSON conversion (cheap) |
-| Step 3 | gpt-4o | 4,096 | 0.2 | Template matching needs reasoning per block |
+| Step 3 | gpt-4.1 | 4,096 | 0.2 | Template matching needs reasoning per block |
 
 ---
 
@@ -195,7 +195,7 @@ Single-step pipeline — no multi-step orchestration needed. The agent both conv
 ### Model
 | Step | Model | Max Tokens | Temperature | Why |
 |------|-------|-----------|-------------|-----|
-| Intake agent | gpt-4o | 1,024 | 0 | Deterministic classification; short response |
+| Intake agent | gpt-4.1 | 1,024 | 0 | Deterministic classification; short response |
 
 ### Statuses
 | Status | Meaning |

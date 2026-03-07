@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
     // 10. Call OpenAI — gpt-4o, temperature 0 for deterministic classification
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4.1",
       temperature: 0,
       max_tokens: 1024,
       messages: openAiMessages,

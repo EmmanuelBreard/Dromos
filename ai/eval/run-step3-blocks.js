@@ -9,7 +9,7 @@ const yaml = require('js-yaml');
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const BLOCK_SIZE = 4;
-const MODEL = 'gpt-4o';
+const MODEL = 'gpt-4.1';
 const TEMPERATURE = 0.2;
 const MAX_TOKENS = 4096; // Much smaller per block — only 4 weeks
 

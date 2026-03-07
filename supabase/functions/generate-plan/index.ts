@@ -20,9 +20,9 @@ function getWorkoutLibraryUrl(): string {
 
 // Constants
 const BLOCK_SIZE = 4;
-const MODEL_STEP1 = "gpt-4o";
+const MODEL_STEP1 = "gpt-4.1";
 const MODEL_STEP2 = "gpt-4o-mini";
-const MODEL_STEP3 = "gpt-4o";
+const MODEL_STEP3 = "gpt-4.1";
 const TEMPERATURE = 0.2;
 const MAX_TOKENS_STEP1 = 16384;
 const MAX_TOKENS_STEP2 = 16384;
