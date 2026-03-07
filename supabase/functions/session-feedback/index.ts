@@ -135,8 +135,9 @@ function formatPace(sport: string, avgSpeedMs: number | null): string {
     case "run": {
       // m/s → sec/km → min:sec/km
       const secPerKm = 1000 / avgSpeedMs;
-      const min = Math.floor(secPerKm / 60);
-      const sec = Math.round(secPerKm % 60);
+      let min = Math.floor(secPerKm / 60);
+      let sec = Math.round(secPerKm % 60);
+      if (sec === 60) { sec = 0; min += 1; }
       return `${min}:${String(sec).padStart(2, "0")}/km`;
     }
     case "bike": {
@@ -147,8 +148,9 @@ function formatPace(sport: string, avgSpeedMs: number | null): string {
     case "swim": {
       // m/s → sec/100m → min:sec/100m
       const secPer100m = 100 / avgSpeedMs;
-      const min = Math.floor(secPer100m / 60);
-      const sec = Math.round(secPer100m % 60);
+      let min = Math.floor(secPer100m / 60);
+      let sec = Math.round(secPer100m % 60);
+      if (sec === 60) { sec = 0; min += 1; }
       return `${min}:${String(sec).padStart(2, "0")}/100m`;
     }
     default:
@@ -168,8 +170,9 @@ function formatLaps(laps: LapRow[], sport: string): string {
     const parts: string[] = [];
 
     // Duration: format moving_time as M:SS
-    const durMin = Math.floor(lap.moving_time / 60);
-    const durSec = Math.round(lap.moving_time % 60);
+    let durMin = Math.floor(lap.moving_time / 60);
+    let durSec = Math.round(lap.moving_time % 60);
+    if (durSec === 60) { durSec = 0; durMin += 1; }
     parts.push(`${durMin}:${String(durSec).padStart(2, "0")}`);
 
     // HR: avg bpm if available
@@ -261,18 +264,25 @@ function formatWeekSessions(
  * Returns an empty map on failure (non-critical — feedback still works without it).
  */
 async function fetchWorkoutLibrary(): Promise<Map<string, WorkoutTemplate>> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const url = `${supabaseUrl}/storage/v1/object/public/static-assets/workout-library.json`;
-  const res = await fetch(url);
-  if (!res.ok) return new Map();
-  const lib = await res.json();
-  const map = new Map<string, WorkoutTemplate>();
-  for (const sport of ["swim", "bike", "run"]) {
-    for (const t of lib[sport] ?? []) {
-      map.set(t.template_id, t);
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) return new Map();
+    const url = `${supabaseUrl}/storage/v1/object/public/static-assets/workout-library.json`;
+    const res = await fetch(url);
+    if (!res.ok) return new Map();
+    const lib = await res.json();
+    if (!lib || typeof lib !== "object") return new Map();
+    const map = new Map<string, WorkoutTemplate>();
+    for (const sport of ["swim", "bike", "run"]) {
+      for (const t of lib[sport] ?? []) {
+        map.set(t.template_id, t);
+      }
     }
+    return map;
+  } catch (err) {
+    console.error("Workout library fetch warning:", err instanceof Error ? err.message : String(err));
+    return new Map();
   }
-  return map;
 }
 
 /**
@@ -570,8 +580,9 @@ Deno.serve(async (req) => {
     // Format CSS for the prompt
     let cssFormatted = "N/A";
     if (profile?.css_seconds_per100m != null) {
-      const cssMin = Math.floor(profile.css_seconds_per100m / 60);
-      const cssSec = Math.round(profile.css_seconds_per100m % 60);
+      let cssMin = Math.floor(profile.css_seconds_per100m / 60);
+      let cssSec = Math.round(profile.css_seconds_per100m % 60);
+      if (cssSec === 60) { cssSec = 0; cssMin += 1; }
       cssFormatted = `${cssMin}:${String(cssSec).padStart(2, "0")}`;
     }
 
