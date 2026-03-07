@@ -204,3 +204,20 @@ Single-step pipeline — no multi-step orchestration needed. The agent both conv
 | `ready` | All required fields collected; constraint summary present |
 | `no_action` | Not a training disruption (chitchat, gratitude) |
 | `escalate` | Disruption too severe to modify plan; recommend plan regeneration |
+
+---
+
+## Session Feedback Pipeline
+
+**Feature:** DRO-158
+**Edge Function:** `supabase/functions/session-feedback/index.ts`
+
+### Session Feedback Prompt
+
+**Prompt:** `ai/prompts/session-feedback-v0.txt`
+**Production:** `supabase/functions/session-feedback/prompts/session-feedback-v0-prompt.ts`
+**Model:** gpt-4.1 | 150 tokens | temp 0.7
+
+**Template variables:** `{{phase}}`, `{{week_number}}`, `{{is_recovery}}`, `{{race_objective}}`, `{{race_date}}`, `{{vma}}`, `{{ftp}}`, `{{css}}`, `{{sport}}`, `{{type}}`, `{{planned_duration}}`, `{{moving_time_min}}`, `{{distance_km}}`, `{{avg_hr}}`, `{{formatted_pace}}`, `{{avg_watts}}`, `{{laps}}`, `{{week_sessions}}`
+
+**`{{laps}}`:** Formatted per-lap summary from `strava_activity_laps`. Each lap shows duration, avg HR, sport-specific metric (pace/power), and distance. Falls back to "No lap data available." when empty. Fed to the LLM for interval-level coaching feedback.

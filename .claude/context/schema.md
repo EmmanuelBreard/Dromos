@@ -1,13 +1,13 @@
 # Database Schema Reference
 
-> Last updated: 2026-02-22 | Migrations: 001-013 + summary_polyline
+> Last updated: 2026-03-07 | Migrations: 001-015 + summary_polyline
 
 ## Tables Overview
 
 ```
 auth.users → public.users (1:1) → training_plans (1:1 via UNIQUE) → plan_weeks (1:N) → plan_sessions (1:N)
 public.users (1:1) → strava_connections
-public.users (1:N) → strava_activities
+public.users (1:N) → strava_activities → strava_activity_laps (1:N)
 ```
 
 All foreign keys use ON DELETE CASCADE. All tables use RLS.
@@ -173,11 +173,40 @@ Synced Strava activities for a user. Written by the `strava-sync` Edge Function.
 | `average_watts` | DOUBLE PRECISION | | Watts |
 | `is_manual` | BOOLEAN | NOT NULL, DEFAULT FALSE | |
 | `summary_polyline` | TEXT | | Encoded polyline from Strava map |
+| `streams_data` | JSONB | | Raw Strava streams (time, HR, power, cadence, speed, distance). NULL if not yet fetched. |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
 
 **UNIQUE:** `(user_id, strava_activity_id)` — upsert conflict target.
 
 **RLS:** Edge Functions use `service_role`. iOS reads via user JWT (SELECT own rows).
+
+---
+
+## `public.strava_activity_laps`
+
+Per-lap breakdown of Strava activities. Written by `strava-sync` Edge Function.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | UUID | PK, DEFAULT `gen_random_uuid()` | |
+| `activity_id` | UUID | NOT NULL, FK → `strava_activities(id)` CASCADE | |
+| `lap_index` | INT | NOT NULL | Zero-based lap order |
+| `elapsed_time` | INT | NOT NULL | Seconds |
+| `moving_time` | INT | NOT NULL | Seconds |
+| `distance` | DOUBLE PRECISION | | Meters |
+| `average_speed` | DOUBLE PRECISION | | m/s |
+| `average_cadence` | DOUBLE PRECISION | | RPM |
+| `average_watts` | DOUBLE PRECISION | | Watts |
+| `average_heartrate` | DOUBLE PRECISION | | BPM |
+| `max_heartrate` | DOUBLE PRECISION | | BPM |
+| `start_index` | INT | | Index into streams arrays |
+| `end_index` | INT | | Index into streams arrays |
+
+**UNIQUE:** `(activity_id, lap_index)` — upsert conflict target.
+
+**RLS:** SELECT own laps via EXISTS join to `strava_activities` where `user_id = auth.uid()`. Edge Functions write via `service_role`.
+
+**Indexes:** `idx_strava_activity_laps_activity_id` on `(activity_id)`
 
 ---
 
