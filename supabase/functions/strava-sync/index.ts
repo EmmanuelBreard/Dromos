@@ -68,7 +68,6 @@ interface StravaTokenResponse {
 }
 
 interface StravaLap {
-  lap_index: number;
   elapsed_time: number;
   moving_time: number;
   distance: number;
