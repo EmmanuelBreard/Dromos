@@ -65,6 +65,18 @@ interface UserProfileRow {
   ftp: number | null;
 }
 
+interface LapRow {
+  lap_index: number;
+  elapsed_time: number;
+  moving_time: number;
+  distance: number | null;
+  average_speed: number | null;
+  average_cadence: number | null;
+  average_watts: number | null;
+  average_heartrate: number | null;
+  max_heartrate: number | null;
+}
+
 interface WeekSessionRow {
   id: string;
   day: string;
@@ -120,6 +132,63 @@ function formatPace(sport: string, avgSpeedMs: number | null): string {
     default:
       return "N/A";
   }
+}
+
+/**
+ * Format lap data for the prompt.
+ * Each lap line includes duration, HR (if available), sport-specific metric, and distance.
+ * Rest is inferred from elapsed_time vs moving_time difference per lap.
+ */
+function formatLaps(laps: LapRow[], sport: string): string {
+  if (!laps || laps.length === 0) return "No lap data available.";
+
+  return laps.map((lap) => {
+    const parts: string[] = [];
+
+    // Duration: format moving_time as M:SS
+    const durMin = Math.floor(lap.moving_time / 60);
+    const durSec = Math.round(lap.moving_time % 60);
+    parts.push(`${durMin}:${String(durSec).padStart(2, "0")}`);
+
+    // HR: avg bpm if available
+    if (lap.average_heartrate != null) {
+      parts.push(`avg ${Math.round(lap.average_heartrate)} bpm`);
+    }
+
+    // Sport-specific metric
+    switch (sport) {
+      case "run":
+        parts.push(formatPace("run", lap.average_speed));
+        break;
+      case "bike":
+        if (lap.average_watts != null) {
+          parts.push(`${Math.round(lap.average_watts)} W`);
+        }
+        break;
+      case "swim":
+        parts.push(formatPace("swim", lap.average_speed));
+        break;
+    }
+
+    // Distance: km for run/bike, meters for swim
+    if (lap.distance != null) {
+      if (sport === "swim") {
+        parts.push(`${Math.round(lap.distance)} m`);
+      } else {
+        parts.push(`${(lap.distance / 1000).toFixed(2)} km`);
+      }
+    }
+
+    let line = `Lap ${lap.lap_index + 1}: ${parts.join(", ")}`;
+
+    // Append rest indicator if elapsed_time significantly exceeds moving_time
+    const rest = lap.elapsed_time - lap.moving_time;
+    if (rest > 10) {
+      line += ` (includes ${Math.round(rest)}s rest)`;
+    }
+
+    return line;
+  }).join("\n");
 }
 
 /**
@@ -251,7 +320,7 @@ Deno.serve(async (req) => {
     // 7. Fetch remaining context in parallel (activity, profile, week sessions)
     const weekId = session.plan_weeks.id;
 
-    const [activityResult, profileResult, weekSessionsResult] = await Promise.all([
+    const [activityResult, profileResult, weekSessionsResult, lapsResult] = await Promise.all([
       // a) Strava activity
       db
         .from("strava_activities")
@@ -271,6 +340,13 @@ Deno.serve(async (req) => {
         .from("plan_sessions")
         .select("id, day, sport, type, duration_minutes, feedback, order_in_day")
         .eq("week_id", weekId),
+
+      // d) Activity laps
+      db
+        .from("strava_activity_laps")
+        .select("lap_index, elapsed_time, moving_time, distance, average_speed, average_cadence, average_watts, average_heartrate, max_heartrate")
+        .eq("activity_id", stravaActivityId)
+        .order("lap_index", { ascending: true }),
     ]);
 
     // Validate activity fetch
@@ -301,6 +377,12 @@ Deno.serve(async (req) => {
       console.error("Week sessions fetch warning:", weekSessionsResult.error.message);
     }
     const weekSessions = (weekSessionsResult.data as WeekSessionRow[] | null) ?? [];
+
+    // Non-critical: log laps errors but continue
+    if (lapsResult.error) {
+      console.error("Laps fetch warning:", lapsResult.error.message);
+    }
+    const laps = (lapsResult.data as LapRow[] | null) ?? [];
 
     // 9. Build the rendered prompt
     const weekStartDate = session.plan_weeks.start_date;
@@ -338,7 +420,8 @@ Deno.serve(async (req) => {
       .replace("{{distance_km}}", distanceKm)
       .replace("{{avg_hr}}", avgHr)
       .replace("{{formatted_pace}}", formattedPace)
-      .replace("{{avg_watts}}", avgWatts);
+      .replace("{{avg_watts}}", avgWatts)
+      .replace("{{laps}}", formatLaps(laps, session.sport));
 
     // 10. Call OpenAI
     const openai = new OpenAI({ apiKey: openaiApiKey });

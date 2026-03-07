@@ -14,8 +14,8 @@ const PER_PAGE = 200;
 /** Safety cap: max pages to fetch (200 * 10 = 2000 activities) */
 const MAX_PAGES = 10;
 
-/** Buffer window: fetch activities from `last_sync_at - 1 hour` to catch late uploads */
-const SYNC_BUFFER_SECONDS = 60 * 60; // 1 hour
+/** Buffer window: fetch activities from `last_sync_at - 24 hours` to catch late uploads */
+const SYNC_BUFFER_SECONDS = 24 * 60 * 60; // 24 hours
 
 /** First-sync lookback window */
 const FIRST_SYNC_LOOKBACK_DAYS = 90;
@@ -67,6 +67,30 @@ interface StravaTokenResponse {
   expires_at: number; // Unix epoch seconds
 }
 
+interface StravaLap {
+  elapsed_time: number;
+  moving_time: number;
+  distance: number;
+  average_speed: number;
+  average_cadence?: number;
+  average_watts?: number;
+  average_heartrate?: number;
+  max_heartrate?: number;
+  start_index: number;
+  end_index: number;
+}
+
+interface StravaStreamEntry {
+  type: string;
+  data: number[];
+  series_type: string;
+  original_size: number;
+  resolution: string;
+}
+
+/** Stream keys to request from Strava activity streams endpoint */
+const STRAVA_STREAM_KEYS = "time,heartrate,watts,cadence,velocity_smooth,distance";
+
 interface StravaApiActivity {
   id: number;
   sport_type?: string;
@@ -112,6 +136,101 @@ async function refreshStravaToken(
   }
 
   return res.json() as Promise<StravaTokenResponse>;
+}
+
+// ---------------------------------------------------------------------------
+// Laps & Streams fetcher
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch laps and streams for each upserted activity, then persist them.
+ * Runs sequentially to respect Strava rate limits. Any failure here is
+ * non-fatal — errors are logged but never propagated to the caller.
+ */
+async function fetchLapsAndStreams(
+  accessToken: string,
+  activityInfos: Array<{ dbId: string; stravaActivityId: number; isManual: boolean }>,
+  db: ReturnType<typeof createClient>
+): Promise<number> {
+  // Manual activities have no GPS/sensor data — skip them
+  const nonManual = activityInfos.filter((a) => !a.isManual);
+  let lapsFetchedCount = 0;
+
+  for (const { dbId, stravaActivityId } of nonManual) {
+    // --- Fetch laps ---
+    const lapsRes = await fetch(
+      `https://www.strava.com/api/v3/activities/${stravaActivityId}/laps`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (lapsRes.status === 429) {
+      console.warn(`Rate limited fetching laps for activity ${stravaActivityId} — stopping`);
+      break;
+    }
+
+    if (!lapsRes.ok) {
+      console.error(`Failed to fetch laps for activity ${stravaActivityId}: ${lapsRes.status}`);
+      continue;
+    }
+
+    // --- Fetch streams ---
+    const streamsRes = await fetch(
+      `https://www.strava.com/api/v3/activities/${stravaActivityId}/streams?keys=${STRAVA_STREAM_KEYS}&key_by_type=true`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (streamsRes.status === 429) {
+      console.warn(`Rate limited fetching streams for activity ${stravaActivityId} — stopping`);
+      break;
+    }
+
+    if (!streamsRes.ok) {
+      console.error(`Failed to fetch streams for activity ${stravaActivityId}: ${streamsRes.status}`);
+      continue;
+    }
+
+    // --- Persist laps (only when >1 lap, i.e. actual splits) ---
+    const laps: StravaLap[] = await lapsRes.json();
+    if (laps.length > 1) {
+      const lapRows = laps.map((lap, index) => ({
+        activity_id: dbId,
+        lap_index: index,
+        elapsed_time: lap.elapsed_time,
+        moving_time: lap.moving_time,
+        distance: lap.distance,
+        average_speed: lap.average_speed,
+        average_cadence: lap.average_cadence ?? null,
+        average_watts: lap.average_watts ?? null,
+        average_heartrate: lap.average_heartrate ?? null,
+        max_heartrate: lap.max_heartrate ?? null,
+        start_index: lap.start_index,
+        end_index: lap.end_index,
+      }));
+
+      const { error: lapsError } = await db
+        .from("strava_activity_laps")
+        .upsert(lapRows, { onConflict: "activity_id,lap_index" });
+
+      if (lapsError) {
+        console.error(`Failed to upsert laps for activity ${stravaActivityId}: ${lapsError.message}`);
+      } else {
+        lapsFetchedCount++;
+      }
+    }
+
+    // --- Persist streams data on the activity row ---
+    const streamsJson = await streamsRes.json();
+    const { error: streamsError } = await db
+      .from("strava_activities")
+      .update({ streams_data: streamsJson })
+      .eq("id", dbId);
+
+    if (streamsError) {
+      console.error(`Failed to update streams for activity ${stravaActivityId}: ${streamsError.message}`);
+    }
+  }
+
+  return lapsFetchedCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -235,7 +354,7 @@ Deno.serve(async (req) => {
     let afterEpoch: number;
 
     if (connection.last_sync_at) {
-      // Use last_sync_at minus 1-hour buffer to catch late uploads
+      // Use last_sync_at minus 24-hour buffer to catch late uploads
       const lastSyncMs = new Date(connection.last_sync_at).getTime();
       afterEpoch = Math.floor(lastSyncMs / 1000) - SYNC_BUFFER_SECONDS;
     } else {
@@ -293,6 +412,8 @@ Deno.serve(async (req) => {
     // 7. Normalize and batch upsert into strava_activities
     // -------------------------------------------------------------------------
 
+    let lapsFetchedCount = 0;
+
     if (allActivities.length > 0) {
       // Filter out activities missing required NOT NULL date fields
       const validActivities = allActivities.filter(
@@ -318,15 +439,41 @@ Deno.serve(async (req) => {
         summary_polyline: a.map?.summary_polyline || null,
       }));
 
-      const { error: upsertError } = await db
+      const { data: upsertedData, error: upsertError } = await db
         .from("strava_activities")
-        .upsert(rows, { onConflict: "user_id,strava_activity_id" });
+        .upsert(rows, { onConflict: "user_id,strava_activity_id" })
+        .select("id, strava_activity_id");
 
       if (upsertError) {
         return jsonResponse(
           { error: `Failed to upsert activities: ${upsertError.message}` },
           500
         );
+      }
+
+      // -----------------------------------------------------------------------
+      // 7b. Fetch laps & streams for upserted activities (non-fatal)
+      // -----------------------------------------------------------------------
+
+      if (upsertedData && upsertedData.length > 0) {
+        // Build a lookup from strava_activity_id → isManual using original data
+        const manualLookup = new Map<number, boolean>();
+        for (const a of allActivities) {
+          manualLookup.set(a.id, a.manual ?? false);
+        }
+
+        const activityInfos = upsertedData.map((row: { id: string; strava_activity_id: number }) => ({
+          dbId: row.id,
+          stravaActivityId: row.strava_activity_id,
+          isManual: manualLookup.get(row.strava_activity_id) ?? false,
+        }));
+
+        try {
+          lapsFetchedCount = await fetchLapsAndStreams(accessToken, activityInfos, db);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("fetchLapsAndStreams failed (non-fatal):", msg);
+        }
       }
     }
 
@@ -365,6 +512,7 @@ Deno.serve(async (req) => {
       synced_count: allActivities.length,
       total_activities: totalActivities ?? 0,
       rate_limited: rateLimited,
+      laps_fetched_count: lapsFetchedCount,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
