@@ -32,6 +32,7 @@ interface PlanSessionRow {
   feedback: string | null;
   order_in_day: number;
   week_id: string;
+  template_id: string | null;
   plan_weeks: {
     id: string;
     phase: string;
@@ -87,6 +88,27 @@ interface WeekSessionRow {
   order_in_day: number;
 }
 
+// ── Workout Library Types ────────────────────────────────────────────────────
+
+interface WorkoutSegment {
+  label: string;
+  duration_minutes?: number;
+  distance_meters?: number;
+  ftp_pct?: number;
+  mas_pct?: number;
+  pace?: string;
+  repeats?: number;
+  segments?: WorkoutSegment[];
+  recovery?: WorkoutSegment;
+  rest_seconds?: number;
+}
+
+interface WorkoutTemplate {
+  template_id: string;
+  duration_minutes: number;
+  segments: WorkoutSegment[];
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Map day name to offset from Monday (0-indexed). */
@@ -113,8 +135,9 @@ function formatPace(sport: string, avgSpeedMs: number | null): string {
     case "run": {
       // m/s → sec/km → min:sec/km
       const secPerKm = 1000 / avgSpeedMs;
-      const min = Math.floor(secPerKm / 60);
-      const sec = Math.round(secPerKm % 60);
+      let min = Math.floor(secPerKm / 60);
+      let sec = Math.round(secPerKm % 60);
+      if (sec === 60) { sec = 0; min += 1; }
       return `${min}:${String(sec).padStart(2, "0")}/km`;
     }
     case "bike": {
@@ -125,8 +148,9 @@ function formatPace(sport: string, avgSpeedMs: number | null): string {
     case "swim": {
       // m/s → sec/100m → min:sec/100m
       const secPer100m = 100 / avgSpeedMs;
-      const min = Math.floor(secPer100m / 60);
-      const sec = Math.round(secPer100m % 60);
+      let min = Math.floor(secPer100m / 60);
+      let sec = Math.round(secPer100m % 60);
+      if (sec === 60) { sec = 0; min += 1; }
       return `${min}:${String(sec).padStart(2, "0")}/100m`;
     }
     default:
@@ -146,8 +170,9 @@ function formatLaps(laps: LapRow[], sport: string): string {
     const parts: string[] = [];
 
     // Duration: format moving_time as M:SS
-    const durMin = Math.floor(lap.moving_time / 60);
-    const durSec = Math.round(lap.moving_time % 60);
+    let durMin = Math.floor(lap.moving_time / 60);
+    let durSec = Math.round(lap.moving_time % 60);
+    if (durSec === 60) { durSec = 0; durMin += 1; }
     parts.push(`${durMin}:${String(durSec).padStart(2, "0")}`);
 
     // HR: avg bpm if available
@@ -234,6 +259,159 @@ function formatWeekSessions(
   return lines.join("\n");
 }
 
+/**
+ * Fetch the workout library from Supabase Storage and index by template_id.
+ * Returns an empty map on failure (non-critical — feedback still works without it).
+ */
+async function fetchWorkoutLibrary(): Promise<Map<string, WorkoutTemplate>> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) return new Map();
+    const url = `${supabaseUrl}/storage/v1/object/public/static-assets/workout-library.json`;
+    const res = await fetch(url);
+    if (!res.ok) return new Map();
+    const lib = await res.json();
+    if (!lib || typeof lib !== "object") return new Map();
+    const map = new Map<string, WorkoutTemplate>();
+    for (const sport of ["swim", "bike", "run"]) {
+      for (const t of lib[sport] ?? []) {
+        map.set(t.template_id, t);
+      }
+    }
+    return map;
+  } catch (err) {
+    console.error("Workout library fetch warning:", err instanceof Error ? err.message : String(err));
+    return new Map();
+  }
+}
+
+/**
+ * Format a single non-repeat segment's intensity label.
+ * Bike: watts from FTP. Run: km/h + pace from VMA. Swim: pace label.
+ */
+function formatSegmentIntensity(
+  seg: WorkoutSegment,
+  sport: string,
+  profile: UserProfileRow | null
+): string {
+  if (sport === "bike") {
+    if (seg.ftp_pct != null && profile?.ftp != null) {
+      return `@${Math.round(seg.ftp_pct / 100 * profile.ftp)}W`;
+    }
+    if (seg.ftp_pct != null) return `@${seg.ftp_pct}% FTP`;
+    return "";
+  }
+
+  if (sport === "run") {
+    if (seg.mas_pct != null && profile?.vma != null) {
+      const speedKmh = Math.round(seg.mas_pct / 100 * profile.vma * 10) / 10;
+      const speedMs = seg.mas_pct / 100 * profile.vma / 3.6;
+      const pace = formatPace("run", speedMs);
+      return `@${speedKmh.toFixed(1)} km/h (${pace})`;
+    }
+    if (seg.mas_pct != null) return `@${seg.mas_pct}% VMA`;
+    return "";
+  }
+
+  // Swim: use pace label
+  if (seg.pace) return `${seg.pace} pace`;
+  return "";
+}
+
+/**
+ * Format a single segment (non-repeat) with its duration/distance and intensity.
+ */
+function formatSingleSegment(
+  seg: WorkoutSegment,
+  sport: string,
+  profile: UserProfileRow | null
+): string {
+  const intensity = formatSegmentIntensity(seg, sport, profile);
+  const label = seg.label.charAt(0).toUpperCase() + seg.label.slice(1);
+
+  if (sport === "swim") {
+    // Swim: distance-based or duration-based with pace label
+    if (seg.distance_meters != null) {
+      return `${label} ${seg.distance_meters}m ${intensity}`.trim();
+    }
+    if (seg.duration_minutes != null) {
+      return `${label} ${seg.duration_minutes}min ${intensity}`.trim();
+    }
+    return `${label} ${intensity}`.trim();
+  }
+
+  // Bike / Run: always duration-based with @intensity
+  if (seg.duration_minutes != null) {
+    return `${label} ${seg.duration_minutes}min ${intensity}`.trim();
+  }
+  return `${label} ${intensity}`.trim();
+}
+
+/**
+ * Format a repeat block: "4x8min @240W / 3min recovery @156W"
+ */
+function formatRepeatSegment(
+  seg: WorkoutSegment,
+  sport: string,
+  profile: UserProfileRow | null
+): string {
+  const repeats = seg.repeats ?? 1;
+  const workSeg = seg.segments?.[0];
+  if (!workSeg) return "";
+
+  // Work portion
+  let workPart: string;
+  if (sport === "swim" && workSeg.distance_meters != null) {
+    const intensity = formatSegmentIntensity(workSeg, sport, profile);
+    workPart = `${repeats}\u00d7${workSeg.distance_meters}m ${intensity}`.trim();
+  } else if (workSeg.duration_minutes != null) {
+    const intensity = formatSegmentIntensity(workSeg, sport, profile);
+    workPart = `${repeats}\u00d7${workSeg.duration_minutes}min ${intensity}`.trim();
+  } else {
+    return "";
+  }
+
+  // Recovery portion
+  if (sport === "swim" && seg.rest_seconds != null) {
+    return `${workPart} / ${seg.rest_seconds}s rest`;
+  }
+  if (seg.recovery) {
+    const recIntensity = formatSegmentIntensity(seg.recovery, sport, profile);
+    if (seg.recovery.duration_minutes != null) {
+      return `${workPart} / ${seg.recovery.duration_minutes}min recovery ${recIntensity}`.trim();
+    }
+  }
+
+  return workPart;
+}
+
+/**
+ * Format the planned workout structure as a compact single-line string.
+ * Segments joined with " → " for readability.
+ * Returns empty string if template is null.
+ *
+ * Examples:
+ * - Bike: Warmup 15min @156W → 4×8min @240W / 3min recovery @156W → Cooldown 10min @156W
+ * - Run: Warmup 15min @12.0 km/h (5:00/km) → 2×20min @14.4 km/h (4:10/km) / 3min recovery @11.2 km/h (5:21/km) → Cooldown 10min @11.2 km/h (5:21/km)
+ * - Swim: Warmup 300m slow pace → 10×100m medium pace / 20s rest → Cooldown 200m slow pace
+ */
+function formatPlannedWorkout(
+  template: WorkoutTemplate,
+  sport: string,
+  profile: UserProfileRow | null
+): string {
+  if (!template?.segments?.length) return "";
+
+  const parts = template.segments.map((seg) => {
+    if (seg.repeats != null && seg.repeats > 1) {
+      return formatRepeatSegment(seg, sport, profile);
+    }
+    return formatSingleSegment(seg, sport, profile);
+  }).filter(Boolean);
+
+  return parts.join(" \u2192 ");
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -298,7 +476,7 @@ Deno.serve(async (req) => {
     const { data: sessionData, error: sessionFetchError } = await db
       .from("plan_sessions")
       .select(
-        "id, day, sport, type, duration_minutes, feedback, order_in_day, week_id, " +
+        "id, day, sport, type, duration_minutes, feedback, order_in_day, week_id, template_id, " +
         "plan_weeks!inner(id, phase, is_recovery, week_number, start_date, plan_id, " +
         "training_plans!inner(user_id))"
       )
@@ -320,7 +498,7 @@ Deno.serve(async (req) => {
     // 7. Fetch remaining context in parallel (activity, profile, week sessions)
     const weekId = session.plan_weeks.id;
 
-    const [activityResult, profileResult, weekSessionsResult, lapsResult] = await Promise.all([
+    const [activityResult, profileResult, weekSessionsResult, lapsResult, workoutLibrary] = await Promise.all([
       // a) Strava activity
       db
         .from("strava_activities")
@@ -347,6 +525,9 @@ Deno.serve(async (req) => {
         .select("lap_index, elapsed_time, moving_time, distance, average_speed, average_cadence, average_watts, average_heartrate, max_heartrate")
         .eq("activity_id", stravaActivityId)
         .order("lap_index", { ascending: true }),
+
+      // e) Workout library (for planned workout structure)
+      fetchWorkoutLibrary(),
     ]);
 
     // Validate activity fetch
@@ -384,6 +565,14 @@ Deno.serve(async (req) => {
     }
     const laps = (lapsResult.data as LapRow[] | null) ?? [];
 
+    // Look up planned workout template (if assigned)
+    const template = session.template_id
+      ? workoutLibrary.get(session.template_id) ?? null
+      : null;
+    const plannedWorkout = template
+      ? formatPlannedWorkout(template, session.sport, profile)
+      : "";
+
     // 9. Build the rendered prompt
     const weekStartDate = session.plan_weeks.start_date;
     const today = new Date();
@@ -391,8 +580,9 @@ Deno.serve(async (req) => {
     // Format CSS for the prompt
     let cssFormatted = "N/A";
     if (profile?.css_seconds_per100m != null) {
-      const cssMin = Math.floor(profile.css_seconds_per100m / 60);
-      const cssSec = Math.round(profile.css_seconds_per100m % 60);
+      let cssMin = Math.floor(profile.css_seconds_per100m / 60);
+      let cssSec = Math.round(profile.css_seconds_per100m % 60);
+      if (cssSec === 60) { cssSec = 0; cssMin += 1; }
       cssFormatted = `${cssMin}:${String(cssSec).padStart(2, "0")}`;
     }
 
@@ -416,6 +606,7 @@ Deno.serve(async (req) => {
       .replace("{{sport}}", session.sport)
       .replace("{{type}}", session.type)
       .replace("{{planned_duration}}", session.duration_minutes.toString())
+      .replace("{{planned_workout}}", plannedWorkout)
       .replace("{{moving_time_min}}", movingTimeMin.toString())
       .replace("{{distance_km}}", distanceKm)
       .replace("{{avg_hr}}", avgHr)

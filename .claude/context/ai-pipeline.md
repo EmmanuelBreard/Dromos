@@ -1,6 +1,6 @@
 # AI Pipeline Reference
 
-> Last updated: 2026-02-15
+> Last updated: 2026-03-07
 
 ## Overview
 
@@ -218,6 +218,6 @@ Single-step pipeline — no multi-step orchestration needed. The agent both conv
 **Production:** `supabase/functions/session-feedback/prompts/session-feedback-v0-prompt.ts`
 **Model:** gpt-4.1 | 150 tokens | temp 0.7
 
-**Template variables:** `{{phase}}`, `{{week_number}}`, `{{is_recovery}}`, `{{race_objective}}`, `{{race_date}}`, `{{vma}}`, `{{ftp}}`, `{{css}}`, `{{sport}}`, `{{type}}`, `{{planned_duration}}`, `{{moving_time_min}}`, `{{distance_km}}`, `{{avg_hr}}`, `{{formatted_pace}}`, `{{avg_watts}}`, `{{laps}}`, `{{week_sessions}}`
+**Template variables:** `{{phase}}`, `{{week_number}}`, `{{is_recovery}}`, `{{race_objective}}`, `{{race_date}}`, `{{vma}}`, `{{ftp}}`, `{{css}}`, `{{sport}}`, `{{type}}`, `{{planned_duration}}`, `{{planned_workout}}`, `{{moving_time_min}}`, `{{distance_km}}`, `{{avg_hr}}`, `{{formatted_pace}}`, `{{avg_watts}}`, `{{laps}}`, `{{week_sessions}}`
 
 **`{{laps}}`:** Formatted per-lap summary from `strava_activity_laps`. Each lap shows duration, avg HR, sport-specific metric (pace/power), and distance. Falls back to "No lap data available." when empty. Fed to the LLM for interval-level coaching feedback.
