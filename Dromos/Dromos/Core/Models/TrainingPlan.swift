@@ -136,6 +136,8 @@ struct PlanSession: Codable, Identifiable {
             return "bicycle"
         case "run":
             return "figure.run"
+        case "strength": return "figure.strengthtraining.traditional"
+        case "race":     return "flag.checkered"
         default:
             return "figure.run"
         }
@@ -147,6 +149,7 @@ struct PlanSession: Codable, Identifiable {
         case "easy": return .green
         case "tempo": return .orange
         case "intervals": return .red
+        case "race": return .yellow
         default: return .gray
         }
     }
@@ -157,6 +160,8 @@ struct PlanSession: Codable, Identifiable {
         case "swim": return "🏊‍♂️"
         case "bike": return "🚴‍♂️"
         case "run": return "🏃‍♂️"
+        case "strength": return "💪"
+        case "race":     return "🏁"
         default: return "🏃‍♂️"
         }
     }

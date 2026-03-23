@@ -108,7 +108,9 @@ final class WorkoutLibraryService {
             for template in library.run {
                 templates[template.templateId] = template
             }
-            
+            for t in library.strength ?? [] { templates[t.templateId] = t }
+            for t in library.race ?? [] { templates[t.templateId] = t }
+
             logger.info("Loaded \(self.templates.count) workout templates")
         } catch {
             logger.error("Failed to load workout library: \(error.localizedDescription)")
@@ -199,20 +201,25 @@ final class WorkoutLibraryService {
     /// - Returns: A flattened segment
     private func createFlatSegment(from segment: WorkoutSegment, isRecovery: Bool) -> FlatSegment {
         // Calculate duration in minutes
-        let durationMinutes: Double
+        var dur: Double
         if let minutes = segment.durationMinutes {
-            durationMinutes = Double(minutes)
+            dur = Double(minutes)
         } else if let seconds = segment.durationSeconds {
-            durationMinutes = Double(seconds) / 60.0
+            dur = Double(seconds) / 60.0
         } else if let distance = segment.distanceMeters {
             // Estimate duration from distance (for swim: ~1.5 min per 100m as baseline)
-            durationMinutes = Double(distance) / 100.0 * 1.5
+            dur = Double(distance) / 100.0 * 1.5
         } else if let restSec = segment.restSeconds {
             // FIX #1: Add restSeconds as fallback after distanceMeters
-            durationMinutes = Double(restSec) / 60.0
+            dur = Double(restSec) / 60.0
         } else {
-            durationMinutes = 0
+            dur = 0
         }
+        // Reps-based estimate for strength segments with no duration
+        if dur == 0, let reps = segment.reps {
+            dur = Double(reps * 4) / 60.0  // ~4 seconds per rep
+        }
+        let durationMinutes: Double = dur
         
         // Get intensity percentage (ftpPct for bike, masPct for run)
         let intensityPct = segment.ftpPct ?? segment.masPct
@@ -407,11 +414,20 @@ final class WorkoutLibraryService {
             if let pace = segment.pace {
                 return pace
             }
-            
+
+        case "strength":
+            if let reps = segment.reps {
+                return "\(reps) reps"
+            }
+            if let secs = segment.durationSeconds {
+                return "\(secs)s"
+            }
+            return nil
+
         default:
             break
         }
-        
+
         return nil
     }
     
