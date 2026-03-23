@@ -98,9 +98,9 @@ BEGIN
   -- WEEK 1 (Mar 23-29) — 10 sessions
   -- ---------------------------------------------------------------------------
 
-  -- Monday: swim intervals
+  -- Monday: swim easy (drills + easy 100s)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w1_id, 'Monday', 'swim', 'Intervals', 'SWIM_Intervals_01', 60, false, 0,
+  VALUES (v_w1_id, 'Monday', 'swim', 'Easy', 'SWIM_Easy_10', 60, false, 0,
     '400 warmup, 8x50m drills (catch-up, fingertip drag), 4x100m @2:15 easy, 200 cooldown');
 
   -- Tuesday: run intervals + swim easy (double)
@@ -113,17 +113,17 @@ BEGIN
 
   -- Wednesday: bike easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w1_id, 'Wednesday', 'bike', 'Easy', 'BIKE_Easy_01', 60, false, 0,
+  VALUES (v_w1_id, 'Wednesday', 'bike', 'Easy', 'BIKE_Easy_12', 60, false, 0,
     'All Z2 @170-190W, steady cadence 85-90rpm');
 
   -- Thursday: run easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w1_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_01', 45, false, 0,
+  VALUES (v_w1_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_07', 45, false, 0,
     '8k easy @5:20-5:30/km (HR <140)');
 
   -- Friday: bike easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w1_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_02', 50, false, 0,
+  VALUES (v_w1_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_13', 50, false, 0,
     'Recovery spin @160-180W');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w1_id, 'Friday', 'swim', 'Easy', 'SWIM_Easy_07', 30, false, 1,
@@ -156,7 +156,7 @@ BEGIN
 
   -- Tuesday: run easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w2_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_01', 55, false, 0,
+  VALUES (v_w2_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_08', 55, false, 0,
     '10k easy @5:20-5:30/km (HR <140)');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w2_id, 'Tuesday', 'swim', 'Easy', 'SWIM_Easy_06', 35, false, 1,
@@ -169,7 +169,7 @@ BEGIN
 
   -- Thursday: run easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w2_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_01', 45, false, 0,
+  VALUES (v_w2_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_07', 45, false, 0,
     '8k easy @5:25/km');
 
   -- Friday: bike easy + swim easy (double)
@@ -207,7 +207,7 @@ BEGIN
 
   -- Tuesday: run easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w3_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_01', 45, false, 0,
+  VALUES (v_w3_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_07', 45, false, 0,
     '8k easy @5:25/km');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w3_id, 'Tuesday', 'swim', 'Easy', 'SWIM_Easy_06', 35, false, 1,
@@ -220,10 +220,10 @@ BEGIN
 
   -- Thursday: brick (bike easy + run easy)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w3_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_03', 40, true, 0,
+  VALUES (v_w3_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_14', 40, true, 0,
     'Brick bike: 40min @175-185W (Z2, all easy)');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w3_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_03', 30, true, 1,
+  VALUES (v_w3_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_09', 30, true, 1,
     'Brick run: 5k easy @5:20/km (practice transition)');
 
   -- Friday: swim easy
@@ -252,22 +252,22 @@ BEGIN
   VALUES (v_w4_id, 'Tuesday', 'swim', 'Easy', 'SWIM_Easy_07', 30, false, 0,
     '1.5k drills');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w4_id, 'Tuesday', 'bike', 'Easy', 'BIKE_Easy_04', 30, false, 1,
+  VALUES (v_w4_id, 'Tuesday', 'bike', 'Easy', 'BIKE_Easy_15', 30, false, 1,
     'Very easy @150W');
 
   -- Wednesday: bike intervals
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w4_id, 'Wednesday', 'bike', 'Intervals', 'BIKE_Intervals_02', 60, false, 0,
+  VALUES (v_w4_id, 'Wednesday', 'bike', 'Intervals', 'BIKE_Intervals_12', 60, false, 0,
     '10min warmup, 4x4min @295-310W (VO2max) w/ 3min easy, 15min cooldown');
 
   -- Thursday: run easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w4_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_01', 45, false, 0,
+  VALUES (v_w4_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_07', 45, false, 0,
     '8k easy @5:25-5:35/km (HR <140)');
 
   -- Friday: bike easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w4_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_02', 50, false, 0,
+  VALUES (v_w4_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_13', 50, false, 0,
     'Easy @160-175W');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w4_id, 'Friday', 'swim', 'Easy', 'SWIM_Easy_06', 35, false, 1,
@@ -295,7 +295,7 @@ BEGIN
 
   -- Monday: swim intervals + strength (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w5_id, 'Monday', 'swim', 'Intervals', 'SWIM_Intervals_01', 55, false, 0,
+  VALUES (v_w5_id, 'Monday', 'swim', 'Intervals', 'SWIM_Intervals_13', 55, false, 0,
     '400 warmup, 10x100m @1:50 (15s rest), 200 cooldown');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w5_id, 'Monday', 'strength', 'Easy', 'STRENGTH_Easy_01', 30, false, 1,
@@ -311,17 +311,17 @@ BEGIN
 
   -- Wednesday: bike easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w5_id, 'Wednesday', 'bike', 'Easy', 'BIKE_Easy_01', 60, false, 0,
+  VALUES (v_w5_id, 'Wednesday', 'bike', 'Easy', 'BIKE_Easy_12', 60, false, 0,
     'Z2 endurance @175-190W, cadence drills: alternate 80/100rpm every 5min');
 
   -- Thursday: run easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w5_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_01', 45, false, 0,
+  VALUES (v_w5_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_07', 45, false, 0,
     '8k easy @5:20/km');
 
   -- Friday: bike easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w5_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_02', 50, false, 0,
+  VALUES (v_w5_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_13', 50, false, 0,
     'Easy @160-175W');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w5_id, 'Friday', 'swim', 'Easy', 'SWIM_Easy_06', 35, false, 1,
@@ -337,7 +337,7 @@ BEGIN
   VALUES (v_w5_id, 'Sunday', 'bike', 'Tempo', 'BIKE_Tempo_12', 50, true, 0,
     'Brick bike: 30min @180W Z2 → last 20min @220-240W / 80-87% FTP');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w5_id, 'Sunday', 'run', 'Easy', 'RUN_Easy_05', 65, true, 1,
+  VALUES (v_w5_id, 'Sunday', 'run', 'Easy', 'RUN_Easy_13', 65, true, 1,
     'Brick run: 12k @5:10-5:20/km all easy — focus on running relaxed off pre-fatigued legs, practice nutrition');
 
   -- ---------------------------------------------------------------------------
@@ -354,7 +354,7 @@ BEGIN
 
   -- Tuesday: run easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w6_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_05', 60, false, 0,
+  VALUES (v_w6_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_14', 60, false, 0,
     '11k easy @5:15-5:25/km (HR <140)');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w6_id, 'Tuesday', 'swim', 'Easy', 'SWIM_Easy_06', 35, false, 1,
@@ -365,20 +365,20 @@ BEGIN
   VALUES (v_w6_id, 'Wednesday', 'bike', 'Intervals', 'BIKE_Intervals_11', 60, false, 0,
     '10min warmup, 5x4min @295-310W (VO2max) w/ 3min easy, 10min cooldown');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w6_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_03', 30, false, 1,
+  VALUES (v_w6_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_09', 30, false, 1,
     '5k easy @5:30/km');
 
   -- Thursday: run easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w6_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_01', 45, false, 0,
+  VALUES (v_w6_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_07', 45, false, 0,
     '8k easy @5:25/km');
 
   -- Friday: bike easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w6_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_02', 50, false, 0,
+  VALUES (v_w6_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_13', 50, false, 0,
     'Easy @160-175W');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w6_id, 'Friday', 'swim', 'Easy', 'SWIM_Easy_08', 45, false, 1,
+  VALUES (v_w6_id, 'Friday', 'swim', 'Easy', 'SWIM_Easy_09', 45, false, 1,
     '2k drills (catch-up, sculling, bilateral breathing)');
 
   -- Saturday: long outdoor bike — race nutrition test
@@ -416,17 +416,17 @@ BEGIN
 
   -- Wednesday: run easy (strides day)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w7_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_03', 35, false, 0,
+  VALUES (v_w7_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_10', 35, false, 0,
     '6k easy @5:30/km + 6x100m strides');
 
   -- Thursday: bike easy (Z2 endurance)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w7_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_01', 60, false, 0,
+  VALUES (v_w7_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_12', 60, false, 0,
     'Z2 endurance @175-190W, steady cadence 85-90rpm');
 
   -- Friday: bike easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w7_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_02', 50, false, 0,
+  VALUES (v_w7_id, 'Friday', 'bike', 'Easy', 'BIKE_Easy_13', 50, false, 0,
     'Easy @160-175W');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w7_id, 'Friday', 'swim', 'Easy', 'SWIM_Easy_06', 35, false, 1,
@@ -470,12 +470,12 @@ BEGIN
 
   -- Wednesday: run easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w8_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_03', 35, false, 0,
+  VALUES (v_w8_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_10', 35, false, 0,
     '6k easy @5:30/km');
 
   -- Thursday: bike easy (save legs)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w8_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_01', 60, false, 0,
+  VALUES (v_w8_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_12', 60, false, 0,
     'Z2 endurance @175-190W, save legs for Sat+Sun');
 
   -- Friday: bike easy + swim easy (double)
@@ -510,7 +510,7 @@ BEGIN
 
   -- Tuesday: run easy + swim easy (double)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w9_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_01', 45, false, 0,
+  VALUES (v_w9_id, 'Tuesday', 'run', 'Easy', 'RUN_Easy_07', 45, false, 0,
     '8k easy @5:20/km');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
   VALUES (v_w9_id, 'Tuesday', 'swim', 'Easy', 'SWIM_Easy_06', 35, false, 1,
@@ -518,12 +518,12 @@ BEGIN
 
   -- Wednesday: bike intervals (short & sharp)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w9_id, 'Wednesday', 'bike', 'Intervals', 'BIKE_Intervals_02', 60, false, 0,
+  VALUES (v_w9_id, 'Wednesday', 'bike', 'Intervals', 'BIKE_Intervals_12', 60, false, 0,
     '10min warmup, 4x4min @295-310W (VO2max) w/ 3min easy, 15min cooldown — short and sharp');
 
   -- Thursday: run easy
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w9_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_03', 35, false, 0,
+  VALUES (v_w9_id, 'Thursday', 'run', 'Easy', 'RUN_Easy_10', 35, false, 0,
     '6k easy @5:30/km');
 
   -- Friday: swim easy (OW — wetsuit comfort)
@@ -556,7 +556,7 @@ BEGIN
   VALUES (v_w10_id, 'Monday', 'swim', 'Easy', 'SWIM_Easy_08', 35, false, 0,
     '1.5k — 400 warmup, 4x100m @1:55 (feeling the water), 300 cooldown');
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w10_id, 'Monday', 'run', 'Easy', 'RUN_Easy_03', 30, false, 1,
+  VALUES (v_w10_id, 'Monday', 'run', 'Easy', 'RUN_Easy_09', 30, false, 1,
     '5k easy @5:25/km + 4x100m strides');
 
   -- Tuesday: bike easy (openers)
@@ -566,12 +566,12 @@ BEGIN
 
   -- Wednesday: run easy (shakeout)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w10_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_03', 25, false, 0,
+  VALUES (v_w10_id, 'Wednesday', 'run', 'Easy', 'RUN_Easy_11', 25, false, 0,
     '4k easy @5:30/km + 4 strides');
 
   -- Thursday: bike easy (leg activation)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w10_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_04', 30, false, 0,
+  VALUES (v_w10_id, 'Thursday', 'bike', 'Easy', 'BIKE_Easy_15', 30, false, 0,
     '30min easy @160W + 4x20s high-cadence sprints (leg activation)');
 
   -- Friday: swim easy (OW — wetsuit check)
@@ -581,7 +581,7 @@ BEGIN
 
   -- Saturday: jog + strides (rack bike, prep nutrition)
   INSERT INTO plan_sessions (week_id, day, sport, type, template_id, duration_minutes, is_brick, order_in_day, notes)
-  VALUES (v_w10_id, 'Saturday', 'run', 'Easy', 'RUN_Easy_03', 15, false, 0,
+  VALUES (v_w10_id, 'Saturday', 'run', 'Easy', 'RUN_Easy_12', 15, false, 0,
     '15min jog + 4 strides. Rack bike. Prep nutrition. Early sleep.');
 
   -- Sunday: RACE DAY
