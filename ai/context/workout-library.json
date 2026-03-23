@@ -2327,7 +2327,7 @@
             {
               "label": "work",
               "duration_minutes": 8,
-              "ftp_pct": 96,
+              "ftp_pct": 97,
               "cadence_rpm": 90
             }
           ],
@@ -2359,7 +2359,7 @@
         {
           "label": "work",
           "duration_minutes": 60,
-          "ftp_pct": 70,
+          "ftp_pct": 67,
           "cadence_rpm": 90
         }
       ]
@@ -2371,7 +2371,7 @@
         {
           "label": "work",
           "duration_minutes": 50,
-          "ftp_pct": 70,
+          "ftp_pct": 61,
           "cadence_rpm": 90
         }
       ]
@@ -2383,7 +2383,7 @@
         {
           "label": "work",
           "duration_minutes": 40,
-          "ftp_pct": 67,
+          "ftp_pct": 65,
           "cadence_rpm": 90
         }
       ]
@@ -2407,7 +2407,7 @@
         {
           "label": "warmup",
           "duration_minutes": 20,
-          "ftp_pct": 65,
+          "ftp_pct": 60,
           "cadence_rpm": 90
         },
         {
@@ -2432,6 +2432,72 @@
           "label": "cooldown",
           "duration_minutes": 15,
           "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_16",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 45,
+          "ftp_pct": 61,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "duration_seconds": 20,
+              "ftp_pct": 61,
+              "cadence_rpm": 115
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "ftp_pct": 61,
+            "cadence_rpm": 90
+          }
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_16",
+      "duration_minutes": 50,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 30,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 20,
+          "ftp_pct": 84,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_17",
+      "duration_minutes": 40,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 15,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 25,
+          "ftp_pct": 88,
           "cadence_rpm": 90
         }
       ]
@@ -3868,7 +3934,7 @@
         {
           "label": "warmup",
           "duration_minutes": 10,
-          "mas_pct": 70
+          "mas_pct": 61
         },
         {
           "label": "repeat",
@@ -3877,19 +3943,19 @@
             {
               "label": "work",
               "duration_minutes": 3,
-              "mas_pct": 100
+              "mas_pct": 98
             }
           ],
           "recovery": {
             "label": "recovery",
             "duration_minutes": 2,
-            "mas_pct": 65
+            "mas_pct": 61
           }
         },
         {
           "label": "cooldown",
           "duration_minutes": 10,
-          "mas_pct": 70
+          "mas_pct": 61
         }
       ]
     },
@@ -3900,7 +3966,7 @@
         {
           "label": "warmup",
           "duration_minutes": 10,
-          "mas_pct": 70
+          "mas_pct": 61
         },
         {
           "label": "repeat",
@@ -3909,19 +3975,19 @@
             {
               "label": "work",
               "duration_minutes": 4,
-              "mas_pct": 100
+              "mas_pct": 98
             }
           ],
           "recovery": {
             "label": "recovery",
             "duration_minutes": 3,
-            "mas_pct": 65
+            "mas_pct": 61
           }
         },
         {
           "label": "cooldown",
           "duration_minutes": 10,
-          "mas_pct": 70
+          "mas_pct": 63
         }
       ]
     },
@@ -3932,12 +3998,12 @@
         {
           "label": "work",
           "duration_minutes": 65,
-          "mas_pct": 68
+          "mas_pct": 63
         },
         {
           "label": "work",
           "duration_minutes": 22,
-          "mas_pct": 85
+          "mas_pct": 80
         }
       ]
     },
@@ -3948,12 +4014,12 @@
         {
           "label": "work",
           "duration_minutes": 38,
-          "mas_pct": 65
+          "mas_pct": 64
         },
         {
           "label": "work",
           "duration_minutes": 17,
-          "mas_pct": 85
+          "mas_pct": 80
         }
       ]
     },
@@ -3969,7 +4035,7 @@
         {
           "label": "work",
           "duration_minutes": 23,
-          "mas_pct": 85
+          "mas_pct": 78
         }
       ]
     },
@@ -3980,7 +4046,7 @@
         {
           "label": "work",
           "duration_minutes": 45,
-          "mas_pct": 65
+          "mas_pct": 62
         }
       ]
     },
@@ -3991,7 +4057,7 @@
         {
           "label": "work",
           "duration_minutes": 55,
-          "mas_pct": 65
+          "mas_pct": 62
         }
       ]
     },
@@ -4002,7 +4068,7 @@
         {
           "label": "work",
           "duration_minutes": 30,
-          "mas_pct": 65
+          "mas_pct": 62
         }
       ]
     },
@@ -4013,7 +4079,7 @@
         {
           "label": "work",
           "duration_minutes": 35,
-          "mas_pct": 65
+          "mas_pct": 61
         }
       ]
     },
@@ -4024,7 +4090,7 @@
         {
           "label": "work",
           "duration_minutes": 25,
-          "mas_pct": 65
+          "mas_pct": 61
         }
       ]
     },
@@ -4046,7 +4112,7 @@
         {
           "label": "work",
           "duration_minutes": 65,
-          "mas_pct": 62
+          "mas_pct": 63
         }
       ]
     },
@@ -4057,7 +4123,87 @@
         {
           "label": "work",
           "duration_minutes": 60,
+          "mas_pct": 63
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_21",
+      "duration_minutes": 53,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 3,
+              "mas_pct": 98
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 2,
+            "mas_pct": 61
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_22",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 3,
+              "mas_pct": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 2,
+            "mas_pct": 61
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_21",
+      "duration_minutes": 75,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 52,
           "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "duration_minutes": 23,
+          "mas_pct": 80
         }
       ]
     }
