@@ -412,8 +412,8 @@ struct RaceDayCardView: View {
     }
 
     /// Converts a decimal minute value to a compact human-readable string (e.g., "1h30", "45 min").
-    private func formatLegDuration(_ minutes: Double) -> String {
-        let totalMinutes = Int(round(minutes))
+    private func formatLegDuration(_ minutes: Int) -> String {
+        let totalMinutes = minutes
         if totalMinutes >= 60 {
             let hours = totalMinutes / 60
             let mins  = totalMinutes % 60
