@@ -180,9 +180,6 @@ struct WorkoutGraphView: View {
             }
 
         case "strength":
-            if let intensityPct = segment.intensityPct {
-                return "\(intensityPct) reps"
-            }
             return nil
 
         case "race":
