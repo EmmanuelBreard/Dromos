@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-03-07 | Migrations: 001-015 + summary_polyline
+> Last updated: 2026-03-23 | Migrations: 001-016 + summary_polyline
 
 ## Tables Overview
 
@@ -102,8 +102,8 @@ Individual training sessions within a week.
 | `id` | UUID | PK, DEFAULT `gen_random_uuid()` | |
 | `week_id` | UUID | NOT NULL, FK → `plan_weeks(id)` CASCADE | |
 | `day` | TEXT | NOT NULL, CHECK IN (Mon-Sun) | |
-| `sport` | TEXT | NOT NULL, CHECK IN ('swim','bike','run') | |
-| `type` | TEXT | NOT NULL, CHECK IN ('Easy','Tempo','Intervals') | |
+| `sport` | TEXT | NOT NULL, CHECK IN ('swim','bike','run','strength','race') | |
+| `type` | TEXT | NOT NULL, CHECK IN ('Easy','Tempo','Intervals','Race') | |
 | `template_id` | TEXT | NOT NULL | e.g. `BIKE_Tempo_03` |
 | `duration_minutes` | INT | NOT NULL, CHECK > 0 | |
 | `is_brick` | BOOLEAN | NOT NULL, DEFAULT FALSE | |
