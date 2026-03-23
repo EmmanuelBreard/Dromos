@@ -5,7 +5,7 @@
 --
 -- Usage: Run as service_role / postgres superuser in Supabase SQL editor.
 -- WARNING: Deletes existing training_plans for ebreard4@gmail.com (CASCADE).
--- Total sessions: 99
+-- Total sessions: 105
 -- =============================================================================
 
 DO $$
