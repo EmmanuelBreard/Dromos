@@ -228,57 +228,70 @@ struct HomeView: View {
 
                 ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
                     let status = completionStatuses[session.id] ?? .planned
-                    HStack(spacing: 8) {
-                        SessionCardView(
-                            session: session,
-                            swimDistance: swimDistance(for: session),
+
+                    if session.sport.lowercased() == "race" {
+                        // Race sessions render as a rich RaceDayCardView with template-driven legs.
+                        // Edit mode arrows are intentionally omitted — race sessions are fixed in the calendar.
+                        RaceDayCardView(
+                            raceObjective: plan.raceObjective,
                             template: workoutLibrary.template(for: session.templateId),
-                            ftp: profileService.user?.ftp,
-                            vma: profileService.user?.vma,
-                            css: profileService.user?.cssSecondsPer100m,
-                            completionStatus: status
+                            notes: session.notes
                         )
+                    } else {
+                        HStack(spacing: 8) {
+                            SessionCardView(
+                                session: session,
+                                swimDistance: swimDistance(for: session),
+                                template: workoutLibrary.template(for: session.templateId),
+                                ftp: profileService.user?.ftp,
+                                vma: profileService.user?.vma,
+                                css: profileService.user?.cssSecondsPer100m,
+                                completionStatus: status
+                            )
 
-                        // Edit mode: hide move arrows for completed sessions (they cannot be rescheduled).
-                        if isEditMode && !isCompleted(session.id) {
-                            VStack(spacing: 12) {
-                                // Up: reorder within day first, then cross to previous day
-                                Button {
-                                    moveSessionUp(
-                                        session: session, sessionIndex: sessionIndex,
-                                        weekId: weekId, dayInfo: dayInfo,
-                                        days: days, dayIndex: dayIndex
-                                    )
-                                } label: {
-                                    Image(systemName: "chevron.up")
-                                        .fontWeight(.semibold)
-                                }
-                                .disabled(dayIndex == 0 && sessionIndex == 0)
+                            // Edit mode: hide move arrows for completed sessions (they cannot be rescheduled).
+                            if isEditMode && !isCompleted(session.id) {
+                                VStack(spacing: 12) {
+                                    // Up: reorder within day first, then cross to previous day
+                                    Button {
+                                        moveSessionUp(
+                                            session: session, sessionIndex: sessionIndex,
+                                            weekId: weekId, dayInfo: dayInfo,
+                                            days: days, dayIndex: dayIndex
+                                        )
+                                    } label: {
+                                        Image(systemName: "chevron.up")
+                                            .fontWeight(.semibold)
+                                    }
+                                    .disabled(dayIndex == 0 && sessionIndex == 0)
 
-                                // Down: reorder within day first, then cross to next day
-                                Button {
-                                    moveSessionDown(
-                                        session: session, sessionIndex: sessionIndex,
-                                        weekId: weekId, dayInfo: dayInfo,
-                                        days: days, dayIndex: dayIndex
-                                    )
-                                } label: {
-                                    Image(systemName: "chevron.down")
-                                        .fontWeight(.semibold)
+                                    // Down: reorder within day first, then cross to next day
+                                    Button {
+                                        moveSessionDown(
+                                            session: session, sessionIndex: sessionIndex,
+                                            weekId: weekId, dayInfo: dayInfo,
+                                            days: days, dayIndex: dayIndex
+                                        )
+                                    } label: {
+                                        Image(systemName: "chevron.down")
+                                            .fontWeight(.semibold)
+                                    }
+                                    .disabled(dayIndex == days.count - 1 && sessionIndex == dayInfo.sessions.count - 1)
                                 }
-                                .disabled(dayIndex == days.count - 1 && sessionIndex == dayInfo.sessions.count - 1)
+                                .font(.title3)
+                                .foregroundColor(.blue)
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
                             }
-                            .font(.title3)
-                            .foregroundColor(.blue)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
                         }
                     }
                 }
             }
 
-            // Race Day card (if this day is the race date)
+            // Race Day card (static fallback): shown only when the day is the race date
+            // AND no seeded race session already exists — avoids duplicate race cards.
             if let raceDate = plan.raceDateAsDate,
-               calendar.isDate(dayInfo.date, inSameDayAs: raceDate) {
+               calendar.isDate(dayInfo.date, inSameDayAs: raceDate),
+               !dayInfo.sessions.contains(where: { $0.sport.lowercased() == "race" }) {
                 RaceDayCardView(raceObjective: plan.raceObjective)
             }
         }
