@@ -60,6 +60,11 @@ struct CalendarPlanView: View {
                 }
                 expandedSessionIDs.removeAll()
             }
+            .onAppear {
+                if let plan = planService.trainingPlan {
+                    currentWeekIndex = plan.currentWeekIndex()
+                }
+            }
         }
     }
 
