@@ -24,7 +24,7 @@ Dromos/Dromos/
 │   │   └── ChatMessage.swift          # ChatMessage (Codable, Identifiable) + ChatResponse edge function DTO
 │   └── Services/
 │       ├── SupabaseClient.swift      # Singleton client with snake_case encoder/decoder
-│       ├── AuthService.swift         # Auth state, sign up/in/out, onboarding/plan status
+│       ├── AuthService.swift         # Auth state, sign up/in/out, onboarding/plan status. `isInitializing` flag (true until `.initialSession` resolves) gates RootView splash screen
 │       ├── PlanService.swift         # Plan generation (edge function) + fetching (nested query) + session reordering (RPC)
 │       ├── ProfileService.swift      # User profile CRUD + onboarding save
 │       ├── StravaService.swift       # Strava OAuth (ASWebAuthenticationSession), disconnect, sync, activity fetch
