@@ -178,11 +178,17 @@ struct WorkoutGraphView: View {
             if let pace = segment.pace {
                 return "\(pace) pace"
             }
-            
+
+        case "strength":
+            return nil
+
+        case "race":
+            return nil
+
         default:
             break
         }
-        
+
         return nil
     }
     
@@ -271,6 +277,8 @@ struct WorkoutGraphView: View {
     /// Derives an effective intensity for bar height calculation.
     /// For swim segments without intensityPct, maps pace label to approximate intensity.
     private func effectiveIntensity(for segment: FlatSegment) -> Int? {
+        if sport == "strength" { return 50 }
+        if sport == "race" { return 70 }
         if let pct = segment.intensityPct { return pct }
         if let pace = segment.pace {
             switch pace.lowercased() {

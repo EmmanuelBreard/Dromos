@@ -351,7 +351,7 @@ struct RaceDayCardView: View {
                             Spacer()
 
                             if let duration = segment.durationMinutes {
-                                Text(formatLegDuration(Double(duration)))
+                                Text(formatLegDuration(duration))
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
@@ -411,9 +411,9 @@ struct RaceDayCardView: View {
         return segment.label.capitalized
     }
 
-    /// Converts a decimal minute value to a compact human-readable string (e.g., "1h30", "45 min").
-    private func formatLegDuration(_ minutes: Double) -> String {
-        let totalMinutes = Int(round(minutes))
+    /// Converts a minute value to a compact human-readable string (e.g., "1h30", "45 min").
+    private func formatLegDuration(_ minutes: Int) -> String {
+        let totalMinutes = minutes
         if totalMinutes >= 60 {
             let hours = totalMinutes / 60
             let mins  = totalMinutes % 60

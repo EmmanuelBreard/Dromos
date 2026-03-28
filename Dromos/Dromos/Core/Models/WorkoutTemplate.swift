@@ -42,6 +42,7 @@ final class WorkoutSegment: Codable {
     var equipment: String?
     var terrain: String?
     var restSeconds: Int?
+    var reps: Int?
     var repeats: Int?
     var segments: [WorkoutSegment]?
     var recovery: WorkoutSegment?
@@ -60,6 +61,7 @@ final class WorkoutSegment: Codable {
         case equipment
         case terrain
         case restSeconds = "rest_seconds"
+        case reps
         case repeats
         case segments
         case recovery
@@ -83,6 +85,7 @@ final class WorkoutSegment: Codable {
         equipment: String? = nil,
         terrain: String? = nil,
         restSeconds: Int? = nil,
+        reps: Int? = nil,
         repeats: Int? = nil,
         segments: [WorkoutSegment]? = nil,
         recovery: WorkoutSegment? = nil
@@ -101,6 +104,7 @@ final class WorkoutSegment: Codable {
         self.equipment = equipment
         self.terrain = terrain
         self.restSeconds = restSeconds
+        self.reps = reps
         self.repeats = repeats
         self.segments = segments
         self.recovery = recovery
@@ -172,4 +176,6 @@ struct WorkoutLibrary: Codable {
     let swim: [WorkoutTemplate]
     let bike: [WorkoutTemplate]
     let run: [WorkoutTemplate]
+    let strength: [WorkoutTemplate]?
+    let race: [WorkoutTemplate]?
 }

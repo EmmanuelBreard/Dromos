@@ -912,6 +912,511 @@
           "pace": "slow"
         }
       ]
+    },
+    {
+      "template_id": "SWIM_Easy_06",
+      "duration_minutes": 35,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 200,
+          "pace": "slow"
+        },
+        {
+          "label": "work",
+          "distance_meters": 1100,
+          "pace": "slow"
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 200,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_07",
+      "duration_minutes": 30,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 200,
+          "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "distance_meters": 200,
+          "drill": "catch_up",
+          "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "distance_meters": 200,
+          "drill": "fingertip_drag",
+          "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "distance_meters": 200,
+          "drill": "fist_drill",
+          "pace": "slow"
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_08",
+      "duration_minutes": 35,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 400,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "medium"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 300,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_11",
+      "duration_minutes": 50,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 400,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 150,
+              "pace": "medium"
+            }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 300,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_12",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 500,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 200,
+              "pace": "medium"
+            }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Tempo_13",
+      "duration_minutes": 50,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 500,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 200,
+              "pace": "medium",
+              "cue": "sight_every_6_strokes"
+            }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 300,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_11",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 500,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 150,
+              "pace": "fast"
+            }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_12",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 500,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 200,
+              "pace": "fast"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_09",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 400,
+          "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "distance_meters": 200,
+          "drill": "catch_up",
+          "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "distance_meters": 200,
+          "drill": "sculling",
+          "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "distance_meters": 200,
+          "drill": "bilateral_breathing",
+          "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "distance_meters": 200,
+          "drill": "fingertip_drag",
+          "pace": "slow"
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_10",
+      "duration_minutes": 45,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 400,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "drill",
+              "distance_meters": 50,
+              "drill": "catch_up",
+              "pace": "slow"
+            },
+            {
+              "label": "drill",
+              "distance_meters": 50,
+              "drill": "fingertip_drag",
+              "pace": "slow"
+            }
+          ],
+          "rest_seconds": 10
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 200,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_13",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 500,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 10,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "quick"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_11",
+      "duration_minutes": 50,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 400,
+          "pace": "slow"
+        },
+        {
+          "label": "work",
+          "distance_meters": 1200,
+          "pace": "easy"
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_12",
+      "duration_minutes": 25,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 300,
+          "pace": "slow"
+        },
+        {
+          "label": "work",
+          "distance_meters": 500,
+          "pace": "easy"
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 200,
+          "pace": "slow"
+        }
+      ]
+    },
+    {
+      "template_id": "SWIM_Intervals_14",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "warmup",
+          "distance_meters": 500,
+          "pace": "slow"
+        },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 150,
+              "pace": "fast"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "equipment": "pull_buoy"
+            }
+          ]
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 400,
+          "pace": "slow"
+        }
+      ]
     }
   ],
   "bike": [
@@ -1769,6 +2274,390 @@
           "label": "work",
           "duration_minutes": 120,
           "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_07",
+      "duration_minutes": 150,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 150,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_08",
+      "duration_minutes": 180,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 180,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_09",
+      "duration_minutes": 210,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 210,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_10",
+      "duration_minutes": 240,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 240,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_11",
+      "duration_minutes": 40,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 15,
+          "ftp_pct": 60,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 5,
+              "ftp_pct": 84,
+              "cadence_rpm": 90
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "ftp_pct": 60,
+            "cadence_rpm": 90
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 10,
+          "ftp_pct": 58,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Intervals_11",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "ftp_pct": 60,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 4,
+              "ftp_pct": 110,
+              "cadence_rpm": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "ftp_pct": 51,
+            "cadence_rpm": 90
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 10,
+          "ftp_pct": 60,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_11",
+      "duration_minutes": 45,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 25,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 20,
+          "ftp_pct": 88,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_12",
+      "duration_minutes": 50,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 30,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 20,
+          "ftp_pct": 91,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_13",
+      "duration_minutes": 40,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 15,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 25,
+          "ftp_pct": 91,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_14",
+      "duration_minutes": 30,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 10,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 20,
+          "ftp_pct": 90,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_15",
+      "duration_minutes": 180,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 80,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 8,
+              "ftp_pct": 97,
+              "cadence_rpm": 90
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 5,
+            "ftp_pct": 60,
+            "cadence_rpm": 90
+          }
+        },
+        {
+          "label": "work",
+          "duration_minutes": 64,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 10,
+          "ftp_pct": 58,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_12",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 60,
+          "ftp_pct": 67,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_13",
+      "duration_minutes": 50,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 50,
+          "ftp_pct": 61,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_14",
+      "duration_minutes": 40,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 40,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_15",
+      "duration_minutes": 30,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 30,
+          "ftp_pct": 58,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Intervals_12",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 20,
+          "ftp_pct": 60,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 4,
+              "ftp_pct": 110,
+              "cadence_rpm": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "ftp_pct": 51,
+            "cadence_rpm": 90
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 15,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_16",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 45,
+          "ftp_pct": 61,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "duration_seconds": 20,
+              "ftp_pct": 61,
+              "cadence_rpm": 115
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "ftp_pct": 61,
+            "cadence_rpm": 90
+          }
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_16",
+      "duration_minutes": 50,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 30,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 20,
+          "ftp_pct": 84,
+          "cadence_rpm": 90
+        }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_17",
+      "duration_minutes": 40,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 15,
+          "ftp_pct": 65,
+          "cadence_rpm": 90
+        },
+        {
+          "label": "work",
+          "duration_minutes": 25,
+          "ftp_pct": 88,
           "cadence_rpm": 90
         }
       ]
@@ -3195,6 +4084,469 @@
           "label": "work",
           "duration_minutes": 120,
           "mas_pct": 62
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_19",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 61
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 3,
+              "mas_pct": 98
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 2,
+            "mas_pct": 61
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 10,
+          "mas_pct": 61
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_20",
+      "duration_minutes": 65,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 10,
+          "mas_pct": 61
+        },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 4,
+              "mas_pct": 98
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 3,
+            "mas_pct": 61
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 10,
+          "mas_pct": 63
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_18",
+      "duration_minutes": 87,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 65,
+          "mas_pct": 63
+        },
+        {
+          "label": "work",
+          "duration_minutes": 22,
+          "mas_pct": 80
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_19",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 38,
+          "mas_pct": 64
+        },
+        {
+          "label": "work",
+          "duration_minutes": 17,
+          "mas_pct": 80
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_20",
+      "duration_minutes": 75,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 52,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "duration_minutes": 23,
+          "mas_pct": 78
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_07",
+      "duration_minutes": 45,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 45,
+          "mas_pct": 62
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_08",
+      "duration_minutes": 55,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 55,
+          "mas_pct": 62
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_09",
+      "duration_minutes": 30,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 30,
+          "mas_pct": 62
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_10",
+      "duration_minutes": 35,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 35,
+          "mas_pct": 61
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_11",
+      "duration_minutes": 25,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 25,
+          "mas_pct": 61
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_12",
+      "duration_minutes": 15,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 15,
+          "mas_pct": 65
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_13",
+      "duration_minutes": 65,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 65,
+          "mas_pct": 63
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Easy_14",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 60,
+          "mas_pct": 63
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_21",
+      "duration_minutes": 53,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 3,
+              "mas_pct": 98
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 2,
+            "mas_pct": 61
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_22",
+      "duration_minutes": 60,
+      "segments": [
+        {
+          "label": "warmup",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "duration_minutes": 3,
+              "mas_pct": 100
+            }
+          ],
+          "recovery": {
+            "label": "recovery",
+            "duration_minutes": 2,
+            "mas_pct": 61
+          }
+        },
+        {
+          "label": "cooldown",
+          "duration_minutes": 11,
+          "mas_pct": 61
+        }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_21",
+      "duration_minutes": 75,
+      "segments": [
+        {
+          "label": "work",
+          "duration_minutes": 52,
+          "mas_pct": 65
+        },
+        {
+          "label": "work",
+          "duration_minutes": 23,
+          "mas_pct": 80
+        }
+      ]
+    }
+  ],
+  "strength": [
+    {
+      "template_id": "STRENGTH_Easy_01",
+      "duration_minutes": 30,
+      "segments": [
+        {
+          "label": "work",
+          "duration_seconds": 45,
+          "cue": "Front plank"
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 30
+        },
+        {
+          "label": "work",
+          "duration_seconds": 30,
+          "cue": "Side plank left"
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 15
+        },
+        {
+          "label": "work",
+          "duration_seconds": 30,
+          "cue": "Side plank right"
+        },
+        {
+          "label": "rest",
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "rest_seconds": 20,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 8,
+              "cue": "Dead bug (each side)"
+            }
+          ]
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "rest_seconds": 20,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 8,
+              "cue": "Bird dog (each side)"
+            }
+          ]
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "rest_seconds": 15,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 10,
+              "cue": "Pallof press (each side)"
+            }
+          ]
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "rest_seconds": 20,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 8,
+              "cue": "Single-leg Romanian deadlift (each side)"
+            }
+          ]
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "rest_seconds": 20,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 8,
+              "cue": "Bulgarian split squat (each side)"
+            }
+          ]
+        },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "rest_seconds": 15,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 12,
+              "cue": "Calf raises (slow eccentric)"
+            }
+          ]
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "rest_seconds": 15,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 10,
+              "cue": "Single-leg glute bridge (each side)"
+            }
+          ]
+        },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "rest_seconds": 15,
+          "segments": [
+            {
+              "label": "work",
+              "reps": 15,
+              "cue": "Band pull-apart"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "race": [
+    {
+      "template_id": "RACE_Race_01",
+      "duration_minutes": 300,
+      "segments": [
+        {
+          "label": "work",
+          "distance_meters": 1900,
+          "duration_minutes": 37,
+          "pace": "medium",
+          "cue": "Swim 1.9km — draft, stay calm in Gardon river current"
+        },
+        {
+          "label": "recovery",
+          "duration_minutes": 4,
+          "cue": "T1 — wetsuit off, helmet on, go"
+        },
+        {
+          "label": "work",
+          "distance_meters": 90000,
+          "duration_minutes": 162,
+          "ftp_pct": 69,
+          "cue": "Bike 90km — negative split, 190W avg, eat 60-80g carbs/h"
+        },
+        {
+          "label": "recovery",
+          "duration_minutes": 3,
+          "cue": "T2 — caffeine gel"
+        },
+        {
+          "label": "work",
+          "distance_meters": 21000,
+          "duration_minutes": 93,
+          "mas_pct": 75,
+          "cue": "Run 21km — start 4:35/km, build to 4:20/km if legs allow"
+        }
+      ]
+    },
+    {
+      "template_id": "RACE_Race_02",
+      "duration_minutes": 220,
+      "segments": [
+        {
+          "label": "work",
+          "distance_meters": 42195,
+          "duration_minutes": 220,
+          "mas_pct": 63,
+          "cue": "Marathon — 5:20-5:40/km Z2, HR <145. Walk aid stations if needed. Practice 60g carbs/h."
         }
       ]
     }

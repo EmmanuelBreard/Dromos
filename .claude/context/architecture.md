@@ -1,6 +1,6 @@
 # Architecture Reference
 
-> Last updated: 2026-02-22
+> Last updated: 2026-03-23
 
 ## Folder Structure
 
@@ -132,6 +132,7 @@ All services follow:
 - `swimDistance(for:)` — Recursive distance calculation for swim templates
 - `flattenedSegments(for:)` — Returns `[FlatSegment]` for graph rendering (expands repeats)
 - `stepSummaries(for:sport:ftp:vma:css:)` — Returns `[StepSummary]` for text display (collapses repeats)
+- Library JSON now has 5 top-level arrays: `swim`, `bike`, `run`, `strength` (optional), `race` (optional)
 
 **FlatSegment** (`WorkoutTemplate.swift`):
 - Identifiable struct for graph rendering
@@ -178,6 +179,7 @@ All services follow:
 **SessionCardView updates** (`SessionCardView.swift`):
 - Now accepts: `template: WorkoutTemplate?`, `ftp: Int?`, `vma: Double?`, `css: Int?`
 - Layout: sport emoji (🏊‍♂️🚴‍♂️🏃‍♂️) + name + duration + type badge (top-right, color by type: Easy=green, Tempo=orange, Intervals=red)
+- Displays `session.notes` (coaching notes from plan) above workout steps when present
 - Shows `WorkoutStepsView` for all sessions with a template (except simple swims: 1 segment, no repeats)
 - Shows `WorkoutGraphView` for all sessions with a template
 - Passes sport + athlete metrics to graph for tap popover formatting
@@ -212,7 +214,7 @@ All services follow:
 **WorkoutStepsView** — Workout step list with intensity-colored dots (Phase 2)
 **WorkoutGraphView** — Interactive horizontal intensity bar chart with tap-to-reveal popovers (Phase 2-3)
 **RestDayCardView** — Bed icon + "Rest Day" label
-**RaceDayCardView** — Trophy icon + "Race Day" label with optional race objective
+**RaceDayCardView** — Trophy icon + "Race Day" label with optional race objective; when given a `template` + `notes`, renders structured race legs (swim/T1/bike/T2/run) with cue text and durations. Race sessions (`sport='race'`) in HomeView are routed here instead of SessionCardView.
 **WeekHeaderView** — Week navigation arrows + phase badge + date range
 **DaySessionRow** — Day header + session list (reused in Home and Plan tabs)
 
@@ -222,9 +224,10 @@ All services follow:
 
 **Color Extensions:**
 - `Color.phaseColor(for:)` — Base=blue, Build=orange, Peak=red, Taper=purple, Recovery=green
-- `PlanSession.sportColor` — swim=cyan, bike=green, run=orange
-- `PlanSession.typeColor` — Easy=green, Tempo=orange, Intervals=red
-- `PlanSession.sportEmoji` — 🏊‍♂️, 🚴‍♂️, 🏃‍♂️
+- `PlanSession.sportColor` — swim=cyan, bike=green, run=orange, strength=purple, race=yellow
+- `PlanSession.typeColor` — Easy=green, Tempo=orange, Intervals=red, Race=yellow
+- `PlanSession.sportEmoji` — 🏊‍♂️, 🚴‍♂️, 🏃‍♂️, 💪, 🏁
+- `PlanSession.sportIcon` — figure.pool.swim, bicycle, figure.run, figure.strengthtraining.traditional, flag.checkered
 - `Color.intensity(for:isRecovery:)` — Green→yellow→orange→red gradient based on intensity % (Phase 2)
 
 **Model Extensions:**

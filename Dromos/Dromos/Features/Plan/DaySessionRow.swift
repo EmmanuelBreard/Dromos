@@ -284,6 +284,8 @@ extension PlanSession {
             return .green
         case "run":
             return .orange
+        case "strength": return .purple
+        case "race":     return .yellow
         default:
             return .primary
         }
