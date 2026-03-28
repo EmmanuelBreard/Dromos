@@ -27,6 +27,7 @@ struct RootView: View {
                     ProgressView()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
             } else if !authService.isAuthenticated {
                 // Not signed in → show auth screens (login/signup)
                 AuthView(authService: authService)
@@ -41,6 +42,7 @@ struct RootView: View {
                 MainTabView(authService: authService)
             }
         }
+        .animation(.none, value: authService.isInitializing)
         .animation(.default, value: authService.isAuthenticated)
         .animation(.default, value: authService.onboardingCompleted)
         .animation(.default, value: authService.hasPlan)
