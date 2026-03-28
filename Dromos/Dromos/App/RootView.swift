@@ -18,7 +18,17 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if !authService.isAuthenticated {
+            if authService.isInitializing {
+                VStack(spacing: 24) {
+                    Image("DromosLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120)
+                    ProgressView()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+            } else if !authService.isAuthenticated {
                 // Not signed in → show auth screens (login/signup)
                 AuthView(authService: authService)
             } else if !authService.onboardingCompleted {
@@ -32,20 +42,10 @@ struct RootView: View {
                 MainTabView(authService: authService)
             }
         }
+        .animation(.none, value: authService.isInitializing)
         .animation(.default, value: authService.isAuthenticated)
         .animation(.default, value: authService.onboardingCompleted)
         .animation(.default, value: authService.hasPlan)
-        .task {
-            // Check onboarding and plan status on app launch if user is already authenticated
-            // This ensures state is up-to-date with the database
-            if authService.isAuthenticated {
-                try? await authService.checkOnboardingStatus()
-                // Check plan status after onboarding check succeeds
-                if authService.onboardingCompleted {
-                    try? await authService.checkPlanStatus()
-                }
-            }
-        }
     }
 }
 
