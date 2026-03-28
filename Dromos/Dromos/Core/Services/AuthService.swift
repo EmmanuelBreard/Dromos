@@ -33,6 +33,10 @@ final class AuthService: ObservableObject {
     /// Updated automatically when auth state changes.
     @Published private(set) var hasPlan: Bool = false
 
+    /// Whether the app is still resolving the initial auth state on cold start.
+    /// True until either `checkExistingSession()` or the `.initialSession` auth event completes.
+    @Published private(set) var isInitializing: Bool = true
+
     // MARK: - Computed Properties
 
     /// Whether the user is currently authenticated.
@@ -235,10 +239,12 @@ final class AuthService: ObservableObject {
                 onboardingCompleted = false
                 hasPlan = false
             }
+            isInitializing = false
         } catch {
             // No existing session, user needs to sign in
             session = nil
             onboardingCompleted = false
+            isInitializing = false
         }
     }
 
@@ -257,10 +263,12 @@ final class AuthService: ObservableObject {
                         if onboardingCompleted {
                             try? await checkPlanStatus()
                         }
+                        self.isInitializing = false
                     } else {
                         self.session = nil
                         self.onboardingCompleted = false
                         self.hasPlan = false
+                        self.isInitializing = false
                     }
                 case .signedIn:
                     self.session = session
