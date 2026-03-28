@@ -34,7 +34,7 @@ final class AuthService: ObservableObject {
     @Published private(set) var hasPlan: Bool = false
 
     /// Whether the app is still resolving the initial auth state on cold start.
-    /// True until either `checkExistingSession()` or the `.initialSession` auth event completes.
+    /// True until the `.initialSession` auth event completes.
     @Published private(set) var isInitializing: Bool = true
 
     // MARK: - Computed Properties
@@ -64,11 +64,6 @@ final class AuthService: ObservableObject {
     init() {
         // Start observing auth state changes
         startObservingAuthState()
-
-        // Check for existing session
-        Task {
-            await checkExistingSession()
-        }
     }
 
     deinit {
@@ -221,33 +216,6 @@ final class AuthService: ObservableObject {
 
     // MARK: - Private Methods
 
-    /// Check for an existing session on app launch.
-    private func checkExistingSession() async {
-        do {
-            let existingSession = try await client.auth.session
-            // Only use the session if it's not expired
-            if !existingSession.isExpired {
-                session = existingSession
-                // Check onboarding status for existing session
-                try? await checkOnboardingStatus()
-                // Check plan status after onboarding check succeeds
-                if onboardingCompleted {
-                    try? await checkPlanStatus()
-                }
-            } else {
-                session = nil
-                onboardingCompleted = false
-                hasPlan = false
-            }
-            isInitializing = false
-        } catch {
-            // No existing session, user needs to sign in
-            session = nil
-            onboardingCompleted = false
-            isInitializing = false
-        }
-    }
-
     /// Start observing auth state changes (sign in, sign out, token refresh).
     private func startObservingAuthState() {
         authStateTask = Task {
@@ -278,6 +246,7 @@ final class AuthService: ObservableObject {
                     if onboardingCompleted {
                         try? await checkPlanStatus()
                     }
+                    self.isInitializing = false
                 case .signedOut:
                     self.session = nil
                     self.onboardingCompleted = false
