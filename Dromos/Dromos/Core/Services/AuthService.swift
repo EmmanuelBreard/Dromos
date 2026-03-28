@@ -225,13 +225,13 @@ final class AuthService: ObservableObject {
                     // Only use initial session if not expired
                     if let session, !session.isExpired {
                         self.session = session
-                        self.isInitializing = false   // unblock UI immediately
                         // Check onboarding status when session is restored
                         try? await checkOnboardingStatus()
                         // Check plan status after onboarding check succeeds
                         if onboardingCompleted {
                             try? await checkPlanStatus()
                         }
+                        self.isInitializing = false
                     } else {
                         self.session = nil
                         self.onboardingCompleted = false
