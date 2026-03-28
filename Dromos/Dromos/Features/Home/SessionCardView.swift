@@ -196,10 +196,19 @@ struct SessionCardView: View {
     // MARK: - Planned Workout Content
 
     /// Shared planned workout rendering used by both the completed-card disclosure and
-    /// the always-visible planned/missed layout. Contains workout steps, intensity graph,
-    /// and swim distance (swim-only, simple sessions).
+    /// the always-visible planned/missed layout. Contains coaching notes, workout steps,
+    /// intensity graph, and swim distance (swim-only, simple sessions).
     @ViewBuilder
     private var plannedWorkoutContent: some View {
+        // Coaching notes from plan (displayed above workout steps when present).
+        // These come from plan_sessions.notes and carry pre-session coaching guidance.
+        if let notes = session.notes, !notes.isEmpty {
+            Text(notes)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .padding(.bottom, 4)
+        }
+
         // Workout steps (only if template has >1 segment or has repeats)
         if let template = template, session.shouldShowWorkoutSteps(template: template) {
             let steps = workoutLibrary.stepSummaries(
@@ -263,37 +272,155 @@ struct RestDayCardView: View {
 // MARK: - Race Day Card
 
 /// Celebratory card for race days.
-/// Shows trophy icon with "Race Day" label and optional race objective (e.g., "Olympic", "Ironman 70.3").
+/// When a race template is provided, renders individual race legs (swim/T1/bike/T2/run)
+/// with their cues and durations. Falls back to a simple header-only display otherwise.
 struct RaceDayCardView: View {
     let raceObjective: String?
+    /// Optional workout template carrying race leg segments (from WorkoutLibrary race array).
+    var template: WorkoutTemplate? = nil
+    /// Optional coaching/strategy notes for race day (from plan_sessions.notes).
+    var notes: String? = nil
+
+    private let workoutLibrary = WorkoutLibraryService.shared
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Trophy icon
-            Image(systemName: "trophy.fill")
-                .font(.title2)
-                .foregroundColor(.orange)
-                .frame(width: 40, height: 40)
-                .background(Color.orange.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Race Day")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            // Header row: trophy icon + race day title + objective subtitle
+            HStack(spacing: 12) {
+                Image(systemName: "trophy.fill")
+                    .font(.title2)
                     .foregroundColor(.orange)
-                
-                if let objective = raceObjective {
-                    Text(objective)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    .frame(width: 40, height: 40)
+                    .background(Color.orange.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Race Day")
+                        .font(.headline)
+                        .foregroundColor(.orange)
+
+                    if let objective = raceObjective {
+                        Text(objective)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                 }
+
+                Spacer()
             }
-            
-            Spacer()
+
+            // Race legs breakdown (only when a template with segments is available)
+            if let template = template {
+                Divider()
+                raceLegsList(template: template)
+            }
+
+            // Session notes: race strategy, target times, pacing guidance
+            if let notes = notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(16)
         .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Race Legs List
+
+    /// Renders each race segment (swim, T1, bike, T2, run) as a labelled row
+    /// with a sport-appropriate icon, human-readable name, duration, and cue text.
+    @ViewBuilder
+    private func raceLegsList(template: WorkoutTemplate) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(template.segments.enumerated()), id: \.offset) { _, segment in
+                HStack(spacing: 12) {
+                    // Sport icon inferred from segment label / cue
+                    legIcon(for: segment)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text(legName(for: segment))
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+
+                            Spacer()
+
+                            if let duration = segment.durationMinutes {
+                                Text(formatLegDuration(duration))
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        // Cue carries pacing / strategy notes for this leg
+                        if let cue = segment.cue, !cue.isEmpty {
+                            Text(cue)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Returns an SF Symbol image appropriate for the race leg based on its label and cue.
+    private func legIcon(for segment: WorkoutSegment) -> Image {
+        let cue = (segment.cue ?? "").lowercased()
+        let label = segment.label.lowercased()
+
+        // Transition segments
+        if label == "recovery" || cue.contains("t1") || cue.contains("t2") {
+            return Image(systemName: "arrow.triangle.2.circlepath")
+        }
+        // Discipline-specific icons
+        if cue.contains("swim") { return Image(systemName: "figure.pool.swim") }
+        if cue.contains("bike") { return Image(systemName: "bicycle") }
+        if cue.contains("run") || cue.contains("marathon") { return Image(systemName: "figure.run") }
+
+        // Distance-based fallback: <5 km → swim, >40 km → marathon run, >20 km → bike
+        if let dist = segment.distanceMeters {
+            if dist < 5000  { return Image(systemName: "figure.pool.swim") }
+            if dist > 40000 { return Image(systemName: "figure.run") }
+            if dist > 20000 { return Image(systemName: "bicycle") }
+            return Image(systemName: "figure.run")
+        }
+
+        return Image(systemName: "flag.checkered")
+    }
+
+    /// Derives a human-readable leg name from the segment's cue or label.
+    private func legName(for segment: WorkoutSegment) -> String {
+        let cue = (segment.cue ?? "").lowercased()
+
+        if cue.contains("t1")       { return "T1" }
+        if cue.contains("t2")       { return "T2" }
+        if cue.contains("swim")     { return "Swim" }
+        if cue.contains("bike")     { return "Bike" }
+        if cue.contains("marathon") { return "Marathon" }
+        if cue.contains("run")      { return "Run" }
+
+        return segment.label.capitalized
+    }
+
+    /// Converts a decimal minute value to a compact human-readable string (e.g., "1h30", "45 min").
+    private func formatLegDuration(_ minutes: Double) -> String {
+        let totalMinutes = Int(round(minutes))
+        if totalMinutes >= 60 {
+            let hours = totalMinutes / 60
+            let mins  = totalMinutes % 60
+            if mins == 0 { return "\(hours)h" }
+            return "\(hours)h\(String(format: "%02d", mins))"
+        }
+        return "\(totalMinutes) min"
     }
 }
 
