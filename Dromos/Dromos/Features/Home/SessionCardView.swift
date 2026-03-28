@@ -351,7 +351,7 @@ struct RaceDayCardView: View {
                             Spacer()
 
                             if let duration = segment.durationMinutes {
-                                Text(formatLegDuration(duration))
+                                Text(formatLegDuration(Double(duration)))
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
