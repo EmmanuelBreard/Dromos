@@ -26,10 +26,11 @@ Tech spec file path: $ARGUMENTS (e.g., `tech-specs/DRO-64-single-source-of-truth
 
 1. Read the tech spec at the provided path. **HALT if the file does not exist.**
 2. Identify the parent Linear issue ID from the tech spec header (look for `DRO-` pattern). **HALT if not found — ask the user for the Linear issue ID.**
-3. Create a feature branch from `main`:
+3. **Check for unmerged feature branches:** Run `git branch --no-merged main | grep -E 'feature/|fix/'` and report any results to the user. **HALT if unmerged branches exist** — ask whether they should be merged to main first before starting new work. Unmerged branches indicate incomplete work that could cause dependency issues or conflicts later.
+4. Create a feature branch from `main`:
    - Branch name: `feature/<parent-issue-id>-<short-description>` (e.g., `feature/DRO-64-single-source-of-truth`)
    - **HALT if branch already exists** — ask user whether to reuse or create a new one.
-4. Report setup completion and proceed to grooming.
+5. Report setup completion and proceed to grooming.
 
 ---
 
@@ -174,8 +175,9 @@ Once all phases are merged and QA passes:
 - <Any follow-up tasks, if none say "None">
 ```
 
-3. Update the tech spec markdown: set all task statuses to 🟩 and progress to 100%.
-4. Update the parent Linear issue status to "Done".
+3. **Merge the feature branch to `main`:** Open a PR from the feature branch to `main` (or merge directly if no PR is needed). Confirm the merge completed and the feature branch is now in `main`.
+4. Update the tech spec markdown: set all task statuses to 🟩 and progress to 100%.
+5. **Update the parent Linear issue status to "Done" — only after the feature branch is confirmed merged to `main`.** Never mark Done based on sub-issue PR merges to the feature branch alone.
 
 ---
 
@@ -183,6 +185,7 @@ Once all phases are merged and QA passes:
 
 | Halt Point | Trigger | What User Does |
 |---|---|---|
+| Unmerged branches | Any `feature/` or `fix/` branch not in `main` at Step 0 | Confirm merge or proceed |
 | Manual QA | After `[QA-REQUIRED]` phases or final phase | "QA pass" or describe issues |
 | Fix loop exhausted | 3 failed code review cycles on same phase | Decide how to proceed |
 | Ambiguity | Requirements unclear at any point | Clarify via question |

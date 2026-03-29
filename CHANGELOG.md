@@ -14,6 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Session completion status** — Past sessions on the Home tab now show a green left border when completed (matched to a Strava activity) or a red border with dimming when missed. Completed cards display actual performance metrics (duration, distance, power/pace/HR) and GPS route map as primary content. Planned workout details available behind a "Planned workout" collapsible disclosure. Future sessions remain unchanged. Completed sessions cannot be moved in edit mode. Status is computed client-side by matching plan sessions against synced Strava activities (same sport, same day, closest duration) (DRO-145, DRO-150)
 
 ### Fixed
+- **App launch flash** — Opening the app while already logged in no longer flashes through the login, onboarding, and home screens before landing. A brief splash screen (logo + spinner) is shown while auth state resolves, then the app navigates directly to the correct screen (DRO-178)
 - **Strava OAuth** — Use web authorize endpoint (`/oauth/authorize`) instead of mobile endpoint which broke callback interception when native Strava app was installed (DRO-145)
 - **Current week detection** — Fixed off-by-one in `currentWeekIndex()` where the last day of a training week could fall through to the next week (DRO-145)
 - **Strava integration** — Connect your Strava account to import activities. OAuth connection in Profile, auto-sync on app open, 90-day lookback on first sync. Activities synced with sport normalization (swim/bike/run) (DRO-139)
