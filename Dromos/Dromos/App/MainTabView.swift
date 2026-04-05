@@ -8,14 +8,18 @@
 import SwiftUI
 
 /// Tabs available in the main navigation.
+/// The `chat` case is only compiled in DEBUG builds — it must not appear in release binaries.
 enum AppTab: Hashable {
-    case home, calendar, chat, profile
+    case home, calendar, profile
+    #if DEBUG
+    case chat
+    #endif
 }
 
 /// Main tab navigation for authenticated users.
-/// Provides access to Home, Calendar, Chat, and Profile sections.
-/// Owns the PlanService, ProfileService, StravaService, and ChatService,
-/// sharing them between tabs.
+/// Provides access to Home, Calendar, and Profile sections.
+/// In DEBUG builds, a Chat tab is also available for AI coaching.
+/// Owns the PlanService, ProfileService, and StravaService, sharing them between tabs.
 struct MainTabView: View {
     @ObservedObject var authService: AuthService
 
@@ -31,9 +35,11 @@ struct MainTabView: View {
     /// Owned here so it persists across tab switches and can auto-sync on launch.
     @StateObject private var stravaService = StravaService()
 
+    #if DEBUG
     /// Shared chat service for the coaching conversation agent.
-    /// Owned here so the message list persists across tab switches.
+    /// Only instantiated in DEBUG builds — excluded from release binaries.
     @StateObject private var chatService = ChatService()
+    #endif
 
     /// Tracks the currently selected tab for scroll-reset on Home re-selection.
     @State private var selectedTab: AppTab = .home
@@ -80,16 +86,17 @@ struct MainTabView: View {
                 )
             }
 
+            #if DEBUG
             Tab("Chat", systemImage: "bubble.left.fill", value: .chat) {
                 ChatView(chatService: chatService)
             }
+            #endif
 
             Tab("Profile", systemImage: "person", value: .profile) {
                 ProfileView(
                     authService: authService,
                     profileService: profileService,
-                    stravaService: stravaService,
-                    chatService: chatService
+                    stravaService: stravaService
                 )
             }
         }

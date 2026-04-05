@@ -19,7 +19,6 @@ struct ProfileView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var profileService: ProfileService
     @ObservedObject var stravaService: StravaService
-    @ObservedObject var chatService: ChatService
 
     /// Local copy of user for immediate UI updates during editing.
     /// Separate from profileService.user to avoid race conditions during save.
@@ -31,7 +30,6 @@ struct ProfileView: View {
     @State private var showValidationError = false
     @State private var validationMessage = ""
     @State private var showDisconnectAlert = false
-    @State private var showClearChatAlert = false
 
     /// Provides the key UIWindow for ASWebAuthenticationSession presentation.
     private let authSessionContext = WebAuthPresentationContext()
@@ -96,13 +94,6 @@ struct ProfileView: View {
 
                         // SECTION 4: STRAVA
                         stravaSection
-
-                        // SECTION 5: DATA
-                        Section("Data") {
-                            Button("Clear Chat History", role: .destructive) {
-                                showClearChatAlert = true
-                            }
-                        }
 
                         // Sign Out section
                         Section {
@@ -190,14 +181,6 @@ struct ProfileView: View {
             }
         } message: {
             Text("Your Strava account will be unlinked and activity sync will stop.")
-        }
-        .alert("Clear Chat History?", isPresented: $showClearChatAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Clear", role: .destructive) {
-                Task { await chatService.clearHistory() }
-            }
-        } message: {
-            Text("This will delete all your chat messages. This action cannot be undone.")
         }
     }
 
@@ -684,7 +667,6 @@ struct ProfileView: View {
     ProfileView(
         authService: AuthService(),
         profileService: ProfileService(),
-        stravaService: StravaService(),
-        chatService: ChatService()
+        stravaService: StravaService()
     )
 }
