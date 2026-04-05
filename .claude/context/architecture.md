@@ -9,7 +9,7 @@ Dromos/Dromos/
 ├── App/                              # App entry + root navigation
 │   ├── DromosApp.swift               # @main entry point
 │   ├── RootView.swift                # Auth → Onboarding → Plan → MainTab routing
-│   └── MainTabView.swift             # TabView (Home/Calendar/Chat/Profile) + PlanService/ProfileService/ChatService owner
+│   └── MainTabView.swift             # TabView (Home/Calendar/Chat/Profile) + PlanService/ProfileService owner; ChatService owned here, DEBUG-only
 │
 ├── Core/
 │   ├── Configuration.swift           # Reads from Secrets.swift (git-ignored)
@@ -72,8 +72,8 @@ Authenticated + plan → MainTabView
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
 - Home (house icon) → `HomeView` (receives shared `profileService` + `stravaService`; fetches activities and manages per-session completion status)
 - Calendar (calendar icon) → `CalendarPlanView` (receives shared `profileService`)
-- Chat (bubble.left.fill icon) → `ChatView` (receives shared `chatService`)
-- Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService` + `chatService`)
+- Chat (bubble.left.fill icon) → `ChatView` (receives shared `chatService`; tab only visible in `#if DEBUG` builds)
+- Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`; chatService is NOT injected)
 
 **Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Home or Calendar:
 - Home: toggles `homeScrollReset` → HomeView scrolls to today's day section and resets progressive disclosure
