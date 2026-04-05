@@ -296,7 +296,7 @@ final class WorkoutLibraryService {
         
         // Format work segments (usually just one, but could be multiple)
         for segment in segments {
-            let duration = formatDuration(segment: segment)
+            let duration = formatDuration(segment: segment, sport: sport)
             let label = segment.label
             let metric = formatMetric(segment: segment, sport: sport, ftp: ftp, vma: vma, css: css)
             
@@ -341,7 +341,7 @@ final class WorkoutLibraryService {
     ///   - css: CSS in seconds per 100m
     /// - Returns: A step summary
     private func formatSegment(segment: WorkoutSegment, sport: String, ftp: Int?, vma: Double?, css: Int?) -> StepSummary {
-        let duration = formatDuration(segment: segment)
+        let duration = formatDuration(segment: segment, sport: sport)
         let label = segment.label
         let metric = formatMetric(segment: segment, sport: sport, ftp: ftp, vma: vma, css: css)
         
@@ -360,8 +360,14 @@ final class WorkoutLibraryService {
     /// Formats the duration of a segment (minutes or distance for swim).
     /// - Parameter segment: The segment
     /// - Returns: Formatted duration string (e.g., "15'", "300m")
-    private func formatDuration(segment: WorkoutSegment) -> String {
+    private func formatDuration(segment: WorkoutSegment, sport: String = "") -> String {
         if let distance = segment.distanceMeters {
+            if sport == "run" && distance >= 1000 {
+                let km = Double(distance) / 1000.0
+                return km.truncatingRemainder(dividingBy: 1) == 0
+                    ? "\(Int(km)) km"
+                    : String(format: "%.1f km", km)
+            }
             return "\(distance)m"
         } else if let minutes = segment.durationMinutes {
             return "\(minutes)'"
