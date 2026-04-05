@@ -447,7 +447,7 @@ struct ProfileView: View {
             HStack {
                 Text("Email")
                 Spacer()
-                Text(authService.currentUserEmail ?? "")
+                Text(authService.currentUserEmail ?? "Not set")
                     .foregroundColor(.secondary)
             }
         }
