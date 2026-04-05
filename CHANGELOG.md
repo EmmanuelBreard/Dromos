@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Removed
+- **Chat tab hidden** — Chat feature is disabled in production builds. Code is preserved for development; the tab and all related UI are excluded from release binaries via `#if DEBUG` (DRO-184)
+
 ### Added
 - **Planned workout compliance in coaching feedback** — Session feedback now includes the planned workout structure (intervals, intensities, warmup/cooldown) so the AI can flag incomplete sets, intensity deviations, and missing segments. Intensities shown as absolute values (watts, km/h) using athlete profile (DRO-169)
 - **Lap-level coaching feedback** — Session feedback now analyzes per-lap/split data (pace, HR, power) instead of just activity averages. The AI can comment on pacing consistency, interval fade, and split execution. Strava streams (second-by-second data) also stored for future use (DRO-164)
