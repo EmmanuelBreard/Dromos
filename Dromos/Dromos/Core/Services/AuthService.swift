@@ -222,8 +222,7 @@ final class AuthService: ObservableObject {
             for await (event, session) in client.auth.authStateChanges {
                 switch event {
                 case .initialSession:
-                    // Only use initial session if not expired
-                    if let session, !session.isExpired {
+                    if let session {
                         self.session = session
                         // Check onboarding status when session is restored
                         try? await checkOnboardingStatus()
