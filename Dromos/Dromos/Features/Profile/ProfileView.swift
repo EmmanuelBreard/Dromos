@@ -99,8 +99,13 @@ struct ProfileView: View {
                         Section {
                             Button("Sign Out", role: .destructive) {
                                 Task {
-                                    try? await authService.signOut()
-                                    profileService.clearProfile()
+                                    do {
+                                        try await authService.signOut()
+                                        profileService.clearProfile()
+                                    } catch {
+                                        errorMessage = mapSaveError(error)
+                                        showError = true
+                                    }
                                 }
                             }
                         }
@@ -421,7 +426,7 @@ struct ProfileView: View {
             HStack {
                 Text("Email")
                 Spacer()
-                Text(authService.currentUserEmail ?? "")
+                Text(authService.currentUserEmail ?? "Not set")
                     .foregroundColor(.secondary)
             }
         }
