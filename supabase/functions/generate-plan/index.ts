@@ -1711,8 +1711,9 @@ Deno.serve(async (req) => {
     }
 
     // Extract user_id from JWT payload.
-    // Deployed with --no-verify-jwt (gateway JWT check disabled due to
-    // platform issue). The JWT is still issued by Supabase Auth on sign-in.
+    // JWT is verified by the Supabase gateway (verify_jwt: true).
+    // The function decodes the payload to extract user_id but does NOT re-verify
+    // the signature — the gateway guarantees authenticity before we reach here.
     const jwt = authHeader.replace("Bearer ", "");
     const payloadBase64 = jwt.split(".")[1];
     if (!payloadBase64) {
