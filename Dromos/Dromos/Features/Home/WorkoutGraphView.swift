@@ -17,19 +17,26 @@ struct WorkoutGraphView: View {
     let sport: String
     let ftp: Int?
     let vma: Double?
-    
+
     /// Selected segment index for tooltip display
     @State private var selectedSegmentIndex: Int?
 
     /// X-offset (within the GeometryReader) at which to center the floating tooltip
     @State private var tooltipXOffset: CGFloat = 0
-    
+
+    /// Captured geometry width for tooltip clamping at VStack level
+    @State private var graphWidth: CGFloat = 0
+
     /// Fixed height for the graph area (bars)
     private let graphHeight: CGFloat = 60
-    
+
     /// Fixed height for the time axis area
     private let axisHeight: CGFloat = 20
-    
+
+    /// Approximate half-width of the tooltip bubble used for x-clamping.
+    /// Increase if tooltip content grows (e.g. longer run metric strings).
+    private let tooltipHalfWidth: CGFloat = 110
+
     var body: some View {
         // Guard against division by zero
         if totalDurationMinutes > 0 {
@@ -39,7 +46,16 @@ struct WorkoutGraphView: View {
                     // Account for HStack spacing in bar width calculations
                     let totalSpacing = CGFloat(max(0, segments.count - 1)) * 2
                     let usableWidth = max(0, geometry.size.width - totalSpacing)
-                    
+
+                    // Pre-compute bar center x-positions (avoids O(n) reduce inside gesture handler)
+                    let barCenterXs: [CGFloat] = segments.indices.map { i in
+                        let preceding = segments[0..<i].reduce(CGFloat(0)) { acc, seg in
+                            acc + max((seg.durationMinutes / totalDurationMinutes) * usableWidth, 2) + 2
+                        }
+                        let thisWidth = max((segments[i].durationMinutes / totalDurationMinutes) * usableWidth, 2)
+                        return preceding + thisWidth / 2
+                    }
+
                     HStack(spacing: 2) {
                         ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
                             let barWidth = (segment.durationMinutes / totalDurationMinutes) * usableWidth
@@ -51,46 +67,31 @@ struct WorkoutGraphView: View {
                                 .frame(width: max(barWidth, 2), height: barHeight) // Minimum 2pt width for visibility
                                 .frame(maxHeight: .infinity, alignment: .bottom)
                                 .contentShape(Rectangle()) // Make entire bar tappable
-                                .gesture(
+                                .simultaneousGesture(
                                     DragGesture(minimumDistance: 0)
                                         .onChanged { _ in
-                                            // Compute this bar's center x within the graph.
-                                            // Sum widths of all preceding bars (respecting the 2pt minimum
-                                            // and +2 spacing between bars), then add half this bar's width.
-                                            let precedingWidth = segments[0..<index].reduce(CGFloat(0)) { acc, seg in
-                                                acc + max((seg.durationMinutes / totalDurationMinutes) * usableWidth, 2) + 2
+                                            withAnimation(.easeInOut(duration: 0.1)) {
+                                                tooltipXOffset = barCenterXs[index]
+                                                selectedSegmentIndex = index
                                             }
-                                            let thisWidth = max(barWidth, 2)
-                                            tooltipXOffset = precedingWidth + thisWidth / 2
-                                            selectedSegmentIndex = index
                                         }
                                         .onEnded { _ in
                                             // Fade out on finger release
                                             withAnimation(.easeInOut(duration: 0.15)) {
                                                 selectedSegmentIndex = nil
+                                                tooltipXOffset = 0
                                             }
                                         }
                                 )
                         }
                     }
                     .frame(height: graphHeight)
-                    // Floating tooltip overlay — placed inside the GeometryReader so that
-                    // `geometry.size.width` is in scope for horizontal clamping.
-                    // Uses topLeading alignment so .position(x:y:) is relative to this view.
-                    .overlay(alignment: .topLeading) {
-                        if let index = selectedSegmentIndex, index < segments.count {
-                            segmentTooltipView(for: segments[index])
-                                .fixedSize() // Size to content rather than stretching
-                                .allowsHitTesting(false) // Don't intercept bar gestures
-                                .transition(.opacity)
-                                // Center on the pressed bar; clamp x to keep tooltip inside graph bounds.
-                                // 80 pt is a reasonable half-width for short tooltip text.
-                                .position(
-                                    x: min(max(tooltipXOffset, 80), geometry.size.width - 80),
-                                    y: -28 // Float above the top edge of the graph
-                                )
-                        }
-                    }
+
+                    // Capture geometry width for tooltip clamping at VStack level
+                    Color.clear
+                        .frame(width: 0, height: 0)
+                        .onAppear { graphWidth = geometry.size.width }
+                        .onChange(of: geometry.size.width) { graphWidth = $0 }
                 }
                 .frame(height: graphHeight)
 
@@ -98,14 +99,30 @@ struct WorkoutGraphView: View {
                 timeAxisView
                     .frame(height: axisHeight)
             }
+            // Floating tooltip overlay at VStack level so it isn't clipped by card clipShape.
+            // Uses topLeading alignment so .position(x:y:) is relative to this view.
+            .overlay(alignment: .topLeading) {
+                if let index = selectedSegmentIndex, index < segments.count {
+                    segmentTooltipView(for: segments[index])
+                        .fixedSize() // Size to content rather than stretching
+                        .allowsHitTesting(false) // Don't intercept bar gestures
+                        .transition(.opacity)
+                        // Center on the pressed bar; clamp x to keep tooltip inside graph bounds.
+                        .position(
+                            x: min(max(tooltipXOffset, tooltipHalfWidth), graphWidth - tooltipHalfWidth),
+                            y: -28 // Float above the top edge of the graph
+                        )
+                }
+            }
             .onDisappear {
                 selectedSegmentIndex = nil
+                tooltipXOffset = 0
             }
         }
     }
-    
+
     // MARK: - Tooltip View
-    
+
     /// Creates a tooltip view for a segment with sport-specific metrics.
     /// - Parameter segment: The segment to display
     /// - Returns: A tooltip view with formatted text
@@ -130,7 +147,7 @@ struct WorkoutGraphView: View {
                 .stroke(Color(.separator), lineWidth: 0.5)
         )
     }
-    
+
     /// Formats tooltip text with sport-specific metrics.
     /// - Parameter segment: The segment to format
     /// - Returns: Formatted text string
@@ -138,26 +155,29 @@ struct WorkoutGraphView: View {
         let duration = formatDuration(segment: segment)
         let label = segment.label
         let metric = formatMetric(segment: segment)
-        
+
         if let metric = metric {
             return "\(duration) \(label) — \(metric)"
         } else {
             return "\(duration) \(label)"
         }
     }
-    
+
     /// Formats the duration of a segment.
     /// - Parameter segment: The segment
-    /// - Returns: Formatted duration string (e.g., "15 min", "300m")
+    /// - Returns: Formatted duration string (e.g., "15 min", "300m", "45s")
     private func formatDuration(segment: FlatSegment) -> String {
         if let distance = segment.distanceMeters {
             return "\(distance)m"
         } else {
             let minutes = Int(round(segment.durationMinutes))
+            if minutes == 0 {
+                return "\(Int(round(segment.durationMinutes * 60)))s"
+            }
             return "\(minutes) min"
         }
     }
-    
+
     /// Formats the sport-specific metric for a segment.
     /// - Parameter segment: The segment
     /// - Returns: Formatted metric string, or nil if not applicable
@@ -172,7 +192,7 @@ struct WorkoutGraphView: View {
                     return "\(intensityPct)% FTP"
                 }
             }
-            
+
         case "run":
             if let intensityPct = segment.intensityPct {
                 if let vma = vma {
@@ -184,7 +204,7 @@ struct WorkoutGraphView: View {
                     return "\(intensityPct)% VMA"
                 }
             }
-            
+
         case "swim":
             // Note: Tooltip shows "pace" suffix for clarity ("hard pace" vs "hard")
             // WorkoutLibraryService.formatMetric uses label-only format for step summaries
@@ -205,7 +225,7 @@ struct WorkoutGraphView: View {
 
         return nil
     }
-    
+
     // MARK: - Time Axis
 
     /// Renders time axis labels at ~15 min intervals.
@@ -285,9 +305,9 @@ struct WorkoutGraphView: View {
             }
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Derives an effective intensity for bar height calculation.
     /// For swim segments without intensityPct, maps pace label to approximate intensity.
     private func effectiveIntensity(for segment: FlatSegment) -> Int? {
@@ -314,7 +334,7 @@ struct WorkoutGraphView: View {
         guard let pct = intensityPct, pct > 0 else {
             return graphHeight * 0.3 // Minimum 30% height for low/nil intensity
         }
-        
+
         // Clamp lower bound to prevent dropping below 30% floor
         // Map intensity to 30%-100% of graph height
         // pct = 50 → 30% height
@@ -322,7 +342,7 @@ struct WorkoutGraphView: View {
         // pct = 120 → 100% height (capped)
         let normalized = max(0, min(Double(pct - 50) / 70.0, 1.0)) // 50-120 → 0-1, clamped
         let heightPct = 0.3 + (normalized * 0.7) // 0-1 → 0.3-1.0
-        
+
         return graphHeight * heightPct
     }
 }
@@ -339,9 +359,9 @@ struct WorkoutGraphView: View {
         FlatSegment(label: "work", durationMinutes: 6, intensityPct: 95, distanceMeters: nil, pace: nil, isRecovery: false),
         FlatSegment(label: "cooldown", durationMinutes: 10, intensityPct: 45, distanceMeters: nil, pace: nil, isRecovery: false)
     ]
-    
+
     let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-    
+
     return WorkoutGraphView(
         segments: segments,
         totalDurationMinutes: totalDuration,
@@ -359,9 +379,9 @@ struct WorkoutGraphView: View {
         FlatSegment(label: "tempo", durationMinutes: 20, intensityPct: 85, distanceMeters: nil, pace: nil, isRecovery: false),
         FlatSegment(label: "cooldown", durationMinutes: 10, intensityPct: 55, distanceMeters: nil, pace: nil, isRecovery: false)
     ]
-    
+
     let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-    
+
     return WorkoutGraphView(
         segments: segments,
         totalDurationMinutes: totalDuration,
@@ -383,9 +403,9 @@ struct WorkoutGraphView: View {
         FlatSegment(label: "work", durationMinutes: 1.5, intensityPct: nil, distanceMeters: 100, pace: "hard", isRecovery: false),
         FlatSegment(label: "cooldown", durationMinutes: 5, intensityPct: nil, distanceMeters: 200, pace: "easy", isRecovery: false)
     ]
-    
+
     let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-    
+
     return WorkoutGraphView(
         segments: segments,
         totalDurationMinutes: totalDuration,
@@ -403,9 +423,9 @@ struct WorkoutGraphView: View {
         FlatSegment(label: "steady", durationMinutes: 150, intensityPct: 70, distanceMeters: nil, pace: nil, isRecovery: false),
         FlatSegment(label: "cooldown", durationMinutes: 10, intensityPct: 45, distanceMeters: nil, pace: nil, isRecovery: false)
     ]
-    
+
     let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-    
+
     return WorkoutGraphView(
         segments: segments,
         totalDurationMinutes: totalDuration,
