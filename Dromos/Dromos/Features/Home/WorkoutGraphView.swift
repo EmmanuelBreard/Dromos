@@ -67,25 +67,29 @@ struct WorkoutGraphView: View {
                                 .frame(width: max(barWidth, 2), height: barHeight) // Minimum 2pt width for visibility
                                 .frame(maxHeight: .infinity, alignment: .bottom)
                                 .contentShape(Rectangle()) // Make entire bar tappable
-                                .simultaneousGesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { _ in
-                                            withAnimation(.easeInOut(duration: 0.1)) {
-                                                tooltipXOffset = barCenterXs[index]
-                                                selectedSegmentIndex = index
-                                            }
-                                        }
-                                        .onEnded { _ in
-                                            // Fade out on finger release
-                                            withAnimation(.easeInOut(duration: 0.15)) {
-                                                selectedSegmentIndex = nil
-                                                tooltipXOffset = 0
-                                            }
-                                        }
-                                )
                         }
                     }
                     .frame(height: graphHeight)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                // Find the bar closest to the current finger position
+                                let x = value.location.x
+                                if let index = barCenterXs.indices.min(by: { abs(barCenterXs[$0] - x) < abs(barCenterXs[$1] - x) }) {
+                                    withAnimation(.easeInOut(duration: 0.1)) {
+                                        tooltipXOffset = barCenterXs[index]
+                                        selectedSegmentIndex = index
+                                    }
+                                }
+                            }
+                            .onEnded { _ in
+                                // Fade out on finger release
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    selectedSegmentIndex = nil
+                                    tooltipXOffset = 0
+                                }
+                            }
+                    )
 
                     // Capture geometry width for tooltip clamping at VStack level
                     Color.clear
