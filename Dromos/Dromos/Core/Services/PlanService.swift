@@ -42,23 +42,15 @@ final class PlanService: ObservableObject {
     /// The Bearer token is sent automatically by the SDK from the current session.
     /// - Throws: Error if generation fails
     func generatePlan() async throws {
-        errorMessage = nil
-
-        do {
-            try await client.auth.refreshSession()
-        } catch {
-            let msg = "Your session has expired. Please sign in again."
-            self.errorMessage = msg
-            throw PlanGenerationError.serverError(msg)
-        }
-
         isGenerating = true
+        errorMessage = nil
 
         defer { isGenerating = false }
 
         do {
             // Invoke the Edge Function (no body needed — Edge Function reads profile server-side)
-            // The SDK automatically includes the Bearer token from the current session
+            // The SDK automatically includes the Bearer token from the current session.
+            // verify_jwt: true on the gateway means an invalid/missing token returns 401 directly.
             try await client.functions.invoke("generate-plan")
 
             // Success — plan generation completed
@@ -69,6 +61,12 @@ final class PlanService: ObservableObject {
             if let functionsError = error as? FunctionsError {
                 switch functionsError {
                 case .httpError(let code, let data):
+                    // 401 from gateway = missing or invalid session
+                    if code == 401 {
+                        let message = "Your session has expired. Please sign in again."
+                        self.errorMessage = message
+                        throw PlanGenerationError.serverError(message)
+                    }
                     // HTTP error from Edge Function
                     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let errorMessage = json["error"] as? String {
