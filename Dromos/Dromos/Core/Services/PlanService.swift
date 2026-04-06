@@ -42,8 +42,17 @@ final class PlanService: ObservableObject {
     /// The Bearer token is sent automatically by the SDK from the current session.
     /// - Throws: Error if generation fails
     func generatePlan() async throws {
-        isGenerating = true
         errorMessage = nil
+
+        do {
+            try await client.auth.refreshSession()
+        } catch {
+            let msg = "Your session has expired. Please sign in again."
+            self.errorMessage = msg
+            throw PlanGenerationError.serverError(msg)
+        }
+
+        isGenerating = true
 
         defer { isGenerating = false }
 
