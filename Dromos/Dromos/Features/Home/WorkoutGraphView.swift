@@ -20,6 +20,9 @@ struct WorkoutGraphView: View {
     
     /// Selected segment index for tooltip display
     @State private var selectedSegmentIndex: Int?
+
+    /// X-offset (within the GeometryReader) at which to center the floating tooltip
+    @State private var tooltipXOffset: CGFloat = 0
     
     /// Fixed height for the graph area (bars)
     private let graphHeight: CGFloat = 60
@@ -48,41 +51,52 @@ struct WorkoutGraphView: View {
                                 .frame(width: max(barWidth, 2), height: barHeight) // Minimum 2pt width for visibility
                                 .frame(maxHeight: .infinity, alignment: .bottom)
                                 .contentShape(Rectangle()) // Make entire bar tappable
-                                .onTapGesture {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        // Toggle selection (tap same bar to dismiss)
-                                        if selectedSegmentIndex == index {
-                                            selectedSegmentIndex = nil
-                                        } else {
+                                .gesture(
+                                    DragGesture(minimumDistance: 0)
+                                        .onChanged { _ in
+                                            // Compute this bar's center x within the graph.
+                                            // Sum widths of all preceding bars (respecting the 2pt minimum
+                                            // and +2 spacing between bars), then add half this bar's width.
+                                            let precedingWidth = segments[0..<index].reduce(CGFloat(0)) { acc, seg in
+                                                acc + max((seg.durationMinutes / totalDurationMinutes) * usableWidth, 2) + 2
+                                            }
+                                            let thisWidth = max(barWidth, 2)
+                                            tooltipXOffset = precedingWidth + thisWidth / 2
                                             selectedSegmentIndex = index
                                         }
-                                    }
-                                }
+                                        .onEnded { _ in
+                                            // Fade out on finger release
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                selectedSegmentIndex = nil
+                                            }
+                                        }
+                                )
                         }
                     }
                     .frame(height: graphHeight)
-                    .background {
-                        // Tap outside bars to dismiss tooltip
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedSegmentIndex = nil
-                                }
-                            }
+                    // Floating tooltip overlay — placed inside the GeometryReader so that
+                    // `geometry.size.width` is in scope for horizontal clamping.
+                    // Uses topLeading alignment so .position(x:y:) is relative to this view.
+                    .overlay(alignment: .topLeading) {
+                        if let index = selectedSegmentIndex, index < segments.count {
+                            segmentTooltipView(for: segments[index])
+                                .fixedSize() // Size to content rather than stretching
+                                .allowsHitTesting(false) // Don't intercept bar gestures
+                                .transition(.opacity)
+                                // Center on the pressed bar; clamp x to keep tooltip inside graph bounds.
+                                // 80 pt is a reasonable half-width for short tooltip text.
+                                .position(
+                                    x: min(max(tooltipXOffset, 80), geometry.size.width - 80),
+                                    y: -28 // Float above the top edge of the graph
+                                )
+                        }
                     }
                 }
                 .frame(height: graphHeight)
-                
+
                 // Time axis labels
                 timeAxisView
                     .frame(height: axisHeight)
-                
-                // Tooltip row (only shown when a bar is selected)
-                if let index = selectedSegmentIndex, index < segments.count {
-                    segmentTooltipView(for: segments[index])
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
             }
             .onDisappear {
                 selectedSegmentIndex = nil
