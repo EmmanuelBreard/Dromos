@@ -48,14 +48,13 @@ final class PlanService: ObservableObject {
         defer { isGenerating = false }
 
         do {
-            // Invoke the Edge Function (no body needed — Edge Function reads profile server-side)
-            // The SDK automatically includes the Bearer token from the current session.
-            // verify_jwt: true on the gateway means an invalid/missing token returns 401 directly.
+            // Invoke the Edge Function — returns immediately (202) while generation runs in background.
+            // The function creates the plan row with status='generating' before responding.
             try await client.functions.invoke("generate-plan")
 
-            // Success — plan generation completed
-            // The plan is now in the database with status='active'
-            // Edge Function returns 4xx/5xx on errors, which are handled in the catch block
+            // Poll the DB until the plan reaches status='active' or 'failed'.
+            let session = try await client.auth.session
+            try await pollForPlanCompletion(userId: session.user.id)
         } catch {
             // Map various error types to user-friendly messages
             if let functionsError = error as? FunctionsError {
@@ -276,6 +275,44 @@ final class PlanService: ObservableObject {
             // Silent failure — don't set errorMessage for background refreshes
             print("Background plan refresh failed: \(error)")
         }
+    }
+
+    // MARK: - Private Methods
+
+    /// Polls the DB every 3 seconds until the latest plan for the user reaches status='active' or 'failed'.
+    /// Throws if the plan fails or if polling times out after 3 minutes.
+    private func pollForPlanCompletion(userId: UUID) async throws {
+        struct PlanStatusResult: Codable { let status: String }
+
+        for _ in 0..<60 {
+            try await Task.sleep(nanoseconds: 3_000_000_000)
+
+            let results: [PlanStatusResult] = try await client
+                .from("training_plans")
+                .select("status")
+                .eq("user_id", value: userId.uuidString)
+                .order("created_at", ascending: false)
+                .limit(1)
+                .execute()
+                .value
+
+            guard let plan = results.first else { continue }
+
+            switch plan.status {
+            case "active":
+                return
+            case "failed":
+                let msg = "Plan generation failed. Please try again."
+                self.errorMessage = msg
+                throw PlanGenerationError.serverError(msg)
+            default:
+                continue
+            }
+        }
+
+        let msg = "Plan generation timed out. Please try again."
+        self.errorMessage = msg
+        throw PlanGenerationError.networkError(msg)
     }
 
     // MARK: - Private Helpers

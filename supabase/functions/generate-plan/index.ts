@@ -1710,14 +1710,13 @@ Deno.serve(async (req) => {
       throw new Error("Missing Supabase environment variables");
     }
 
-    // Extract user_id from JWT payload.
-    // JWT is verified by the Supabase gateway (verify_jwt: true).
-    // The function decodes the payload to extract user_id but does NOT re-verify
-    // the signature — the gateway guarantees authenticity before we reach here.
+    // Cryptographically validate the JWT via auth.getUser() — same pattern as strava-sync.
+    // This validates the token server-side, so verify_jwt on the gateway is not required.
     const jwt = authHeader.replace("Bearer ", "");
-    const payloadBase64 = jwt.split(".")[1];
-    if (!payloadBase64) {
-      return new Response(JSON.stringify({ error: "Malformed token" }), {
+    const authClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
         status: 401,
         headers: {
           "Content-Type": "application/json",
@@ -1725,19 +1724,7 @@ Deno.serve(async (req) => {
         },
       });
     }
-    const payload = JSON.parse(
-      atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"))
-    );
-    const userId = payload.sub;
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Invalid token: missing sub" }), {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      });
-    }
+    const userId = user.id;
 
     // Create service_role client for DB operations
     dbClient = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -1825,8 +1812,12 @@ Deno.serve(async (req) => {
 
     planId = plan.id;
 
-    // Initialize OpenAI client
-    const openai = getOpenAIClient();
+    // Respond immediately — plan generation continues as a background task.
+    // The iOS app polls training_plans.status for 'active' or 'failed'.
+    EdgeRuntime.waitUntil((async () => {
+      try {
+        // Initialize OpenAI client
+        const openai = getOpenAIClient();
 
     // Step 1: Generate macro plan (markdown)
     const step1Prompt = buildStep1Prompt(userProfile, vars);
@@ -1871,53 +1862,41 @@ Deno.serve(async (req) => {
       blocks.push(weeks.slice(j, j + BLOCK_SIZE));
     }
 
-    let previouslyUsed: any[] = [];
-    const allBlockWeeks: any[] = [];
-
     // Build constraint string once (same for all blocks)
     const constraintString = buildConstraintString(userProfile);
 
     // Build simplified library for Step 3 (strips segment details, keeps only template matching info)
     const simplifiedLibrary = buildSimplifiedLibrary(workoutLibrary);
 
-    for (let b = 0; b < blocks.length; b++) {
-      const block = blocks[b];
-      // Build prompt for this block
-      let finalPrompt = STEP3_WORKOUT_BLOCK_PROMPT;
-      finalPrompt = finalPrompt.replace("{{workout_library}}", simplifiedLibrary);
-      finalPrompt = finalPrompt.replace(
-        "{{block_weeks_json}}",
-        JSON.stringify(block, null, 2)
-      );
-      // Limiters column not yet in users table — defaults to "none" until onboarding captures it
-      const limitersStep3 = (userProfile.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
-      finalPrompt = finalPrompt.replace("{{limiters}}", limitersStep3);
-      finalPrompt = finalPrompt.replace("{{constraints}}", constraintString);
-      const prevStr =
-        previouslyUsed.length > 0
-          ? previouslyUsed
-              .map(
-                (p) =>
-                  `- ${p.sport} ${p.type}: last used ${p.template_id} in W${p.week}`
-              )
-              .join("\n")
-          : "None — this is the first block.";
-      finalPrompt = finalPrompt.replace("{{previously_used}}", prevStr);
+    // Run all blocks in parallel — cuts step 3 from O(blocks) sequential calls to O(1).
+    // previouslyUsed cross-block deduplication is dropped; fixConsecutiveRepeats post-processing
+    // handles adjacent repeats, and intra-block variety is preserved.
+    const limitersStep3 = (userProfile.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
 
-      const blockResponse = await callOpenAI(
-        openai,
-        MODEL_STEP3,
-        finalPrompt,
-        TEMPERATURE,
-        MAX_TOKENS_STEP3,
-        { type: "json_object" }
-      );
+    const blockResults = await Promise.all(
+      blocks.map(async (block) => {
+        let finalPrompt = STEP3_WORKOUT_BLOCK_PROMPT;
+        finalPrompt = finalPrompt.replace("{{workout_library}}", simplifiedLibrary);
+        finalPrompt = finalPrompt.replace("{{block_weeks_json}}", JSON.stringify(block, null, 2));
+        finalPrompt = finalPrompt.replace("{{limiters}}", limitersStep3);
+        finalPrompt = finalPrompt.replace("{{constraints}}", constraintString);
+        finalPrompt = finalPrompt.replace("{{previously_used}}", "None — blocks are processed in parallel.");
 
-      const blockJson = blockResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      const blockResult = JSON.parse(blockJson);
-      allBlockWeeks.push(...(blockResult.weeks || []));
-      previouslyUsed = extractLastUsed(blockResult);
-    }
+        const blockResponse = await callOpenAI(
+          openai,
+          MODEL_STEP3,
+          finalPrompt,
+          TEMPERATURE,
+          MAX_TOKENS_STEP3,
+          { type: "json_object" }
+        );
+
+        const blockJson = blockResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        return JSON.parse(blockJson);
+      })
+    );
+
+    const allBlockWeeks = blockResults.flatMap((r) => r.weeks || []);
 
     // Post-processing
     const templateDurationMap = buildTemplateDurationMap(workoutLibrary);
@@ -2039,68 +2018,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update plan status to 'active'
-    await dbClient
-      .from("training_plans")
-      .update({ status: "active" })
-      .eq("id", planId);
+        // Update plan status to 'active'
+        await dbClient
+          .from("training_plans")
+          .update({ status: "active" })
+          .eq("id", planId);
 
-    // Fetch full plan for response
-    const { data: finalPlan } = await dbClient
-      .from("training_plans")
-      .select("*")
-      .eq("id", planId)
-      .single();
+        console.log(`Plan ${planId} generation complete — status set to active`);
+      } catch (bgError) {
+        console.error("Background plan generation failed:", bgError);
+        // Mark plan as failed so the iOS app can detect it via polling
+        try {
+          await dbClient
+            .from("training_plans")
+            .update({ status: "failed" })
+            .eq("id", planId);
+        } catch (updateError) {
+          console.error("Failed to mark plan as failed:", updateError);
+        }
+      }
+    })());
 
-    const { data: planWeeks } = await dbClient
-      .from("plan_weeks")
-      .select("*")
-      .eq("plan_id", planId)
-      .order("week_number");
-
-    const { data: planSessions } = await dbClient
-      .from("plan_sessions")
-      .select("*")
-      .in(
-        "week_id",
-        planWeeks?.map((w) => w.id) || []
-      )
-      .order("week_id, day, order_in_day");
-
-    // Build response JSON
-    const responseWeeks = (planWeeks || []).map((week) => ({
-      week_number: week.week_number,
-      phase: week.phase,
-      is_recovery: week.is_recovery,
-      rest_days: week.rest_days,
-      notes: week.notes,
-      start_date: week.start_date,
-      sessions: (planSessions || [])
-        .filter((s) => s.week_id === week.id)
-        .map((s) => ({
-          sport: s.sport,
-          type: s.type,
-          template_id: s.template_id,
-          duration_minutes: s.duration_minutes,
-          day: s.day,
-          is_brick: s.is_brick,
-          notes: s.notes,
-          order_in_day: s.order_in_day,
-        })),
-    }));
-
+    // Return immediately — iOS polls training_plans.status for completion
     return new Response(
-      JSON.stringify({
-        plan: {
-          id: finalPlan?.id,
-          status: finalPlan?.status,
-          total_weeks: finalPlan?.total_weeks,
-          start_date: finalPlan?.start_date,
-          race_date: finalPlan?.race_date,
-          race_objective: finalPlan?.race_objective,
-        },
-        weeks: responseWeeks,
-      }),
+      JSON.stringify({ planId }),
       {
         status: 200,
         headers: {
@@ -2110,20 +2051,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Plan generation failed:", error);
-
-    // Best-effort cleanup: delete the zombie plan row
-    if (planId && dbClient) {
-      try {
-        await dbClient
-          .from("training_plans")
-          .delete()
-          .eq("id", planId);
-        console.log(`Cleaned up zombie plan ${planId}`);
-      } catch (cleanupError) {
-        console.error("Failed to clean up zombie plan:", cleanupError);
-      }
-    }
+    console.error("Plan generation setup failed:", error);
 
     const message =
       error instanceof Error
