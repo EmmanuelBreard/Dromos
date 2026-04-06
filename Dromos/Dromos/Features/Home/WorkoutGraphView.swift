@@ -91,7 +91,7 @@ struct WorkoutGraphView: View {
                     Color.clear
                         .frame(width: 0, height: 0)
                         .onAppear { graphWidth = geometry.size.width }
-                        .onChange(of: geometry.size.width) { graphWidth = $0 }
+                        .onChange(of: geometry.size.width) { _, newValue in graphWidth = newValue }
                 }
                 .frame(height: graphHeight)
 
