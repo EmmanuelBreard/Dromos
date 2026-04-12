@@ -220,7 +220,7 @@ struct HomeView: View {
                 .foregroundColor(.primary)
 
             // Content: session cards or rest day
-            if dayInfo.isRestDay && dayInfo.sessions.isEmpty {
+            if dayInfo.sessions.isEmpty {
                 RestDayCardView()
             } else {
                 let days = plan.daysForWeek(plan.planWeeks.first(where: { $0.id == weekId })!)
