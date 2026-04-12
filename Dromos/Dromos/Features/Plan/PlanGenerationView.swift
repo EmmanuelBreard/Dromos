@@ -62,6 +62,7 @@ struct PlanGenerationView: View {
                     } label: {
                         Image(systemName: "gear")
                     }
+                    .accessibilityLabel("Settings")
                 }
             }
             .sheet(isPresented: $showSettings) {
