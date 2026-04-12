@@ -43,7 +43,7 @@ struct DaySessionRow: View {
             .padding(.bottom, 4)
 
             // Content: rest day or sessions
-            if isRestDay && sessions.isEmpty {
+            if sessions.isEmpty {
                 restDayRow
             } else {
                 ForEach(sessions) { session in
