@@ -137,6 +137,29 @@ final class AuthService: ObservableObject {
         }
     }
 
+    /// Delete the current user's account permanently.
+    /// Calls the `delete-account` Edge Function which removes the user from auth.users
+    /// (all downstream data is wiped via ON DELETE CASCADE).
+    /// - Throws: Error if deletion fails — caller should NOT clear session on failure
+    func deleteAccount() async throws {
+        isLoading = true
+        errorMessage = nil
+
+        defer { isLoading = false }
+
+        do {
+            try await client.functions.invoke("delete-account", options: FunctionInvokeOptions())
+            // Best-effort sign out to clean up the local session
+            try? await client.auth.signOut()
+            session = nil
+            onboardingCompleted = false
+            hasPlan = false
+        } catch {
+            errorMessage = "Unable to delete account. Please try again."
+            throw error
+        }
+    }
+
     /// Check the current user's onboarding completion status.
     /// Updates the `onboardingCompleted` published property.
     /// - Throws: Error if fetch fails
