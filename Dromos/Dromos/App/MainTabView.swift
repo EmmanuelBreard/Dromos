@@ -42,6 +42,9 @@ struct MainTabView: View {
     /// week reset in CalendarPlanView via a @Binding that stays live even when the tab is inactive.
     @State private var calendarReset: Bool = false
 
+    /// Observed scene phase to trigger foreground-resume syncs.
+    @Environment(\.scenePhase) private var scenePhase
+
     /// Custom binding that triggers view resets on tab navigation.
     /// Fires for both tab switches (Calendar→Home) and same-tab re-taps (Home→Home).
     private var tabSelection: Binding<AppTab> {
@@ -86,6 +89,15 @@ struct MainTabView: View {
         }
         .task {
             await loadData()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Sync Strava activities whenever the app returns to the foreground.
+            // Profile must already be loaded (isStravaConnected is non-nil) for sync to fire.
+            // On cold launch this naturally no-ops because profileService.user is still nil
+            // when scenePhase first fires .active — the .task {} path handles that case.
+            if newPhase == .active, profileService.user?.isStravaConnected == true {
+                Task { await stravaService.syncActivities() }
+            }
         }
     }
 
