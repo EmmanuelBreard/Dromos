@@ -36,6 +36,7 @@ struct ProfileView: View {
 
     // MARK: - Edit State
 
+    @State private var showDeleteAccountAlert = false
     @State private var editName: String = ""
     @State private var editRaceObjective: RaceObjective = .sprint
     @State private var editRaceDate: Date = Date()
@@ -108,6 +109,9 @@ struct ProfileView: View {
                                     }
                                 }
                             }
+                            Button("Delete Account", role: .destructive) {
+                                showDeleteAccountAlert = true
+                            }
                         }
                     }
                 } else {
@@ -148,6 +152,24 @@ struct ProfileView: View {
             Button("OK") { }
         } message: {
             Text(validationMessage)
+        }
+        .alert("Delete Account", isPresented: $showDeleteAccountAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                Task {
+                    isLoading = true
+                    do {
+                        try await authService.deleteAccount()
+                        profileService.clearProfile()
+                    } catch {
+                        isLoading = false
+                        errorMessage = "Unable to delete account. Please try again."
+                        showError = true
+                    }
+                }
+            }
+        } message: {
+            Text("This will permanently delete your account and all data. This cannot be undone.")
         }
         .onChange(of: stravaService.isConnecting) { oldValue, newValue in
             // OAuth completed: isConnecting transitioned true → false
