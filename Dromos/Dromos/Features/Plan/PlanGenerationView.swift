@@ -14,7 +14,10 @@ import Combine
 struct PlanGenerationView: View {
     @ObservedObject var authService: AuthService
     @StateObject private var planService = PlanService()
+    @StateObject private var profileService = ProfileService()
+    @StateObject private var stravaService = StravaService()
 
+    @State private var showSettings = false
     @State private var generationStartTime: Date?
     @State private var elapsedSeconds: Double = 0
     @State private var generationCompleted: Bool = false
@@ -54,13 +57,15 @@ struct PlanGenerationView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Sign Out") {
-                        Task {
-                            try? await authService.signOut()
-                        }
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gear")
                     }
-                    .foregroundColor(.red)
                 }
+            }
+            .sheet(isPresented: $showSettings) {
+                ProfileView(authService: authService, profileService: profileService, stravaService: stravaService)
             }
             .onChange(of: planService.isGenerating) { _, isGenerating in
                 if isGenerating {
