@@ -1,7 +1,7 @@
 # DRO-213 — Phase 1: Generalize session display for agent-generated sessions
 
 **Linear:** [DRO-213](https://linear.app/dromosapp/issue/DRO-213/phase-1-generalize-session-display-for-agent-generated-sessions)
-**Overall Progress:** `0%`
+**Overall Progress:** `25%`
 
 ## TLDR
 
@@ -150,23 +150,23 @@ Recovery segments always render as the recovery green regardless of target.
 
 ## Tasks
 
-- [ ] 🟥 **Phase 1 — Additive DB migration & shared materializer**
-  - [ ] 🟥 Write migration `20260425_session_structure_and_max_hr.sql` (additive only: `structure`, `max_hr`, `birth_year`; **no strength deletion here**)
-  - [ ] 🟥 Apply migration directly to production via `mcp__supabase__apply_migration` (no staging exists)
-  - [ ] 🟥 Verify with `mcp__supabase__list_tables` that the new columns are present and nullable
-  - [ ] 🟥 Create `supabase/functions/_shared/materialize-structure.ts` — pure function `materialize(template) -> SessionStructure`. **No Supabase client / `Deno.env` deps** — must be importable by both Edge Functions and Deno CLI scripts via relative path
-  - [ ] 🟥 Encode swim pace → RPE table inside the materializer
-  - [ ] 🟥 Encode `mas_pct` → `vma_pct` rename inside the materializer (translates legacy JSON keys to new schema)
-  - [ ] 🟥 Strip `strength` array from `ai/context/workout-library.json`; rename `mas_pct` → `vma_pct` keys throughout the JSON
-  - [ ] 🟥 Update `step3-workout-block-prompt.ts` to drop strength entries; verify the prompt no longer references `mas_pct` (use `vma_pct`)
-  - [ ] 🟥 Unit-test the materializer for: `ftp_pct` template, `vma_pct` template, swim pace tags → RPE, nested repeats (3 levels), `cadence_rpm` preservation, `cue` preservation, `RUN_Easy_07`-style duration+distance dedup (prefer duration)
+- [x] ✅ **Phase 1 — Additive DB migration & shared materializer** *(DRO-215, merged)*
+  - [x] ✅ Write migration `20260425_session_structure_and_max_hr.sql` (additive only: `structure`, `max_hr`, `birth_year`)
+  - [x] ✅ Apply migration directly to production via `mcp__supabase__apply_migration`
+  - [x] ✅ Verify columns are present and nullable
+  - [x] ✅ Create `supabase/functions/_shared/materialize-structure.ts` — pure function
+  - [x] ✅ Encode swim pace → RPE table
+  - [x] ✅ Encode `mas_pct` → `vma_pct` rename
+  - [x] ✅ Strip `strength` array from `ai/context/workout-library.json`; rename `mas_pct` → `vma_pct`
+  - [x] ✅ Update `step3-workout-block-prompt.ts` to drop strength entries
+  - [x] ✅ Unit-test the materializer (21 tests, all passing)
 
-- [ ] 🟥 **Phase 2 — Server (`generate-plan`) writes both columns**
-  - [ ] 🟥 Import shared materializer in `supabase/functions/generate-plan/index.ts`
-  - [ ] 🟥 At the single insert site (~line 2006-2016), call materializer with the resolved template and pass result as the `structure` insert field. Insert site is the only materialization point — fixers do **not** re-materialize
-  - [ ] 🟥 Remove strength session generation throughout the pipeline (Step 1/2/3 prompts + post-processing fixers)
-  - [ ] 🟥 Tests: unit-test that `generate-plan`'s insert payload has non-null `structure` matching the template; integration test that strength is never produced
-  - [ ] 🟥 Generate a fresh test plan against production (test user); verify rows have non-null `structure`
+- [x] ✅ **Phase 2 — Server (`generate-plan`) writes both columns** *(DRO-216)*
+  - [x] ✅ Import shared materializer in `supabase/functions/generate-plan/index.ts`
+  - [x] ✅ At the single insert site, call `materialize(template)` and include `structure` in insert payload. `buildTemplateMap()` built once; fixers mutate `template_id` before insert; single materialisation point confirmed
+  - [x] ✅ Remove strength session generation: step1/step2/step3 prompts clean; `VALID_SPORTS` guard rejects strength at validation
+  - [x] ✅ Tests: 11 unit tests in `generate-plan/__tests__/insert-payload.test.ts` — all passing
+  - [ ] 🟡 Generate a fresh test plan against production (test user); verify rows have non-null `structure` — pending deploy
 
 - [ ] 🟥 **Phase 3 — Backfill script**
   - [ ] 🟥 Create `scripts/backfill-session-structure.ts` (Deno). Imports the shared materializer from `../supabase/functions/_shared/materialize-structure.ts` via relative path
