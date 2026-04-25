@@ -1,6 +1,6 @@
 # AI Pipeline Reference
 
-> Last updated: 2026-03-07
+> Last updated: 2026-04-25
 
 ## Overview
 
@@ -89,6 +89,8 @@ Pure conversion, no transformation.
 - Template variety: never same template 2 consecutive weeks (Tempo/Intervals)
 
 **Template variables:** `{{constraints}}` (per-day availability string), `{{block_weeks_json}}`, `{{previously_used}}`, `{{workout_library}}` (simplified format)
+
+**DRO-215 (Phase 1):** `workout-library.json` strength templates removed. `buildSimplifiedLibrary()` in `generate-plan/index.ts` already iterates only `["swim", "bike", "run"]` so no prompt change was needed. Run intensity keys renamed `mas_pct` → `vma_pct` throughout the JSON. The shared materializer (`supabase/functions/_shared/materialize-structure.ts`) handles legacy `mas_pct` keys at materialisation time for edge cases.
 
 ---
 

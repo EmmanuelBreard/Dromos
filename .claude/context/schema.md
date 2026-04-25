@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-03-23 | Migrations: 001-016 + summary_polyline
+> Last updated: 2026-04-25 | Migrations: 001-016 + summary_polyline + 20260405_align-swim-templates + 20260425_session_structure_and_max_hr
 
 ## Tables Overview
 
@@ -44,6 +44,8 @@ Profile data linked to `auth.users` via UUID primary key.
 | `sat_duration` | INT | CHECK 30-420 OR NULL | |
 | `sun_duration` | INT | CHECK 30-420 OR NULL | |
 | `current_weekly_hours` | DECIMAL(3,1) | CHECK 0-25 OR NULL | Self-reported avg weekly hours |
+| `max_hr` | INT | CHECK 100-220 OR NULL | Maximum heart rate (BPM). Used by `hr_zone`/`hr_pct_max` targets. Set via onboarding (new users) or Settings (existing users). |
+| `birth_year` | INT | CHECK 1920-2020 OR NULL | Birth year. Supports "220 − age" formula affordance in onboarding. |
 
 **Triggers:** `on_auth_user_created` (auto-insert on signup), `update_users_updated_at` (auto-update timestamp)
 
@@ -111,6 +113,7 @@ Individual training sessions within a week.
 | `order_in_day` | INT | NOT NULL, DEFAULT 0 | |
 | `feedback` | TEXT | | AI-generated coaching commentary |
 | `matched_activity_id` | UUID | FK → `strava_activities(id)` | Persists the Strava match for feedback |
+| `structure` | JSONB | nullable | Materialised `SessionStructure` blob. Written at plan-generation time and by the backfill script. Renderer prefers this column; falls back to `template_id` lookup when NULL. See `supabase/functions/_shared/materialize-structure.ts` for the shape. |
 
 **RLS:** SELECT own sessions (via join to `plan_weeks` → `training_plans`). No direct UPDATE — all writes go through `reorder_sessions` RPC.
 

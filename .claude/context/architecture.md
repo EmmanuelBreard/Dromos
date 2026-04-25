@@ -1,6 +1,6 @@
 # Architecture Reference
 
-> Last updated: 2026-03-23
+> Last updated: 2026-04-25
 
 ## Folder Structure
 
@@ -54,7 +54,30 @@ Dromos/Dromos/
 │
 └── Resources/
     ├── Assets.xcassets/              # Icons, colors
-    └── workout-library.json          # Symlink → ai/context/workout-library.json
+    └── workout-library.json          # Symlink → ai/context/workout-library.json (strength removed; mas_pct renamed to vma_pct — DRO-215)
+```
+
+---
+
+## Shared Materializer (DRO-215 — Phase 1)
+
+**File:** `supabase/functions/_shared/materialize-structure.ts`
+
+Pure TypeScript function `materialize(template: WorkoutTemplate) -> SessionStructure` with no runtime dependencies. Importable by:
+- Edge Functions (`generate-plan/index.ts`)
+- Deno CLI scripts (backfill script at `scripts/backfill-session-structure.ts`)
+
+**Key transforms:**
+- `mas_pct` (legacy) → `vma_pct` (canonical) silently at materialisation time
+- `duration_minutes` XOR `distance_meters`: when both are present, duration wins
+- Swim `pace` tags → `rpe` target (slow/easy→3, medium→6, quick/threshold→7, fast→8, very_quick→9)
+- `cadence_rpm` and `cue` preserved verbatim
+- `duration_seconds` converted to `duration_minutes` (ceiling)
+- Nested repeat segments processed recursively (unlimited depth)
+
+**Tests:** `supabase/functions/_shared/__tests__/materialize-structure.test.ts` (17 tests, Deno test runner)
+
+```
 ```
 
 ---
