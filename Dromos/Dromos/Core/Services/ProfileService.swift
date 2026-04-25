@@ -81,7 +81,9 @@ final class ProfileService: ObservableObject {
         vma: Double? = nil,
         cssSecondsPer100m: Int? = nil,
         ftp: Int? = nil,
-        experienceYears: Int? = nil
+        experienceYears: Int? = nil,
+        maxHr: Int? = nil,
+        birthYear: Int? = nil
     ) async throws -> User {
         isLoading = true
         errorMessage = nil
@@ -98,7 +100,9 @@ final class ProfileService: ObservableObject {
                 cssSecondsPer100m: cssSecondsPer100m,
                 ftp: ftp,
                 experienceYears: experienceYears,
-                onboardingCompleted: nil
+                onboardingCompleted: nil,
+                maxHr: maxHr,
+                birthYear: birthYear
             )
 
             let user: User = try await client

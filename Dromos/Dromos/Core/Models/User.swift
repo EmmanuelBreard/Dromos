@@ -91,6 +91,14 @@ struct User: Codable, Identifiable, Equatable {
     /// Total training duration for Sunday in minutes (30-420, nullable if day not available)
     var sunDuration: Int?
 
+    // MARK: - Performance Metrics: HR (DRO-213)
+
+    /// Maximum heart rate in bpm (used for HR-zone and hr_pct_max target resolution)
+    var maxHr: Int?
+
+    /// Year of birth (used for the 220−age formula affordance in onboarding)
+    var birthYear: Int?
+
     // MARK: - Onboarding Status
 
     /// Indicates whether the user has completed the onboarding flow
@@ -157,4 +165,6 @@ struct UserUpdate: Codable {
     var satDuration: Int?
     var sunDuration: Int?
     var onboardingCompleted: Bool?
+    var maxHr: Int?
+    var birthYear: Int?
 }
