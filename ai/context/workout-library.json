@@ -978,7 +978,7 @@
           "pace": "slow"
         },
         {
-          "label": "main",
+          "label": "work",
           "distance_meters": 400,
           "pace": "slow"
         },
@@ -1784,7 +1784,7 @@
               "cadence_rpm": 90
             },
             {
-              "label": "surge",
+              "label": "work",
               "duration_seconds": 20,
               "ftp_pct": 120,
               "cadence_rpm": 105
@@ -2262,7 +2262,7 @@
               "repeats": 4,
               "segments": [
                 {
-                  "label": "surge",
+                  "label": "work",
                   "duration_seconds": 15,
                   "ftp_pct": 150,
                   "cadence_rpm": 115
@@ -3285,7 +3285,7 @@
               "vma_pct": 90
             },
             {
-              "label": "surge",
+              "label": "work",
               "duration_seconds": 20,
               "vma_pct": 105
             }
