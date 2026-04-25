@@ -1965,6 +1965,7 @@ Deno.serve(async (req) => {
 
     // Write to database
     const weekIds: Record<number, string> = {};
+    const unknownTemplateIds = new Set<string>();
 
     for (const week of allBlockWeeks) {
       const weekStartDate = addDays(planStartDate, (week.week_number - 1) * 7);
@@ -2030,12 +2031,15 @@ Deno.serve(async (req) => {
           // fixMissingBricks, etc.) mutate session.template_id BEFORE this insert site runs.
           // Materialisation therefore happens exactly once — here — always against the
           // final post-fix template. Fixers do NOT call materialize() themselves.
-          const template = templateMap[session.template_id];
-          const structure = template ? materialize(template) : null;
-          if (!structure) {
+          if (!session.template_id) {
             console.warn(
-              `[generate-plan] Unknown template_id "${session.template_id}" — structure will be null for this session.`
+              `[generate-plan] Session at index ${i} has no template_id — skipping structure materialization`
             );
+          }
+          const template = session.template_id ? templateMap[session.template_id] : undefined;
+          const structure = template ? materialize(template) : null;
+          if (!structure && session.template_id) {
+            unknownTemplateIds.add(session.template_id);
           }
 
           await dbClient.from("plan_sessions").insert({
@@ -2053,6 +2057,14 @@ Deno.serve(async (req) => {
         }
       }
     }
+
+        // Emit one summary warn if any sessions had unrecognised template_ids
+        if (unknownTemplateIds.size > 0) {
+          console.warn(
+            "[generate-plan] Unknown template_ids encountered (structure left NULL):",
+            Array.from(unknownTemplateIds)
+          );
+        }
 
         // Update plan status to 'active'
         await dbClient
