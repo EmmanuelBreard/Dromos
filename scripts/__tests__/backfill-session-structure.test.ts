@@ -5,7 +5,7 @@
  *
  * Strategy:
  *  - Import the shared materializer directly (pure function, no side effects).
- *  - Test the per-row decision logic (skip / orphan / populate) using fixture rows
+ *  - Import processRow from the real script and exercise it with fixture rows
  *    and a mock library map — no real DB or network calls required.
  *  - Verify the CAS guard SQL predicate shape by testing that update is only
  *    called when structure IS NULL.
@@ -17,13 +17,14 @@
 import {
   assertEquals,
   assertExists,
-  assertThrows,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
   materialize,
   WorkoutTemplate,
-  SessionStructure,
 } from "../../supabase/functions/_shared/materialize-structure.ts";
+import {
+  processRow,
+} from "../backfill-session-structure.ts";
 
 // ---------------------------------------------------------------------------
 // Fixture templates
@@ -88,191 +89,156 @@ const NESTED_REPEAT_TEMPLATE: WorkoutTemplate = {
 };
 
 // ---------------------------------------------------------------------------
-// Helper: simulate the per-row processing decision
-// (mirrors the logic in backfill-session-structure.ts without DB calls)
-// ---------------------------------------------------------------------------
-
-interface MockRow {
-  id: string;
-  sport: string;
-  template_id: string | null;
-  structure: unknown | null;
-}
-
-type RowOutcome =
-  | { type: "skipped" }
-  | { type: "orphaned"; reason: string }
-  | { type: "populated"; structure: SessionStructure }
-  | { type: "failed"; error: string };
-
-function processRow(row: MockRow, library: Map<string, WorkoutTemplate>): RowOutcome {
-  if (row.structure !== null) {
-    return { type: "skipped" };
-  }
-
-  if (row.sport === "strength") {
-    return { type: "skipped" };
-  }
-
-  if (!row.template_id) {
-    return { type: "orphaned", reason: "no template_id" };
-  }
-
-  const template = library.get(row.template_id);
-  if (!template) {
-    return { type: "orphaned", reason: `template not found: ${row.template_id}` };
-  }
-
-  try {
-    const structure = materialize(template);
-    return { type: "populated", structure };
-  } catch (err) {
-    return { type: "failed", error: String(err) };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Tests
+// processRow tests — imported directly from the real script
 // ---------------------------------------------------------------------------
 
 Deno.test("processRow: skips rows with existing structure", () => {
   const library = new Map([[FTP_TEMPLATE.template_id, FTP_TEMPLATE]]);
-  const row: MockRow = {
+  const row = {
     id: "row-1",
     sport: "bike",
     template_id: "BIKE_Easy_01",
     structure: { segments: [] }, // already populated
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "skipped");
+  const result = processRow(row, library);
+  assertEquals(result.kind, "skip");
+  if (result.kind === "skip") {
+    assertEquals(result.reason, "already-populated");
+  }
 });
 
 Deno.test("processRow: skips strength rows (Phase 8 deferred)", () => {
   const library = new Map<string, WorkoutTemplate>();
-  const row: MockRow = {
+  const row = {
     id: "row-2",
     sport: "strength",
     template_id: "STRENGTH_Core_01",
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "skipped");
+  const result = processRow(row, library);
+  assertEquals(result.kind, "skip");
+  if (result.kind === "skip") {
+    assertEquals(result.reason, "strength");
+  }
 });
 
-Deno.test("processRow: orphans row with null template_id", () => {
+Deno.test("processRow: skips row with null template_id", () => {
   const library = new Map<string, WorkoutTemplate>();
-  const row: MockRow = {
+  const row = {
     id: "row-3",
     sport: "run",
     template_id: null,
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "orphaned");
+  const result = processRow(row, library);
+  assertEquals(result.kind, "skip");
+  if (result.kind === "skip") {
+    assertEquals(result.reason, "no-template-id");
+  }
 });
 
 Deno.test("processRow: orphans row when template_id not in library", () => {
   const library = new Map([[FTP_TEMPLATE.template_id, FTP_TEMPLATE]]);
-  const row: MockRow = {
+  const row = {
     id: "row-4",
     sport: "run",
     template_id: "RUN_UNKNOWN_99",
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "orphaned");
-  if (outcome.type === "orphaned") {
-    assertEquals(outcome.reason.includes("RUN_UNKNOWN_99"), true);
+  const result = processRow(row, library);
+  assertEquals(result.kind, "orphaned");
+  if (result.kind === "orphaned") {
+    assertEquals(result.templateId, "RUN_UNKNOWN_99");
   }
 });
 
-Deno.test("processRow: populates FTP bike template correctly", () => {
+Deno.test("processRow: materializes FTP bike template correctly", () => {
   const library = new Map([[FTP_TEMPLATE.template_id, FTP_TEMPLATE]]);
-  const row: MockRow = {
+  const row = {
     id: "row-5",
     sport: "bike",
     template_id: "BIKE_Easy_01",
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "populated");
-  if (outcome.type === "populated") {
-    assertEquals(outcome.structure.segments.length, 3);
-    assertEquals(outcome.structure.segments[0].label, "warmup");
-    assertEquals(outcome.structure.segments[0].target, { type: "ftp_pct", value: 55 });
-    assertEquals(outcome.structure.segments[1].target, { type: "ftp_pct", value: 70 });
-    assertEquals(outcome.structure.segments[2].target, { type: "ftp_pct", value: 50 });
+  const result = processRow(row, library);
+  assertEquals(result.kind, "materialize");
+  if (result.kind === "materialize") {
+    assertEquals(result.structure.segments.length, 3);
+    assertEquals(result.structure.segments[0].label, "warmup");
+    assertEquals(result.structure.segments[0].target, { type: "ftp_pct", value: 55 });
+    assertEquals(result.structure.segments[1].target, { type: "ftp_pct", value: 70 });
+    assertEquals(result.structure.segments[2].target, { type: "ftp_pct", value: 50 });
   }
 });
 
-Deno.test("processRow: populates VMA run template correctly", () => {
+Deno.test("processRow: materializes VMA run template correctly", () => {
   const library = new Map([[VMA_TEMPLATE.template_id, VMA_TEMPLATE]]);
-  const row: MockRow = {
+  const row = {
     id: "row-6",
     sport: "run",
     template_id: "RUN_Tempo_01",
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "populated");
-  if (outcome.type === "populated") {
-    assertEquals(outcome.structure.segments[1].target, { type: "vma_pct", value: 85 });
+  const result = processRow(row, library);
+  assertEquals(result.kind, "materialize");
+  if (result.kind === "materialize") {
+    assertEquals(result.structure.segments[1].target, { type: "vma_pct", value: 85 });
   }
 });
 
 Deno.test("processRow: normalises legacy mas_pct to vma_pct", () => {
   const library = new Map([[LEGACY_MAS_TEMPLATE.template_id, LEGACY_MAS_TEMPLATE]]);
-  const row: MockRow = {
+  const row = {
     id: "row-7",
     sport: "run",
     template_id: "RUN_Easy_01",
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "populated");
-  if (outcome.type === "populated") {
+  const result = processRow(row, library);
+  assertEquals(result.kind, "materialize");
+  if (result.kind === "materialize") {
     // All targets should be vma_pct, not mas_pct
-    for (const seg of outcome.structure.segments) {
+    for (const seg of result.structure.segments) {
       if (seg.target) {
         assertEquals(seg.target.type, "vma_pct");
       }
     }
-    assertEquals(outcome.structure.segments[1].target, { type: "vma_pct", value: 70 });
+    assertEquals(result.structure.segments[1].target, { type: "vma_pct", value: 70 });
   }
 });
 
 Deno.test("processRow: maps swim pace tags to RPE values", () => {
   const library = new Map([[SWIM_PACE_TEMPLATE.template_id, SWIM_PACE_TEMPLATE]]);
-  const row: MockRow = {
+  const row = {
     id: "row-8",
     sport: "swim",
     template_id: "SWIM_Easy_01",
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "populated");
-  if (outcome.type === "populated") {
-    assertEquals(outcome.structure.segments[0].target, { type: "rpe", value: 3 }); // easy
-    assertEquals(outcome.structure.segments[1].target, { type: "rpe", value: 6 }); // medium
-    assertEquals(outcome.structure.segments[2].target, { type: "rpe", value: 3 }); // slow
+  const result = processRow(row, library);
+  assertEquals(result.kind, "materialize");
+  if (result.kind === "materialize") {
+    assertEquals(result.structure.segments[0].target, { type: "rpe", value: 3 }); // easy
+    assertEquals(result.structure.segments[1].target, { type: "rpe", value: 6 }); // medium
+    assertEquals(result.structure.segments[2].target, { type: "rpe", value: 3 }); // slow
     // Distance should be preserved
-    assertEquals(outcome.structure.segments[0].distance_meters, 200);
-    assertEquals(outcome.structure.segments[1].distance_meters, 600);
+    assertEquals(result.structure.segments[0].distance_meters, 200);
+    assertEquals(result.structure.segments[1].distance_meters, 600);
   }
 });
 
 Deno.test("processRow: correctly handles nested repeat segments", () => {
   const library = new Map([[NESTED_REPEAT_TEMPLATE.template_id, NESTED_REPEAT_TEMPLATE]]);
-  const row: MockRow = {
+  const row = {
     id: "row-9",
     sport: "run",
     template_id: "RUN_Intervals_04",
     structure: null,
   };
-  const outcome = processRow(row, library);
-  assertEquals(outcome.type, "populated");
-  if (outcome.type === "populated") {
-    const segs = outcome.structure.segments;
+  const result = processRow(row, library);
+  assertEquals(result.kind, "materialize");
+  if (result.kind === "materialize") {
+    const segs = result.structure.segments;
     assertEquals(segs.length, 3);
 
     // Repeat segment
@@ -294,20 +260,23 @@ Deno.test("processRow: correctly handles nested repeat segments", () => {
 Deno.test("CAS guard: idempotency — re-running skips already-populated rows", () => {
   const library = new Map([[FTP_TEMPLATE.template_id, FTP_TEMPLATE]]);
 
-  // Simulate first run: structure was null, gets populated
-  const firstRun: MockRow = { id: "row-10", sport: "bike", template_id: "BIKE_Easy_01", structure: null };
-  const firstOutcome = processRow(firstRun, library);
-  assertEquals(firstOutcome.type, "populated");
+  // Simulate first run: structure was null, gets materialized
+  const firstRow = { id: "row-10", sport: "bike", template_id: "BIKE_Easy_01", structure: null };
+  const firstResult = processRow(firstRow, library);
+  assertEquals(firstResult.kind, "materialize");
 
   // Simulate re-run: the row now has structure set
-  const secondRun: MockRow = {
+  const secondRow = {
     id: "row-10",
     sport: "bike",
     template_id: "BIKE_Easy_01",
-    structure: firstOutcome.type === "populated" ? firstOutcome.structure : null,
+    structure: firstResult.kind === "materialize" ? firstResult.structure : null,
   };
-  const secondOutcome = processRow(secondRun, library);
-  assertEquals(secondOutcome.type, "skipped");
+  const secondResult = processRow(secondRow, library);
+  assertEquals(secondResult.kind, "skip");
+  if (secondResult.kind === "skip") {
+    assertEquals(secondResult.reason, "already-populated");
+  }
 });
 
 Deno.test("library map: all top-level sports are indexed", async () => {

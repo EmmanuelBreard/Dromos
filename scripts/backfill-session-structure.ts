@@ -16,7 +16,7 @@
  * Exit code: non-zero when failed > 0, zero otherwise.
  */
 
-import { materialize, WorkoutTemplate } from "../supabase/functions/_shared/materialize-structure.ts";
+import { materialize, WorkoutTemplate, SessionStructure } from "../supabase/functions/_shared/materialize-structure.ts";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -28,13 +28,8 @@ const BATCH_SIZE = 100;
 // Env validation
 // ---------------------------------------------------------------------------
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("[backfill] ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.");
-  Deno.exit(1);
-}
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 // ---------------------------------------------------------------------------
 // Workout library loader — builds Map<template_id, WorkoutTemplate>
@@ -75,14 +70,14 @@ const HEADERS = {
   "apikey": SERVICE_ROLE_KEY,
   "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
   "Content-Type": "application/json",
-  "Prefer": "return=minimal",
+  "Prefer": "return=minimal,count=exact",
 };
 
 async function fetchBatch(lastId: string | null): Promise<PlanSessionRow[]> {
   // Use keyset pagination: id > lastId, ordered by id, limit BATCH_SIZE
   let filter = "sport=neq.strength&structure=is.null&select=id,sport,template_id,structure&order=id.asc&limit=" + BATCH_SIZE;
   if (lastId !== null) {
-    filter += `&id=gt.${lastId}`;
+    filter += `&id=gt.${encodeURIComponent(lastId)}`;
   }
 
   const url = `${SUPABASE_URL}/rest/v1/plan_sessions?${filter}`;
@@ -96,9 +91,14 @@ async function fetchBatch(lastId: string | null): Promise<PlanSessionRow[]> {
   return resp.json() as Promise<PlanSessionRow[]>;
 }
 
-async function updateStructure(id: string, structure: unknown): Promise<void> {
+/**
+ * CAS-guarded PATCH: only updates the row when structure IS NULL.
+ * Returns the number of rows actually updated (0 or 1).
+ * A return value of 0 means a concurrent writer beat us to it (race).
+ */
+async function updateStructure(id: string, structure: unknown): Promise<number> {
   // CAS guard: only update where structure IS NULL (race-condition safety)
-  const url = `${SUPABASE_URL}/rest/v1/plan_sessions?id=eq.${id}&structure=is.null`;
+  const url = `${SUPABASE_URL}/rest/v1/plan_sessions?id=eq.${encodeURIComponent(id)}&structure=is.null`;
   const resp = await fetch(url, {
     method: "PATCH",
     headers: HEADERS,
@@ -109,6 +109,48 @@ async function updateStructure(id: string, structure: unknown): Promise<void> {
     const body = await resp.text();
     throw new Error(`updateStructure failed for id=${id} (${resp.status}): ${body}`);
   }
+
+  // Parse Content-Range header to determine how many rows were actually updated.
+  // Format: "0-0/N" where N is the matched-row count, or "*/0" when 0 rows matched.
+  const contentRange = resp.headers.get("Content-Range") ?? "";
+  const match = contentRange.match(/\/(\d+)$/);
+  return match ? parseInt(match[1], 10) : 1; // fall back to 1 to stay backward-compatible
+}
+
+// ---------------------------------------------------------------------------
+// Per-row decision logic (exported for unit testing)
+// ---------------------------------------------------------------------------
+
+export type ProcessRowResult =
+  | { kind: "skip"; reason: "already-populated" }
+  | { kind: "skip"; reason: "strength" }
+  | { kind: "skip"; reason: "no-template-id" }
+  | { kind: "orphaned"; templateId: string | null }
+  | { kind: "materialize"; structure: SessionStructure };
+
+export function processRow(
+  row: { id: string; template_id: string | null; sport: string; structure: unknown },
+  library: Map<string, WorkoutTemplate>
+): ProcessRowResult {
+  if (row.structure !== null) {
+    return { kind: "skip", reason: "already-populated" };
+  }
+
+  if (row.sport === "strength") {
+    return { kind: "skip", reason: "strength" };
+  }
+
+  if (!row.template_id) {
+    return { kind: "skip", reason: "no-template-id" };
+  }
+
+  const template = library.get(row.template_id);
+  if (!template) {
+    return { kind: "orphaned", templateId: row.template_id };
+  }
+
+  const structure = materialize(template);
+  return { kind: "materialize", structure };
 }
 
 // ---------------------------------------------------------------------------
@@ -122,8 +164,9 @@ async function run(): Promise<void> {
   console.log(`[backfill] Loaded ${library.size} templates from workout-library.json`);
 
   let populated = 0;
-  let skipped = 0;    // structure already non-null
-  let orphaned = 0;   // template_id not in library
+  let raced = 0;      // CAS guard fired: another writer updated the row first
+  let skipped = 0;    // structure already non-null or strength row
+  let orphaned = 0;   // template_id null or not found in library
   let failed = 0;
 
   let lastId: string | null = null;
@@ -140,49 +183,48 @@ async function run(): Promise<void> {
     console.log(`[backfill] Batch ${batchNum}: ${batch.length} rows (starting after id=${lastId ?? "beginning"})`);
 
     for (const row of batch) {
-      // The query already filters structure IS NULL and sport != strength,
-      // but guard here too for extra safety.
-      if (row.structure !== null) {
-        skipped++;
-        continue;
-      }
-
-      if (row.sport === "strength") {
-        // Should not appear due to filter, but defensive skip
-        console.log(`[backfill]   SKIP (strength) id=${row.id}`);
-        skipped++;
-        continue;
-      }
-
-      if (!row.template_id) {
-        console.log(`[backfill]   ORPHAN (no template_id) id=${row.id} sport=${row.sport}`);
-        orphaned++;
-        continue;
-      }
-
-      const template = library.get(row.template_id);
-      if (!template) {
-        console.log(`[backfill]   ORPHAN (template not found) id=${row.id} template_id=${row.template_id}`);
-        orphaned++;
-        continue;
-      }
-
-      let structure: unknown;
+      let result: ProcessRowResult;
       try {
-        structure = materialize(template);
+        result = processRow(row, library);
       } catch (err) {
         console.error(`[backfill]   FAILED (materialize) id=${row.id} template_id=${row.template_id}: ${err}`);
         failed++;
         continue;
       }
 
-      try {
-        await updateStructure(row.id, structure);
-        console.log(`[backfill]   POPULATED id=${row.id} template_id=${row.template_id}`);
-        populated++;
-      } catch (err) {
-        console.error(`[backfill]   FAILED (update) id=${row.id}: ${err}`);
-        failed++;
+      switch (result.kind) {
+        case "skip":
+          if (result.reason === "strength") {
+            // Should not appear due to query filter, but log defensively
+            console.log(`[backfill]   SKIP (strength) id=${row.id}`);
+          }
+          skipped++;
+          break;
+
+        case "orphaned":
+          if (result.templateId) {
+            console.log(`[backfill]   ORPHAN (template not found) id=${row.id} template_id=${result.templateId}`);
+          } else {
+            console.log(`[backfill]   ORPHAN (no template_id) id=${row.id} sport=${row.sport}`);
+          }
+          orphaned++;
+          break;
+
+        case "materialize":
+          try {
+            const updated = await updateStructure(row.id, result.structure);
+            if (updated === 0) {
+              console.log(`[backfill]   RACED id=${row.id} (concurrent writer beat us)`);
+              raced++;
+            } else {
+              console.log(`[backfill]   POPULATED id=${row.id} template_id=${row.template_id}`);
+              populated++;
+            }
+          } catch (err) {
+            console.error(`[backfill]   FAILED (update) id=${row.id}: ${err}`);
+            failed++;
+          }
+          break;
       }
     }
 
@@ -194,6 +236,7 @@ async function run(): Promise<void> {
   // ---------------------------------------------------------------------------
   console.log("\n[backfill] ====== SUMMARY ======");
   console.log(`[backfill]   populated : ${populated}`);
+  console.log(`[backfill]   raced     : ${raced}`);
   console.log(`[backfill]   skipped   : ${skipped}`);
   console.log(`[backfill]   orphaned  : ${orphaned}`);
   console.log(`[backfill]   failed    : ${failed}`);
@@ -207,4 +250,11 @@ async function run(): Promise<void> {
   console.log("[backfill] Done.");
 }
 
-await run();
+// Only execute when run directly — not when imported by tests.
+if (import.meta.main) {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    console.error("[backfill] ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.");
+    Deno.exit(1);
+  }
+  await run();
+}
