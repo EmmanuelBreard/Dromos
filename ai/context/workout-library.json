@@ -1393,6 +1393,35 @@
         { "label": "work", "distance_meters": 600, "pace": "slow", "cue": "sight every 6 strokes" },
         { "label": "cooldown", "distance_meters": 200, "pace": "slow" }
       ]
+    },
+    {
+      "template_id": "SWIM_Tempo_14",
+      "duration_minutes": 55,
+      "segments": [
+        { "label": "warmup", "distance_meters": 400, "pace": "slow" },
+        {
+          "label": "repeat",
+          "repeats": 8,
+          "segments": [{ "label": "work", "distance_meters": 100, "pace": "threshold", "cue": "@1:52/100m CSS" }],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [{ "label": "work", "distance_meters": 200, "pace": "slow", "cue": "pull buoy @2:10/100m" }],
+          "rest_seconds": 15
+        },
+        { "label": "cooldown", "distance_meters": 400, "pace": "slow" }
+      ]
+    },
+    {
+      "template_id": "SWIM_Easy_15",
+      "duration_minutes": 45,
+      "segments": [
+        { "label": "warmup", "distance_meters": 300, "pace": "slow" },
+        { "label": "work", "distance_meters": 1400, "pace": "slow", "cue": "aerobic @2:15/100m, bilateral breathing" },
+        { "label": "cooldown", "distance_meters": 300, "pace": "slow" }
+      ]
     }
   ],
   "bike": [
@@ -2618,6 +2647,126 @@
           "ftp_pct": 65,
           "cadence_rpm": 90
         }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_17",
+      "duration_minutes": 120,
+      "segments": [
+        { "label": "work", "duration_minutes": 120, "ftp_pct": 62, "cadence_rpm": 90, "cue": "all Z1 <180W, rolling OK" }
+      ]
+    },
+    {
+      "template_id": "BIKE_Easy_18",
+      "duration_minutes": 50,
+      "segments": [
+        { "label": "work", "duration_minutes": 50, "ftp_pct": 62, "cadence_rpm": 90, "cue": "Z1 recovery @170W" }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_18",
+      "duration_minutes": 60,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 10, "ftp_pct": 60, "cadence_rpm": 90 },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [{ "label": "work", "duration_minutes": 12, "ftp_pct": 87, "cadence_rpm": 90, "cue": "race-pace @240W" }],
+          "recovery": { "label": "recovery", "duration_minutes": 5, "ftp_pct": 55, "cadence_rpm": 85 }
+        },
+        { "label": "cooldown", "duration_minutes": 6, "ftp_pct": 55, "cadence_rpm": 85 }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_19",
+      "duration_minutes": 180,
+      "segments": [
+        { "label": "work", "duration_minutes": 150, "ftp_pct": 65, "cadence_rpm": 90, "cue": "Z1 @175-185W" },
+        { "label": "work", "duration_minutes": 30, "ftp_pct": 84, "cadence_rpm": 90, "cue": "sub-threshold block @230W" }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_20",
+      "duration_minutes": 210,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 60, "ftp_pct": 65, "cadence_rpm": 90, "cue": "Z1 easy" },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [{ "label": "work", "duration_minutes": 20, "ftp_pct": 85, "cadence_rpm": 90, "cue": "race-pace @235W" }],
+          "recovery": { "label": "recovery", "duration_minutes": 5, "ftp_pct": 55, "cadence_rpm": 90 }
+        },
+        { "label": "cooldown", "duration_minutes": 60, "ftp_pct": 65, "cadence_rpm": 90 }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_21",
+      "duration_minutes": 210,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 30, "ftp_pct": 65, "cadence_rpm": 90 },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [{ "label": "work", "duration_minutes": 25, "ftp_pct": 84, "cadence_rpm": 90, "cue": "race-sim @230W" }],
+          "recovery": { "label": "recovery", "duration_minutes": 10, "ftp_pct": 55, "cadence_rpm": 90 }
+        },
+        { "label": "cooldown", "duration_minutes": 30, "ftp_pct": 65, "cadence_rpm": 90 }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_22",
+      "duration_minutes": 50,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 10, "ftp_pct": 60, "cadence_rpm": 90 },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [{ "label": "work", "duration_minutes": 12, "ftp_pct": 85, "cadence_rpm": 90, "cue": "race-pace @235W" }],
+          "recovery": { "label": "recovery", "duration_minutes": 5, "ftp_pct": 55, "cadence_rpm": 90 }
+        },
+        { "label": "cooldown", "duration_minutes": 6, "ftp_pct": 55, "cadence_rpm": 90 }
+      ]
+    },
+    {
+      "template_id": "BIKE_Tempo_23",
+      "duration_minutes": 120,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 20, "ftp_pct": 65, "cadence_rpm": 90 },
+        {
+          "label": "repeat",
+          "repeats": 4,
+          "segments": [{ "label": "work", "duration_minutes": 10, "ftp_pct": 84, "cadence_rpm": 90, "cue": "race-pace @230W" }],
+          "recovery": { "label": "recovery", "duration_minutes": 5, "ftp_pct": 55, "cadence_rpm": 90 }
+        },
+        { "label": "cooldown", "duration_minutes": 20, "ftp_pct": 65, "cadence_rpm": 90 }
+      ]
+    },
+    {
+      "template_id": "BIKE_Intervals_13",
+      "duration_minutes": 60,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 10, "ftp_pct": 60, "cadence_rpm": 90 },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [{ "label": "work", "duration_minutes": 15, "ftp_pct": 94, "cadence_rpm": 90, "cue": "threshold @260W" }],
+          "recovery": { "label": "recovery", "duration_minutes": 5, "ftp_pct": 55, "cadence_rpm": 90 }
+        },
+        { "label": "cooldown", "duration_minutes": 10, "ftp_pct": 55, "cadence_rpm": 90 }
+      ]
+    },
+    {
+      "template_id": "BIKE_Intervals_14",
+      "duration_minutes": 40,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 10, "ftp_pct": 60, "cadence_rpm": 90 },
+        {
+          "label": "repeat",
+          "repeats": 3,
+          "segments": [{ "label": "work", "duration_minutes": 2, "ftp_pct": 102, "cadence_rpm": 100, "cue": "race opener @280W (90s)" }],
+          "recovery": { "label": "recovery", "duration_minutes": 2, "ftp_pct": 55, "cadence_rpm": 90 }
+        },
+        { "label": "cooldown", "duration_minutes": 10, "ftp_pct": 55, "cadence_rpm": 90 }
       ]
     }
   ],
@@ -4372,6 +4521,115 @@
           "mas_pct": 80
         }
       ]
+    },
+    {
+      "template_id": "RUN_Easy_15",
+      "duration_minutes": 90,
+      "segments": [
+        { "label": "work", "duration_minutes": 90, "mas_pct": 60, "cue": "16k @5:30/km, HR <145" }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_23",
+      "duration_minutes": 60,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 11, "mas_pct": 61, "cue": "2k @5:30/km" },
+        {
+          "label": "repeat",
+          "repeats": 5,
+          "segments": [{ "label": "work", "duration_minutes": 3, "mas_pct": 95, "cue": "3min @3:30/km HR >170" }],
+          "recovery": { "label": "recovery", "duration_minutes": 3, "mas_pct": 55, "cue": "jog" }
+        },
+        { "label": "cooldown", "duration_minutes": 11, "mas_pct": 61, "cue": "2k @5:30/km" }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_24",
+      "duration_minutes": 50,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 11, "mas_pct": 61 },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [{ "label": "work", "duration_minutes": 2, "mas_pct": 100, "cue": "90s @3:20/km — ceiling touch" }],
+          "recovery": { "label": "recovery", "duration_minutes": 2, "mas_pct": 55, "cue": "jog" }
+        },
+        { "label": "cooldown", "duration_minutes": 11, "mas_pct": 61 }
+      ]
+    },
+    {
+      "template_id": "RUN_Intervals_25",
+      "duration_minutes": 60,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 11, "mas_pct": 61, "cue": "2k @5:30/km" },
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "segments": [{ "label": "work", "duration_minutes": 9, "mas_pct": 75, "cue": "2k @4:25/km race-pace+" }],
+          "recovery": { "label": "recovery", "duration_minutes": 5, "mas_pct": 55, "cue": "jog" }
+        },
+        { "label": "cooldown", "duration_minutes": 11, "mas_pct": 61 }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_23",
+      "duration_minutes": 10,
+      "segments": [
+        { "label": "work", "duration_minutes": 10, "mas_pct": 74, "cue": "brick run @4:30/km off bike" }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_24",
+      "duration_minutes": 60,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 11, "mas_pct": 61, "cue": "2k @5:30/km" },
+        { "label": "work", "duration_minutes": 38, "mas_pct": 70, "cue": "8k @4:45/km HR 150" },
+        { "label": "cooldown", "duration_minutes": 11, "mas_pct": 61, "cue": "2k @5:30/km" }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_25",
+      "duration_minutes": 100,
+      "segments": [
+        { "label": "work", "duration_minutes": 42, "mas_pct": 63, "cue": "8k @5:15/km" },
+        { "label": "work", "duration_minutes": 36, "mas_pct": 74, "cue": "8k @4:30/km HR 150-155" },
+        { "label": "cooldown", "duration_minutes": 10, "mas_pct": 60, "cue": "2k CD" }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_26",
+      "duration_minutes": 90,
+      "segments": [
+        { "label": "work", "duration_minutes": 66, "mas_pct": 60, "cue": "12k @5:30/km easy" },
+        { "label": "work", "duration_minutes": 18, "mas_pct": 74, "cue": "4k @4:30/km race-pace brick finish" }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_27",
+      "duration_minutes": 60,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 11, "mas_pct": 61, "cue": "2k @5:30/km" },
+        { "label": "work", "duration_minutes": 36, "mas_pct": 74, "cue": "8k @4:30/km race-pace + fuel practice" },
+        { "label": "cooldown", "duration_minutes": 11, "mas_pct": 61, "cue": "2k CD" }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_28",
+      "duration_minutes": 90,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 16, "mas_pct": 61, "cue": "3k @5:30/km" },
+        { "label": "work", "duration_minutes": 47, "mas_pct": 70, "cue": "10k @4:45/km HR 150" },
+        { "label": "cooldown", "duration_minutes": 16, "mas_pct": 61, "cue": "3k CD" }
+      ]
+    },
+    {
+      "template_id": "RUN_Tempo_29",
+      "duration_minutes": 45,
+      "segments": [
+        { "label": "warmup", "duration_minutes": 11, "mas_pct": 61, "cue": "2k @5:30/km" },
+        { "label": "work", "duration_minutes": 23, "mas_pct": 74, "cue": "5k @4:30/km race-pace" },
+        { "label": "cooldown", "duration_minutes": 5, "mas_pct": 60, "cue": "1k CD" }
+      ]
     }
   ],
   "strength": [
@@ -4500,6 +4758,23 @@
               "reps": 15,
               "cue": "Band pull-apart"
             }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "STRENGTH_Easy_02",
+      "duration_minutes": 15,
+      "segments": [
+        {
+          "label": "repeat",
+          "repeats": 2,
+          "rest_seconds": 15,
+          "segments": [
+            { "label": "work", "duration_seconds": 45, "cue": "Front plank" },
+            { "label": "work", "duration_seconds": 30, "cue": "Side plank (each side)" },
+            { "label": "work", "reps": 12, "cue": "Glute bridge" },
+            { "label": "work", "reps": 10, "cue": "Bird-dog (each side)" }
           ]
         }
       ]
