@@ -9,6 +9,7 @@ import SwiftUI
 
 /// Third onboarding screen collecting performance metrics.
 /// All fields are required: current weekly hours, VMA, CSS, FTP, experience years.
+/// Also collects birth year and max HR (optional, DRO-213 Phase 6).
 struct OnboardingScreen3View: View {
     @Binding var data: MetricsData
     var onBack: () -> Void
@@ -22,10 +23,18 @@ struct OnboardingScreen3View: View {
     @State private var selectedCssSec: Int = 0
     @State private var selectedFtp: Int = 200
     @State private var selectedExperience: Int = 2
+    @State private var selectedBirthYear: Int = 1996
+    @State private var selectedMaxHr: Int = 190
 
     // Static VMA values array (computed once)
     private static let vmaValues: [Double] = stride(from: 13.0, through: 25.0, by: 0.1)
         .map { Double(round($0 * 10)) / 10 }
+
+    // Birth year range: 1920–2020
+    private static let birthYearValues: [Int] = Array(1920...2020).reversed()
+
+    // Max HR range: 100–220
+    private static let maxHrValues: [Int] = Array(100...220)
 
     // MARK: - Validation
 
@@ -37,6 +46,22 @@ struct OnboardingScreen3View: View {
     /// Form is valid when required field is set (all picker fields have defaults)
     private var isFormValid: Bool {
         isCurrentWeeklyHoursValid
+    }
+
+    // MARK: - Formula
+
+    /// The current calendar year, derived at runtime (not hardcoded).
+    private var currentYear: Int {
+        Calendar.current.component(.year, from: Date())
+    }
+
+    /// Computes max HR from birth year using the 220 − age formula.
+    private func applyMaxHrFormula() {
+        let age = currentYear - selectedBirthYear
+        let computed = 220 - age
+        let clamped = min(220, max(100, computed))
+        selectedMaxHr = clamped
+        data.maxHr = clamped
     }
 
     // MARK: - Body
@@ -192,6 +217,61 @@ struct OnboardingScreen3View: View {
                             data.experienceYears = newValue
                         }
                     }
+
+                    Divider()
+
+                    // Birth Year
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Year of Birth")
+                            .font(.headline)
+                        Text("Used to estimate your max heart rate")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Picker("Birth Year", selection: $selectedBirthYear) {
+                            ForEach(Self.birthYearValues, id: \.self) { year in
+                                Text(String(year))
+                                    .tag(year)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .onChange(of: selectedBirthYear) { _, newValue in
+                            data.birthYear = newValue
+                        }
+                    }
+
+                    // Max HR
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Max Heart Rate (bpm)")
+                            .font(.headline)
+                        Text("Your maximum heart rate — used for HR zone targets")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Picker("Max HR", selection: $selectedMaxHr) {
+                            ForEach(Self.maxHrValues, id: \.self) { value in
+                                Text("\(value) bpm")
+                                    .tag(value)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(height: 120)
+                        .onChange(of: selectedMaxHr) { _, newValue in
+                            data.maxHr = newValue
+                        }
+
+                        Button(action: applyMaxHrFormula) {
+                            Label("Use formula (220 − age)", systemImage: "function")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.blue.opacity(0.1))
+                                .foregroundColor(.blue)
+                                .cornerRadius(8)
+                        }
+                        .accessibilityLabel("Use formula 220 minus age to calculate max heart rate")
+                    }
                 }
 
                 // Navigation buttons
@@ -246,6 +326,16 @@ struct OnboardingScreen3View: View {
                 selectedExperience = years
             } else {
                 data.experienceYears = selectedExperience
+            }
+            if let birthYear = data.birthYear {
+                selectedBirthYear = birthYear
+            } else {
+                data.birthYear = selectedBirthYear
+            }
+            if let maxHr = data.maxHr {
+                selectedMaxHr = maxHr
+            } else {
+                data.maxHr = selectedMaxHr
             }
         }
     }
