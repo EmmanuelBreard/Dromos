@@ -1,6 +1,6 @@
 # Architecture Reference
 
-> Last updated: 2026-03-23
+> Last updated: 2026-04-25
 
 ## Folder Structure
 
@@ -54,7 +54,30 @@ Dromos/Dromos/
 │
 └── Resources/
     ├── Assets.xcassets/              # Icons, colors
-    └── workout-library.json          # Symlink → ai/context/workout-library.json
+    └── workout-library.json          # Symlink → ai/context/workout-library.json (strength templates removed from JSON; existing `plan_sessions` rows with `sport='strength'` deleted in Phase 8 — DRO-222. mas_pct renamed to vma_pct — DRO-215)
+```
+
+---
+
+## Shared Materializer (DRO-215 — Phase 1)
+
+**File:** `supabase/functions/_shared/materialize-structure.ts`
+
+Pure TypeScript function `materialize(template: WorkoutTemplate) -> SessionStructure` with no runtime dependencies. Importable by:
+- Edge Functions (`generate-plan/index.ts`)
+- Deno CLI scripts (backfill script at `scripts/backfill-session-structure.ts`)
+
+**Key transforms:**
+- `mas_pct` (legacy) → `vma_pct` (canonical) silently at materialisation time
+- `duration_minutes` XOR `distance_meters`: when both are present, duration wins
+- Swim `pace` tags → `rpe` target (slow/easy→3, medium→6, quick/threshold→7, fast→8, very_quick→9)
+- `cadence_rpm` and `cue` preserved verbatim
+- `duration_seconds` converted to `duration_minutes` (ceiling)
+- Nested repeat segments processed recursively (unlimited depth)
+
+**Tests:** `supabase/functions/_shared/__tests__/materialize-structure.test.ts` (17 tests, Deno test runner)
+
+```
 ```
 
 ---
@@ -132,7 +155,7 @@ All services follow:
 - `swimDistance(for:)` — Recursive distance calculation for swim templates
 - `flattenedSegments(for:)` — Returns `[FlatSegment]` for graph rendering (expands repeats)
 - `stepSummaries(for:sport:ftp:vma:css:)` — Returns `[StepSummary]` for text display (collapses repeats)
-- Library JSON now has 5 top-level arrays: `swim`, `bike`, `run`, `strength` (optional), `race` (optional)
+- Library JSON now has 4 top-level arrays: `swim`, `bike`, `run`, `race` (optional) — strength was removed (see DRO-222 for DB cleanup)
 
 **FlatSegment** (`WorkoutTemplate.swift`):
 - Identifiable struct for graph rendering

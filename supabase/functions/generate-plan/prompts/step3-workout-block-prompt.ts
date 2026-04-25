@@ -1,4 +1,8 @@
 // AUTO-GENERATED from ai/prompts/step3-workout-block.txt — do not edit directly. Run scripts/sync-prompts.sh
+// DRO-215: Strength templates removed from workout-library.json (Phase 1). The {{workout_library}}
+// variable is built by buildSimplifiedLibrary() which already iterates only swim/bike/run.
+// Run intensity keys in workout-library.json use vma_pct (renamed from mas_pct). No reference
+// to mas_pct or strength templates should appear in this prompt or the injected library.
 export default `You are an expert triathlon coach selecting specific workouts from a template library for a 4-week training block.
 
 ## Daily Availability (HARD CONSTRAINTS — read this first)
