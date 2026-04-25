@@ -2,6 +2,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import OpenAI from "npm:openai@4";
 
+// Shared materializer — pure function, no Supabase/Deno.env deps.
+// Converts a WorkoutTemplate from workout-library.json into the SessionStructure
+// JSON shape stored in plan_sessions.structure.
+import { materialize, type WorkoutTemplate } from "../_shared/materialize-structure.ts";
+
 // Static assets (bundled as TS modules for CLI deploy)
 import STEP1_MACRO_PLAN_PROMPT from "./prompts/step1-macro-plan-prompt.ts";
 import STEP2_MD_TO_JSON_PROMPT from "./prompts/step2-md-to-json-prompt.ts";
@@ -355,6 +360,18 @@ function buildTemplateDurationMap(lib: any): Record<string, number> {
   for (const sport of ["swim", "bike", "run"]) {
     for (const tmpl of lib[sport] || []) {
       map[tmpl.template_id] = tmpl.duration_minutes;
+    }
+  }
+  return map;
+}
+
+// Build template_id → full WorkoutTemplate lookup from workout library.
+// Used at insert time to materialise the structure column without re-scanning the library.
+function buildTemplateMap(lib: any): Record<string, WorkoutTemplate> {
+  const map: Record<string, WorkoutTemplate> = {};
+  for (const sport of ["swim", "bike", "run"]) {
+    for (const tmpl of lib[sport] || []) {
+      map[tmpl.template_id] = tmpl as WorkoutTemplate;
     }
   }
   return map;
@@ -1900,6 +1917,10 @@ Deno.serve(async (req) => {
 
     // Post-processing
     const templateDurationMap = buildTemplateDurationMap(workoutLibrary);
+    // Template map for insert-time materialisation (template_id → full WorkoutTemplate).
+    // Built once here; fixers mutate session.template_id BEFORE the insert site so the
+    // correct (post-fix) template is always resolved at insertion — no re-materialisation needed.
+    const templateMap = buildTemplateMap(workoutLibrary);
     const { dayCaps, sportEligibility } = parseConstraints(userProfile);
 
     fixTypes(allBlockWeeks);
@@ -2003,6 +2024,20 @@ Deno.serve(async (req) => {
             orderInDay = session.sport === "bike" ? 0 : 1;
           }
 
+          // Materialise the structure column from the resolved template.
+          //
+          // Design note: all post-processing fixers (fixConsecutiveRepeats, fixDurationCaps,
+          // fixMissingBricks, etc.) mutate session.template_id BEFORE this insert site runs.
+          // Materialisation therefore happens exactly once — here — always against the
+          // final post-fix template. Fixers do NOT call materialize() themselves.
+          const template = templateMap[session.template_id];
+          const structure = template ? materialize(template) : null;
+          if (!structure) {
+            console.warn(
+              `[generate-plan] Unknown template_id "${session.template_id}" — structure will be null for this session.`
+            );
+          }
+
           await dbClient.from("plan_sessions").insert({
             week_id: weekRow.id,
             day: normDay(session.day),
@@ -2013,6 +2048,7 @@ Deno.serve(async (req) => {
             is_brick: session.is_brick || false,
             notes: null,
             order_in_day: orderInDay,
+            structure,
           });
         }
       }
