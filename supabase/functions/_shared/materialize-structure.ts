@@ -123,19 +123,37 @@ const SWIM_PACE_TO_RPE: Record<string, number> = {
 // Core materialisation logic
 // ---------------------------------------------------------------------------
 
+const VALID_LABELS = new Set<SegmentLabel>([
+  "warmup", "work", "recovery", "cooldown", "repeat", "rest", "drill"
+]);
+
+function validateLabel(raw: string): SegmentLabel {
+  if (!VALID_LABELS.has(raw as SegmentLabel)) {
+    throw new Error(`Invalid segment label: "${raw}". Valid: ${[...VALID_LABELS].join(", ")}`);
+  }
+  return raw as SegmentLabel;
+}
+
 /**
  * Converts a pace tag to an RPE target.
- * Falls back to RPE 6 (moderate) for unknown tags so we never hard-error.
+ * Throws on unknown tags — unknown pace indicates a data error in the template.
  */
 function paceToRpe(pace: string): Target {
-  const rpe = SWIM_PACE_TO_RPE[pace.toLowerCase()] ?? 6;
+  const rpe = SWIM_PACE_TO_RPE[pace.toLowerCase()];
+  if (rpe === undefined) {
+    throw new Error(`Unknown swim pace tag: "${pace}". Valid: ${Object.keys(SWIM_PACE_TO_RPE).join(", ")}`);
+  }
   return { type: "rpe", value: rpe };
 }
 
 /**
- * Derives a Target from a source segment's intensity fields.
- * Normalises mas_pct → vma_pct.
- * Returns undefined when no intensity is present (drill / skill work).
+ * Resolves the source segment's intensity into a Target object.
+ * Phase 1 only emits single-value targets ({type, value}). The Target union
+ * supports range form ({type, min, max}) but no Phase 1 templates carry ranges —
+ * range emission is deferred to Phase 2 when the agent produces them.
+ *
+ * Priority order: ftp_pct → vma_pct → mas_pct (legacy alias) → css_pct →
+ * rpe → hr_zone → hr_pct_max → swim pace tag.
  */
 function resolveTarget(seg: SourceSegment): Target | undefined {
   // ftp_pct (bike / range support not in current templates but handled for safety)
@@ -158,9 +176,9 @@ function resolveTarget(seg: SourceSegment): Target | undefined {
   }
 
   if (seg.hr_zone !== undefined) {
-    // Clamp to valid 1-5 range
-    const zone = Math.max(1, Math.min(5, seg.hr_zone)) as 1 | 2 | 3 | 4 | 5;
-    return { type: "hr_zone", value: zone };
+    // Round then clamp to valid 1-5 range (handles non-integer input gracefully)
+    const z = Math.max(1, Math.min(5, Math.round(seg.hr_zone))) as 1 | 2 | 3 | 4 | 5;
+    return { type: "hr_zone", value: z };
   }
 
   if (seg.hr_pct_max !== undefined) {
@@ -202,9 +220,12 @@ function resolveMeasure(
  * Recursively converts a SourceSegment into a StructureSegment.
  */
 function convertSegment(src: SourceSegment): StructureSegment {
-  const label = src.label as SegmentLabel;
+  const label = validateLabel(src.label);
   const measure = resolveMeasure(src);
-  const target = resolveTarget(src);
+
+  // Repeat container segments must not carry a target — intensity belongs on
+  // leaf children only. Only resolve the target for non-repeat segments.
+  const target = src.repeats !== undefined ? undefined : resolveTarget(src);
 
   const out: StructureSegment = { label, ...measure };
 

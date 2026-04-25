@@ -54,7 +54,7 @@ Dromos/Dromos/
 │
 └── Resources/
     ├── Assets.xcassets/              # Icons, colors
-    └── workout-library.json          # Symlink → ai/context/workout-library.json (strength removed; mas_pct renamed to vma_pct — DRO-215)
+    └── workout-library.json          # Symlink → ai/context/workout-library.json (strength templates removed from JSON; existing `plan_sessions` rows with `sport='strength'` deleted in Phase 8 — DRO-222. mas_pct renamed to vma_pct — DRO-215)
 ```
 
 ---
@@ -155,7 +155,7 @@ All services follow:
 - `swimDistance(for:)` — Recursive distance calculation for swim templates
 - `flattenedSegments(for:)` — Returns `[FlatSegment]` for graph rendering (expands repeats)
 - `stepSummaries(for:sport:ftp:vma:css:)` — Returns `[StepSummary]` for text display (collapses repeats)
-- Library JSON now has 5 top-level arrays: `swim`, `bike`, `run`, `strength` (optional), `race` (optional)
+- Library JSON now has 4 top-level arrays: `swim`, `bike`, `run`, `race` (optional) — strength was removed (see DRO-222 for DB cleanup)
 
 **FlatSegment** (`WorkoutTemplate.swift`):
 - Identifiable struct for graph rendering

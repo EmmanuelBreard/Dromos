@@ -19,6 +19,7 @@
 import {
   assertEquals,
   assertExists,
+  assertThrows,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { materialize, type WorkoutTemplate } from "../materialize-structure.ts";
 
@@ -304,4 +305,59 @@ Deno.test("duration_seconds: converted to duration_minutes (ceiling)", () => {
   for (const seg of result.segments) {
     assertEquals(seg.distance_meters, undefined);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Negative-path tests (error handling)
+// ---------------------------------------------------------------------------
+
+Deno.test("paceToRpe: unknown pace tag throws", () => {
+  const tpl = simpleTemplate("SWIM_Unknown_01", [
+    { label: "work", distance_meters: 100, pace: "tempo" },
+  ]);
+  assertThrows(
+    () => materialize(tpl),
+    Error,
+    'Unknown swim pace tag: "tempo"'
+  );
+});
+
+Deno.test("validateLabel: invalid label throws", () => {
+  const tpl = simpleTemplate("BAD_Label_01", [
+    { label: "foo", duration_minutes: 5 },
+  ]);
+  assertThrows(
+    () => materialize(tpl),
+    Error,
+    'Invalid segment label: "foo"'
+  );
+});
+
+Deno.test("hr_zone: non-integer value 2.7 rounds to 3", () => {
+  const tpl = simpleTemplate("RUN_HR_01", [
+    { label: "work", duration_minutes: 30, hr_zone: 2.7 },
+  ]);
+  const result = materialize(tpl);
+  assertEquals(result.segments[0].target, { type: "hr_zone", value: 3 });
+});
+
+Deno.test("repeat container: intensity field does not produce a top-level target", () => {
+  const tpl = simpleTemplate("BIKE_Repeat_01", [
+    {
+      label: "repeat",
+      repeats: 3,
+      ftp_pct: 80, // intensity on container — must NOT appear as target
+      segments: [
+        { label: "work", duration_minutes: 5, ftp_pct: 90 },
+        { label: "recovery", duration_minutes: 2, ftp_pct: 55 },
+      ],
+    },
+  ]);
+  const result = materialize(tpl);
+  const container = result.segments[0];
+  assertEquals(container.repeats, 3);
+  assertEquals(container.target, undefined, "repeat container must not carry target");
+  // Leaf children still get their targets
+  assertEquals(container.segments![0].target, { type: "ftp_pct", value: 90 });
+  assertEquals(container.segments![1].target, { type: "ftp_pct", value: 55 });
 });
