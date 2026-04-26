@@ -123,25 +123,49 @@ final class WorkoutSegment: Codable {
 struct FlatSegment: Identifiable {
     // FIX #9: Add Identifiable conformance
     let id = UUID()
-    
+
     /// Segment label (e.g., "warmup", "work", "recovery", "cooldown")
     let label: String
-    
+
     /// Total duration of this segment in minutes
     let durationMinutes: Double
-    
-    /// Intensity percentage — ftpPct for bike, masPct for run.
+
+    /// Intensity percentage normalized 0-100 for graph bar height + color.
     /// Drives both bar height and color in the intensity graph.
     let intensityPct: Int?
-    
+
     /// Distance in meters (for swim segments)
     let distanceMeters: Int?
-    
-    /// Pace label (for swim segments, e.g., "easy", "medium", "quick")
+
+    /// Pace label (for swim segments, e.g., "easy", "medium", "quick").
+    /// Used by legacy template path; structure path leaves this nil and uses tooltipMetric instead.
     let pace: String?
-    
+
     /// True for recovery segments between repeats (always shown in green)
     let isRecovery: Bool
+
+    /// Pre-formatted tooltip metric string (e.g., "260–275 W", "RPE 6 — moderate", "5:30/km").
+    /// Populated by the structure-based render path so the graph tooltip can render polymorphic Target output.
+    /// Nil for legacy template path — graph view falls back to its own per-sport formatter.
+    let tooltipMetric: String?
+
+    init(
+        label: String,
+        durationMinutes: Double,
+        intensityPct: Int?,
+        distanceMeters: Int?,
+        pace: String?,
+        isRecovery: Bool,
+        tooltipMetric: String? = nil
+    ) {
+        self.label = label
+        self.durationMinutes = durationMinutes
+        self.intensityPct = intensityPct
+        self.distanceMeters = distanceMeters
+        self.pace = pace
+        self.isRecovery = isRecovery
+        self.tooltipMetric = tooltipMetric
+    }
 }
 
 // MARK: - Step Summary

@@ -21,6 +21,8 @@ struct DaySessionRow: View {
     var ftp: Int? = nil
     var vma: Double? = nil
     var css: Int? = nil
+    /// Max heart rate in bpm (for HR-zone targets). DRO-213 Phase 5.
+    var maxHr: Int? = nil
     /// Callback when a session is tapped to expand/collapse.
     let onToggleExpand: (UUID) -> Void
 
@@ -138,27 +140,26 @@ struct DaySessionRow: View {
     /// Renders workout steps, intensity graph, or swim distance for an expanded session.
     @ViewBuilder
     private func expandedContent(for session: PlanSession) -> some View {
-        let template = workoutLibrary.template(for: session.templateId)
+        // DRO-213 Phase 5: dual-path read — session.structure preferred, template lookup as fallback.
+        let canRender = session.structure != nil || workoutLibrary.template(for: session.templateId) != nil
 
-        VStack(alignment: .leading, spacing: 12) {
-            if let template = template {
-                let showSteps = session.shouldShowWorkoutSteps(template: template)
+        return VStack(alignment: .leading, spacing: 12) {
+            if canRender {
+                let showSteps = workoutLibrary.shouldShowWorkoutSteps(for: session)
 
-                // Workout steps (skip for simple swims)
                 if showSteps {
                     let steps = workoutLibrary.stepSummaries(
-                        for: session.templateId,
-                        sport: session.sport,
-                        ftp: ftp,
-                        vma: vma,
-                        css: css
+                        for: session,
+                        ftp: ftp, vma: vma, css: css, maxHr: maxHr
                     )
                     if !steps.isEmpty {
                         WorkoutStepsView(steps: steps)
                     }
 
-                    // Intensity graph (same guard as steps)
-                    let segments = workoutLibrary.flattenedSegments(for: session.templateId)
+                    let segments = workoutLibrary.flattenedSegments(
+                        for: session,
+                        ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                    )
                     if !segments.isEmpty {
                         let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
                         WorkoutGraphView(
@@ -166,12 +167,14 @@ struct DaySessionRow: View {
                             totalDurationMinutes: totalDuration,
                             sport: session.sport,
                             ftp: ftp,
-                            vma: vma
+                            vma: vma,
+                            css: css,
+                            maxHr: maxHr
                         )
                     }
                 } else if session.sport.lowercased() == "swim" {
-                    // Simple swim — show distance only
-                    if let distance = workoutLibrary.swimDistance(for: session.templateId) {
+                    // Simple swim — show distance only.
+                    if let distance = workoutLibrary.swimDistance(for: session) {
                         HStack(spacing: 6) {
                             Image(systemName: "ruler")
                                 .font(.caption)

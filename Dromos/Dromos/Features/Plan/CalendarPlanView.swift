@@ -112,6 +112,7 @@ struct CalendarPlanView: View {
                             ftp: profileService.user?.ftp,
                             vma: profileService.user?.vma,
                             css: profileService.user?.cssSecondsPer100m,
+                            maxHr: profileService.user?.maxHr,
                             onToggleExpand: { sessionID in
                                 withAnimation {
                                     if expandedSessionIDs.contains(sessionID) {

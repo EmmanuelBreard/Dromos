@@ -442,11 +442,628 @@ final class WorkoutLibraryService {
     /// - Returns: Formatted pace string (e.g., "5:00/km")
     func speedToPace(speed: Double) -> String {
         guard speed > 0 else { return "?:??/km" }
-        
+
         let minutesPerKm = 60.0 / speed
         let minutes = Int(minutesPerKm)
         let seconds = Int((minutesPerKm - Double(minutes)) * 60.0)
-        
+
         return String(format: "%d:%02d/km", minutes, seconds)
+    }
+
+    // MARK: - DRO-213 Phase 5: SessionStructure rendering
+    //
+    // The new schema lives on PlanSession.structure (JSONB). Renderer prefers it; falls
+    // back to template lookup + Swift materialize when nil (transitional path during the
+    // first release that ships the new renderer).
+
+    /// Dual-path entry: returns flattened graph segments for a session.
+    /// Reads `session.structure` first; if nil, looks up the template and materializes.
+    func flattenedSegments(
+        for session: PlanSession,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> [FlatSegment] {
+        if let structure = session.structure {
+            return flattenedSegments(
+                structure: structure,
+                sport: session.sport,
+                ftp: ftp,
+                vma: vma,
+                css: css,
+                maxHr: maxHr
+            )
+        }
+        guard let template = templates[session.templateId] else { return [] }
+        return flattenSegments(segments: template.segments)
+    }
+
+    /// Dual-path entry: returns step summaries for a session.
+    /// Reads `session.structure` first; if nil, looks up the template and uses the legacy formatter.
+    func stepSummaries(
+        for session: PlanSession,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> [StepSummary] {
+        if let structure = session.structure {
+            return stepSummaries(
+                structure: structure,
+                sport: session.sport,
+                ftp: ftp,
+                vma: vma,
+                css: css,
+                maxHr: maxHr
+            )
+        }
+        guard let template = templates[session.templateId] else { return [] }
+        return generateStepSummaries(segments: template.segments, sport: session.sport, ftp: ftp, vma: vma, css: css)
+    }
+
+    /// Returns false for simple swims (1 leaf segment, no repeats) — show distance only.
+    /// Uses session.structure if present, else falls back to template lookup.
+    func shouldShowWorkoutSteps(for session: PlanSession) -> Bool {
+        guard session.sport.lowercased() == "swim" else { return true }
+        if let structure = session.structure {
+            return !(structure.segments.count == 1 && structure.segments.first?.repeats == nil)
+        }
+        guard let template = templates[session.templateId] else { return false }
+        return !(template.segments.count == 1 && template.segments.first?.repeats == nil)
+    }
+
+    /// Total swim distance for a session, walking either structure or template.
+    func swimDistance(for session: PlanSession) -> Int? {
+        guard session.sport.lowercased() == "swim" else { return nil }
+        if let structure = session.structure {
+            return calculateDistance(structureSegments: structure.segments)
+        }
+        return swimDistance(for: session.templateId)
+    }
+
+    // MARK: Structure → FlatSegment
+
+    func flattenedSegments(
+        structure: SessionStructure,
+        sport: String,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> [FlatSegment] {
+        flattenStructureSegments(
+            structure.segments,
+            sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+        )
+    }
+
+    private func flattenStructureSegments(
+        _ segments: [StructureSegment],
+        sport: String,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> [FlatSegment] {
+        var out: [FlatSegment] = []
+        for seg in segments {
+            if let repeats = seg.repeats, let nested = seg.segments {
+                for i in 0..<repeats {
+                    out.append(contentsOf: flattenStructureSegments(
+                        nested,
+                        sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                    ))
+                    if i < repeats - 1 {
+                        if let recovery = seg.recovery {
+                            out.append(makeFlatSegment(
+                                from: recovery, isRecovery: true,
+                                sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                            ))
+                        } else if let restSec = seg.restSeconds {
+                            out.append(FlatSegment(
+                                label: "rest",
+                                durationMinutes: Double(restSec) / 60.0,
+                                intensityPct: nil,
+                                distanceMeters: nil,
+                                pace: nil,
+                                isRecovery: true,
+                                tooltipMetric: nil
+                            ))
+                        }
+                    }
+                }
+            } else {
+                let lower = seg.label.lowercased()
+                let isRecovery = (lower == "recovery" || lower == "rest")
+                out.append(makeFlatSegment(
+                    from: seg, isRecovery: isRecovery,
+                    sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                ))
+            }
+        }
+        return out
+    }
+
+    private func makeFlatSegment(
+        from seg: StructureSegment,
+        isRecovery: Bool,
+        sport: String,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> FlatSegment {
+        // Duration in minutes — prefer duration_minutes; fall back to estimate from distance for swim
+        var dur: Double = seg.durationMinutes ?? 0
+        if dur == 0, let distance = seg.distanceMeters {
+            dur = Double(distance) / 100.0 * 1.5
+        }
+        let intensity = intensityPct(
+            for: seg.target, sport: sport,
+            ftp: ftp, vma: vma, css: css, maxHr: maxHr
+        )
+        let metric = displayString(
+            for: seg.target, sport: sport,
+            ftp: ftp, vma: vma, css: css, maxHr: maxHr
+        )
+        return FlatSegment(
+            label: seg.label,
+            durationMinutes: dur,
+            intensityPct: intensity,
+            distanceMeters: seg.distanceMeters,
+            pace: nil,
+            isRecovery: isRecovery,
+            tooltipMetric: metric
+        )
+    }
+
+    // MARK: Structure → StepSummary
+
+    func stepSummaries(
+        structure: SessionStructure,
+        sport: String,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> [StepSummary] {
+        generateStructureStepSummaries(
+            structure.segments,
+            sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+        )
+    }
+
+    private func generateStructureStepSummaries(
+        _ segments: [StructureSegment],
+        sport: String,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> [StepSummary] {
+        var out: [StepSummary] = []
+        for seg in segments {
+            if let repeats = seg.repeats, let nested = seg.segments {
+                out.append(formatStructureRepeatBlock(
+                    repeats: repeats, segments: nested,
+                    recovery: seg.recovery, restSeconds: seg.restSeconds,
+                    sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                ))
+            } else {
+                out.append(formatStructureSegment(
+                    seg, sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                ))
+            }
+        }
+        return out
+    }
+
+    private func formatStructureSegment(
+        _ seg: StructureSegment,
+        sport: String,
+        ftp: Int?, vma: Double?, css: Int?, maxHr: Int?
+    ) -> StepSummary {
+        let duration = formatStructureDuration(seg, sport: sport)
+        let label = seg.label
+        let metric = displayString(for: seg.target, sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr)
+        let cue = (seg.cue?.isEmpty == false) ? seg.cue : nil
+
+        var text = "\(duration) \(label)"
+        if let metric = metric { text += " - \(metric)" }
+        if let cue = cue { text += " (\(cue))" }
+
+        let intensity = intensityPct(for: seg.target, sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr)
+        return StepSummary(text: text, intensityPct: intensity, isRepeatBlock: false)
+    }
+
+    private func formatStructureRepeatBlock(
+        repeats: Int,
+        segments: [StructureSegment],
+        recovery: StructureSegment?,
+        restSeconds: Int?,
+        sport: String,
+        ftp: Int?, vma: Double?, css: Int?, maxHr: Int?
+    ) -> StepSummary {
+        var parts: [String] = []
+        for seg in segments {
+            // Recursively format nested repeats so 3-level nesting (e.g. SWIM_Tempo_02) reads cleanly.
+            if let innerRepeats = seg.repeats, let innerSegs = seg.segments {
+                let inner = formatStructureRepeatBlock(
+                    repeats: innerRepeats, segments: innerSegs,
+                    recovery: seg.recovery, restSeconds: seg.restSeconds,
+                    sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                )
+                parts.append(inner.text)
+            } else {
+                let duration = formatStructureDuration(seg, sport: sport)
+                let label = seg.label
+                let metric = displayString(for: seg.target, sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr)
+                if let metric = metric {
+                    parts.append("\(duration) \(label) - \(metric)")
+                } else {
+                    parts.append("\(duration) \(label)")
+                }
+            }
+        }
+        if let recovery = recovery {
+            parts.append("\(formatStructureDuration(recovery, sport: sport)) recovery")
+        } else if let restSec = restSeconds {
+            let m = restSec / 60, s = restSec % 60
+            if m > 0 && s > 0      { parts.append("\(m)'\(String(format: "%02d", s))\" rest") }
+            else if m > 0          { parts.append("\(m)' rest") }
+            else                   { parts.append("\(restSec)\" rest") }
+        }
+        let inner = parts.joined(separator: " + ")
+        let text = "\(repeats)× (\(inner))"
+        let firstLeaf = segments.first
+        let intensity = intensityPct(
+            for: firstLeaf?.target,
+            sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
+        )
+        return StepSummary(text: text, intensityPct: intensity, isRepeatBlock: true)
+    }
+
+    private func formatStructureDuration(_ seg: StructureSegment, sport: String) -> String {
+        if let distance = seg.distanceMeters {
+            if sport.lowercased() == "run" && distance >= 1000 {
+                let km = Double(distance) / 1000.0
+                return km.truncatingRemainder(dividingBy: 1) == 0
+                    ? "\(Int(km)) km"
+                    : String(format: "%.1f km", km)
+            }
+            return "\(distance)m"
+        }
+        if let mins = seg.durationMinutes {
+            // Render integer minutes when possible (5'); else with decimal (5.5')
+            let intMins = Int(mins)
+            if Double(intMins) == mins { return "\(intMins)'" }
+            return String(format: "%.1f'", mins)
+        }
+        return "?"
+    }
+
+    // MARK: Polymorphic Target formatter
+
+    /// Returns concrete actionable display string for a target (no raw %).
+    /// Resolution priority by sport: run pace→HR→RPE; swim pace/100m→RPE; bike watts→HR→RPE.
+    /// When a metric required to resolve a percentage target is nil, falls back to RPE-equivalent.
+    func displayString(
+        for target: Target?,
+        sport: String,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> String? {
+        guard let target = target else { return nil }
+        switch target {
+        case let .ftpPct(value, min, max):
+            return percentToWatts(value: value, min: min, max: max, ftp: ftp)
+                ?? rpeFallback(forPctMid(value: value, min: min, max: max))
+        case let .vmaPct(value, min, max):
+            return percentToRunPace(value: value, min: min, max: max, vma: vma)
+                ?? rpeFallback(forPctMid(value: value, min: min, max: max))
+        case let .cssPct(value, min, max):
+            return percentToSwimPace(value: value, min: min, max: max, css: css)
+                ?? rpeFallback(forPctMid(value: value, min: min, max: max))
+        case let .rpe(value):
+            return rpeDisplay(value)
+        case let .hrZone(value):
+            return hrZoneDisplay(zone: value, maxHr: maxHr)
+        case let .hrPctMax(value, min, max):
+            return hrPctMaxDisplay(value: value, min: min, max: max, maxHr: maxHr)
+        case let .powerWatts(value, min, max):
+            return wattsRangeDisplay(value: value, min: min, max: max)
+        case let .pacePerKm(value):
+            return "\(value)/km"
+        case let .pacePerHundredM(value):
+            return "\(value)/100m"
+        }
+    }
+
+    /// Returns intensity percentage 0-100 for graph bar height. Approximate.
+    func intensityPct(
+        for target: Target?,
+        sport: String,
+        ftp: Int?,
+        vma: Double?,
+        css: Int?,
+        maxHr: Int?
+    ) -> Int? {
+        guard let target = target else { return nil }
+        switch target {
+        case let .ftpPct(value, min, max):
+            return clampIntensity(forPctMid(value: value, min: min, max: max))
+        case let .vmaPct(value, min, max):
+            return clampIntensity(forPctMid(value: value, min: min, max: max))
+        case let .cssPct(value, min, max):
+            return clampIntensity(forPctMid(value: value, min: min, max: max))
+        case let .rpe(value):
+            return clampIntensity(value * 10.0)
+        case let .hrZone(value):
+            switch value { case 1: return 55; case 2: return 65; case 3: return 75; case 4: return 85; default: return 95 }
+        case let .hrPctMax(value, min, max):
+            return clampIntensity(forPctMid(value: value, min: min, max: max))
+        case let .powerWatts(value, min, max):
+            guard let ftp = ftp, ftp > 0, let mid = forPctMid(value: value, min: min, max: max) else { return 70 }
+            return clampIntensity(mid / Double(ftp) * 100.0)
+        case let .pacePerKm(value):
+            guard let vma = vma, let kmh = paceStringToKmH(value), vma > 0 else { return 70 }
+            return clampIntensity(kmh / vma * 100.0)
+        case let .pacePerHundredM(value):
+            // Faster pace = higher intensity. CSS is in seconds per 100m.
+            guard let css = css, css > 0, let secs = paceStringToSeconds(value), secs > 0 else { return 70 }
+            return clampIntensity(Double(css) / Double(secs) * 100.0)
+        }
+    }
+
+    private func clampIntensity(_ v: Double?) -> Int {
+        guard let v = v else { return 70 }
+        return Swift.max(30, Swift.min(110, Int(v.rounded())))
+    }
+
+    private func forPctMid(value: Double?, min: Double?, max: Double?) -> Double? {
+        if let v = value { return v }
+        if let mn = min, let mx = max { return (mn + mx) / 2.0 }
+        return nil
+    }
+
+    private func percentToWatts(value: Double?, min: Double?, max: Double?, ftp: Int?) -> String? {
+        guard let ftp = ftp, ftp > 0 else { return nil }
+        if let mn = min, let mx = max {
+            let lo = Int((Double(ftp) * mn / 100.0).rounded())
+            let hi = Int((Double(ftp) * mx / 100.0).rounded())
+            return "\(lo)–\(hi) W"
+        }
+        if let v = value {
+            return "\(Int((Double(ftp) * v / 100.0).rounded())) W"
+        }
+        return nil
+    }
+
+    private func percentToRunPace(value: Double?, min: Double?, max: Double?, vma: Double?) -> String? {
+        guard let vma = vma, vma > 0 else { return nil }
+        // VMA in km/h. mas_pct% → speed = vma * pct/100. Pace is the min:sec/km of that speed.
+        if let mn = min, let mx = max {
+            // Faster pace corresponds to higher percentage; format low→high pace as max%→min%.
+            let fastSpeed = vma * mx / 100.0  // higher pct = faster speed = lower min:sec
+            let slowSpeed = vma * mn / 100.0
+            return "\(speedToPaceShort(fastSpeed))–\(speedToPaceShort(slowSpeed))/km"
+        }
+        if let v = value {
+            let speed = vma * v / 100.0
+            return "\(speedToPaceShort(speed))/km"
+        }
+        return nil
+    }
+
+    private func percentToSwimPace(value: Double?, min: Double?, max: Double?, css: Int?) -> String? {
+        guard let css = css, css > 0 else { return nil }
+        // CSS is total seconds per 100m. css_pct% reflects intensity relative to CSS — higher pct = faster pace.
+        // target_seconds = css * 100 / pct. (At pct=100, target_seconds = css.)
+        if let mn = min, let mx = max {
+            let fastSecs = Double(css) * 100.0 / mx
+            let slowSecs = Double(css) * 100.0 / mn
+            return "\(secondsToMinSec(fastSecs))–\(secondsToMinSec(slowSecs))/100m"
+        }
+        if let v = value {
+            let secs = Double(css) * 100.0 / v
+            return "\(secondsToMinSec(secs))/100m"
+        }
+        return nil
+    }
+
+    private func wattsRangeDisplay(value: Double?, min: Double?, max: Double?) -> String? {
+        if let mn = min, let mx = max { return "\(Int(mn.rounded()))–\(Int(mx.rounded())) W" }
+        if let v = value { return "\(Int(v.rounded())) W" }
+        return nil
+    }
+
+    private func hrZoneDisplay(zone: Int, maxHr: Int?) -> String? {
+        guard let maxHr = maxHr else { return "Z\(zone) (set max HR in profile)" }
+        let bounds: (lo: Double, hi: Double)
+        switch zone {
+        case 1: bounds = (0.50, 0.60)
+        case 2: bounds = (0.60, 0.70)
+        case 3: bounds = (0.70, 0.80)
+        case 4: bounds = (0.80, 0.90)
+        default: bounds = (0.90, 1.00)
+        }
+        let lo = Int((Double(maxHr) * bounds.lo).rounded())
+        let hi = Int((Double(maxHr) * bounds.hi).rounded())
+        return "\(lo)–\(hi) bpm"
+    }
+
+    private func hrPctMaxDisplay(value: Double?, min: Double?, max: Double?, maxHr: Int?) -> String? {
+        guard let maxHr = maxHr else {
+            if let mn = min, let mx = max { return "\(Int(mn.rounded()))–\(Int(mx.rounded()))% max HR" }
+            if let v = value { return "\(Int(v.rounded()))% max HR" }
+            return nil
+        }
+        if let mn = min, let mx = max {
+            let lo = Int((Double(maxHr) * mn / 100.0).rounded())
+            let hi = Int((Double(maxHr) * mx / 100.0).rounded())
+            return "\(lo)–\(hi) bpm"
+        }
+        if let v = value {
+            return "\(Int((Double(maxHr) * v / 100.0).rounded())) bpm"
+        }
+        return nil
+    }
+
+    private func rpeDisplay(_ value: Double) -> String {
+        let v = Int(value.rounded())
+        let descriptor: String
+        switch v {
+        case ...2: descriptor = "very easy"
+        case 3, 4: descriptor = "easy"
+        case 5: descriptor = "steady"
+        case 6: descriptor = "moderate"
+        case 7: descriptor = "comfortably hard"
+        case 8: descriptor = "hard"
+        case 9: descriptor = "very hard"
+        default: descriptor = "max"
+        }
+        return "RPE \(v) — \(descriptor)"
+    }
+
+    /// Maps a percentage (0-110) to an RPE display when the underlying metric is missing.
+    private func rpeFallback(_ pct: Double?) -> String? {
+        guard let pct = pct else { return nil }
+        let rpeValue: Double
+        switch pct {
+        case ..<55: rpeValue = 3
+        case ..<65: rpeValue = 4
+        case ..<75: rpeValue = 5
+        case ..<82: rpeValue = 6
+        case ..<90: rpeValue = 7
+        case ..<98: rpeValue = 8
+        case ..<105: rpeValue = 9
+        default: rpeValue = 10
+        }
+        return rpeDisplay(rpeValue)
+    }
+
+    // MARK: Pace string helpers
+
+    /// "5:30" → 330 seconds. Returns nil for malformed input.
+    private func paceStringToSeconds(_ s: String) -> Int? {
+        let parts = s.split(separator: ":")
+        guard parts.count == 2,
+              let m = Int(parts[0]),
+              let sec = Int(parts[1]) else { return nil }
+        return m * 60 + sec
+    }
+
+    /// "5:30" → 60/5.5 ≈ 10.9 km/h. Returns nil for malformed input.
+    private func paceStringToKmH(_ s: String) -> Double? {
+        guard let secs = paceStringToSeconds(s), secs > 0 else { return nil }
+        return 3600.0 / Double(secs)
+    }
+
+    /// km/h → "5:30" pace. Same shape as `speedToPace` but without the `/km` suffix.
+    private func speedToPaceShort(_ speed: Double) -> String {
+        guard speed > 0 else { return "?:??" }
+        let minutesPerKm = 60.0 / speed
+        let m = Int(minutesPerKm)
+        let s = Int((minutesPerKm - Double(m)) * 60.0)
+        return String(format: "%d:%02d", m, s)
+    }
+
+    /// Total seconds → "1:38" minute:second.
+    private func secondsToMinSec(_ totalSeconds: Double) -> String {
+        let total = Int(totalSeconds.rounded())
+        let m = total / 60
+        let s = total % 60
+        return String(format: "%d:%02d", m, s)
+    }
+
+    // MARK: Distance walking for SessionStructure
+
+    private func calculateDistance(structureSegments segments: [StructureSegment]) -> Int {
+        var total = 0
+        for seg in segments {
+            if let repeats = seg.repeats, let nested = seg.segments {
+                let nestedDist = calculateDistance(structureSegments: nested)
+                total += nestedDist * repeats
+                if let recovery = seg.recovery, let recoveryDistance = recovery.distanceMeters {
+                    total += recoveryDistance * Swift.max(0, repeats - 1)
+                }
+            } else if let distance = seg.distanceMeters {
+                total += distance
+            }
+            if let recovery = seg.recovery, let recoveryDistance = recovery.distanceMeters,
+               seg.repeats == nil {
+                total += recoveryDistance
+            }
+        }
+        return total
+    }
+
+    // MARK: - Swift port of TS materializer (transitional fallback)
+    //
+    // Mirrors `supabase/functions/_shared/materialize-structure.ts`. Used when a session has
+    // template_id but no structure (older rows pre-backfill, or legacy fallback path).
+
+    private static let swimPaceToRpe: [String: Double] = [
+        "slow": 3, "easy": 3,
+        "medium": 6,
+        "quick": 7, "threshold": 7,
+        "fast": 8,
+        "very_quick": 9
+    ]
+
+    /// Materializes a legacy WorkoutTemplate into a SessionStructure.
+    func materialize(template: WorkoutTemplate) -> SessionStructure {
+        SessionStructure(segments: template.segments.map(materializeSegment(_:)))
+    }
+
+    private func materializeSegment(_ src: WorkoutSegment) -> StructureSegment {
+        // Pick exactly one of duration / distance: prefer duration.
+        var durationMinutes: Double?
+        var distanceMeters: Int?
+        if let mins = src.durationMinutes {
+            durationMinutes = Double(mins)
+        } else if let secs = src.durationSeconds {
+            durationMinutes = ceil(Double(secs) / 60.0)
+        } else if let d = src.distanceMeters {
+            distanceMeters = d
+        }
+        // Repeat containers carry no target — only leaves do.
+        let target: Target? = (src.repeats != nil) ? nil : resolveLegacyTarget(src)
+
+        let nested = src.segments?.map(materializeSegment(_:))
+        let recovery = src.recovery.map(materializeSegment(_:))
+
+        return StructureSegment(
+            label: src.label,
+            durationMinutes: durationMinutes,
+            distanceMeters: distanceMeters,
+            target: target,
+            cadenceRpm: src.cadenceRpm,
+            constraints: nil,
+            cue: src.cue,
+            drill: src.drill,
+            repeats: src.repeats,
+            restSeconds: src.restSeconds,
+            recovery: recovery,
+            segments: nested
+        )
+    }
+
+    private func resolveLegacyTarget(_ s: WorkoutSegment) -> Target? {
+        if let pct = s.ftpPct {
+            return .ftpPct(value: Double(pct), min: nil, max: nil)
+        }
+        // Phase 1 backfill rule: mas_pct → vma_pct (legacy alias)
+        if let pct = s.masPct {
+            return .vmaPct(value: Double(pct), min: nil, max: nil)
+        }
+        if let pace = s.pace?.lowercased(),
+           let rpe = Self.swimPaceToRpe[pace] {
+            return .rpe(value: rpe)
+        }
+        return nil
     }
 }
