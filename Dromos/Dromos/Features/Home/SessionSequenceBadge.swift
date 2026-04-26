@@ -19,7 +19,7 @@ struct SessionSequenceBadge: View {
         Text("\(index)")
             .font(.caption2.weight(.bold))
             .monospacedDigit()
-            .foregroundColor(Color("CardSurface"))
+            .foregroundColor(Color.cardSurface)
             .frame(width: 18, height: 18)
             .background(Circle().fill(Color.primary))
             .accessibilityLabel("Session \(index)")
@@ -33,7 +33,7 @@ struct SessionSequenceBadge: View {
         SessionSequenceBadge(index: 3)
     }
     .padding(16)
-    .background(Color("CardSurface"))
+    .background(Color.cardSurface)
     .padding()
-    .background(Color("PageSurface"))
+    .background(Color.pageSurface)
 }

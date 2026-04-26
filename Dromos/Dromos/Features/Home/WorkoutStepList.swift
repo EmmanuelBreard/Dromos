@@ -74,12 +74,12 @@ struct WorkoutStepList: View {
     }
 
     /// Repeat block row: 2pt accent left-border + 12pt left-padding + multiplier prefix in accent.
-    /// `WorkoutLibraryService` always emits repeat-block text as `"N× (...)"` so the
-    /// multiplier-extraction is deterministic.
+    /// `WorkoutLibraryService` always emits repeat-block text as `"N× [label] (...)"` so the
+    /// multiplier + optional label extraction is deterministic.
     private func repeatRow(for step: StepSummary) -> some View {
         let split = splitMultiplier(step.text)
         return HStack(alignment: .firstTextBaseline, spacing: 0) {
-            // Two-line composition: multiplier + body on top, with the rest of the
+            // Two-line composition: multiplier + label on top, with the rest of the
             // collapsed parenthetical wrapping below at .secondary weight.
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -89,7 +89,7 @@ struct WorkoutStepList: View {
                             .foregroundColor(.accentColor)
                             .monospacedDigit()
                     }
-                    Text("Main set")
+                    Text(split.title)
                         .font(.body.weight(.semibold))
                         .foregroundColor(.primary)
                 }
@@ -144,22 +144,41 @@ struct WorkoutStepList: View {
         return ParsedStep(name: "", duration: trimmed, target: target)
     }
 
-    /// Splits a repeat-block string of the form `"5× (...)"` into the multiplier and the
-    /// inner body (without the surrounding parens). Returns `nil` multiplier if the format
-    /// doesn't match — caller renders the full text as body.
-    private func splitMultiplier(_ text: String) -> (multiplier: String?, body: String) {
+    /// Splits a repeat-block string of the form `"N× [label] (...)"` into the multiplier,
+    /// an optional label clause (the text between `×` and the first `(`), and the inner
+    /// body (without the surrounding parens). Returns `nil` multiplier if the format
+    /// doesn't match — caller renders the full text as body. The `title` slot falls back
+    /// to "Main set" when no label clause is present, so existing canonical strings like
+    /// `"5× (3' work + 3' recovery)"` keep their familiar header.
+    private func splitMultiplier(_ text: String) -> (multiplier: String?, title: String, body: String) {
         guard let xRange = text.range(of: "×"),
               let parenStart = text.range(of: "(", range: xRange.upperBound..<text.endIndex),
               let parenEnd = text.range(of: ")", options: .backwards)
         else {
-            return (nil, text)
+            return (nil, "Main set", text)
         }
 
         let multiplier = String(text[..<xRange.upperBound])
             .trimmingCharacters(in: .whitespaces)
+
+        // Anything between the `×` and the opening `(` is the human label for the block
+        // (e.g. `"5× main set (...)"`, `"3× hill repeats (...)"`). Empty → fall back.
+        let rawLabel = String(text[xRange.upperBound..<parenStart.lowerBound])
+            .trimmingCharacters(in: .whitespaces)
+        let title = rawLabel.isEmpty ? "Main set" : rawLabel.capitalizedFirstLetter
+
         let body = String(text[parenStart.upperBound..<parenEnd.lowerBound])
             .trimmingCharacters(in: .whitespaces)
-        return (multiplier, body)
+        return (multiplier, title, body)
+    }
+}
+
+private extension String {
+    /// Capitalize only the first character so we don't mangle pre-cased labels like
+    /// `"VO2 intervals"` via Swift's full `.capitalized` (which would lowercase `VO2`).
+    var capitalizedFirstLetter: String {
+        guard let first = self.first else { return self }
+        return first.uppercased() + self.dropFirst()
     }
 }
 
@@ -186,9 +205,9 @@ struct WorkoutStepList: View {
 
     return WorkoutStepList(steps: steps)
         .padding(16)
-        .background(Color("CardSurface"))
+        .background(Color.cardSurface)
         .padding()
-        .background(Color("PageSurface"))
+        .background(Color.pageSurface)
 }
 
 #Preview("Bike intervals") {
@@ -199,7 +218,7 @@ struct WorkoutStepList: View {
     ]
     return WorkoutStepList(steps: steps)
         .padding(16)
-        .background(Color("CardSurface"))
+        .background(Color.cardSurface)
         .padding()
 }
 
@@ -211,6 +230,6 @@ struct WorkoutStepList: View {
     ]
     return WorkoutStepList(steps: steps)
         .padding(16)
-        .background(Color("CardSurface"))
+        .background(Color.cardSurface)
         .padding()
 }

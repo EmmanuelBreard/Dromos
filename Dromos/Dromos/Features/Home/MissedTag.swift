@@ -31,7 +31,7 @@ struct MissedTag: View {
 #Preview("MissedTag") {
     MissedTag()
         .padding(16)
-        .background(Color("CardSurface"))
+        .background(Color.cardSurface)
         .padding()
-        .background(Color("PageSurface"))
+        .background(Color.pageSurface)
 }

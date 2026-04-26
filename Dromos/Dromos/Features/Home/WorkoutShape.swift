@@ -40,7 +40,9 @@ struct WorkoutShape: View {
 
     var body: some View {
         if segments.isEmpty || totalWeight <= 0 {
-            EmptyView()
+            // Preserve the 56pt footprint so the parent layout is stable regardless
+            // of segment availability — caller doesn't have to special-case empty.
+            Color.clear.frame(height: outerHeight)
         } else {
             // GeometryReader is needed because SwiftUI's HStack cannot flex children by an
             // arbitrary numeric weight — we have to translate "this segment is X% of the total
@@ -95,11 +97,14 @@ struct WorkoutShape: View {
         case ..<60:    return 0.30
         case 60..<80:  return 0.55
         case 80..<88:  return 0.75
-        case 88..<95:  return 0.88
+        case 88...95:  return 0.88
         default:       return 1.00
         }
     }
 
+    // TODO(follow-up): Consolidate this with WorkoutGraphView.effectiveIntensity(for:).
+    // Two intensity-visual languages exist today (5 fixed buckets here vs linear gradient there).
+    // Extract a shared helper on FlatSegment when Calendar tab work next touches WorkoutGraphView.
     /// Same heuristic `WorkoutGraphView` uses for swim/strength: derive an effective intensity
     /// from a pace label when `intensityPct` is missing. Keeps the shape's height contrast
     /// usable for the bundled swim templates.
@@ -150,9 +155,9 @@ private let tuesdayVO2Segments: [FlatSegment] = {
         WorkoutShape(segments: tuesdayVO2Segments)
     }
     .padding(16)
-    .background(Color("CardSurface"))
+    .background(Color.cardSurface)
     .padding()
-    .background(Color("PageSurface"))
+    .background(Color.pageSurface)
 }
 
 #Preview("Long ride — steady block") {
@@ -163,7 +168,7 @@ private let tuesdayVO2Segments: [FlatSegment] = {
     ]
     return WorkoutShape(segments: segments)
         .padding(16)
-        .background(Color("CardSurface"))
+        .background(Color.cardSurface)
         .padding()
 }
 
@@ -178,6 +183,6 @@ private let tuesdayVO2Segments: [FlatSegment] = {
     ]
     return WorkoutShape(segments: segments)
         .padding(16)
-        .background(Color("CardSurface"))
+        .background(Color.cardSurface)
         .padding()
 }

@@ -111,6 +111,8 @@ private struct SkeletonStack: View {
     }
 }
 
+// TODO(follow-up): Consider containerRelativeFrame(.horizontal) { width, _ in width * widthFraction }
+// to avoid the GeometryReader per bar. Acceptable for now since this is not rendered inside a List.
 /// A single shimmer bar. Animates a moving accent-tinted gradient across an 11pt-tall pill.
 /// In Reduce Motion mode it collapses to a static 0.55-opacity fill — same height/width,
 /// no movement, so the skeleton's footprint stays identical for screen layout.
@@ -159,11 +161,12 @@ private struct SkeletonBar: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(height: barHeight)
-        .onAppear {
+        // `.task` runs after the view is on-screen and is Apple's documented pattern for
+        // kicking off `.repeatForever` animations cleanly — it sidesteps the same-runloop
+        // race that `.onAppear { withAnimation … }` can hit. The phase reset stays inside
+        // the guard so it only happens when motion is enabled (avoids a dead store).
+        .task {
             guard !reduceMotion else { return }
-            // Start at -1 → animate to +1 so the highlight passes fully across the bar.
-            // .repeatForever requires the value to actually change between runs — we set the
-            // start state synchronously, then schedule the animation on the next runloop tick.
             phase = -1.0
             withAnimation(
                 Animation
@@ -205,13 +208,13 @@ private struct SkeletonBar: View {
         }
         .padding(16)
     }
-    .background(Color("PageSurface"))
+    .background(Color.pageSurface)
 }
 
 #Preview("Loading — long-form") {
     CoachFeedbackBlock(feedback: nil, isLoading: true)
         .padding(16)
-        .background(Color("CardSurface"))
+        .background(Color.cardSurface)
         .padding()
-        .background(Color("PageSurface"))
+        .background(Color.pageSurface)
 }
