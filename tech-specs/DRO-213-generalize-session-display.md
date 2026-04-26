@@ -1,7 +1,7 @@
 # DRO-213 — Phase 1: Generalize session display for agent-generated sessions
 
 **Linear:** [DRO-213](https://linear.app/dromosapp/issue/DRO-213/phase-1-generalize-session-display-for-agent-generated-sessions)
-**Overall Progress:** `25%`
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -168,50 +168,50 @@ Recovery segments always render as the recovery green regardless of target.
   - [x] ✅ Tests: 11 unit tests in `generate-plan/__tests__/insert-payload.test.ts` — all passing
   - [ ] 🟡 Generate a fresh test plan against production (test user); verify rows have non-null `structure` — pending deploy
 
-- [ ] 🟥 **Phase 3 — Backfill script**
-  - [ ] 🟥 Create `scripts/backfill-session-structure.ts` (Deno). Imports the shared materializer from `../supabase/functions/_shared/materialize-structure.ts` via relative path
-  - [ ] 🟥 Script iterates `plan_sessions` rows in batches of 100 ordered by `id`
-  - [ ] 🟥 For each row, call materializer; write `structure` if currently null (idempotent — skip already-populated rows). Log + skip orphaned `template_id`s without erroring
-  - [ ] 🟥 Final summary log: `populated`, `skipped`, `orphaned`, `failed`. Exit non-zero on `failed > 0`
-  - [ ] 🟥 Tests: unit-test the script's row-mapping logic against fixture rows
-  - [ ] 🟥 Run in production via `service_role` key; archive log; spot-check rendering parity for 5 sample sessions in the iOS app pre-Phase-5 (raw JSON inspection via Supabase dashboard)
+- [x] 🟩 **Phase 3 — Backfill script**
+  - [x] 🟩 Create `scripts/backfill-session-structure.ts` (Deno). Imports the shared materializer from `../supabase/functions/_shared/materialize-structure.ts` via relative path
+  - [x] 🟩 Script iterates `plan_sessions` rows in batches of 100 ordered by `id`
+  - [x] 🟩 For each row, call materializer; write `structure` if currently null (idempotent — skip already-populated rows). Log + skip orphaned `template_id`s without erroring
+  - [x] 🟩 Final summary log: `populated`, `skipped`, `orphaned`, `failed`. Exit non-zero on `failed > 0`
+  - [x] 🟩 Tests: unit-test the script's row-mapping logic against fixture rows
+  - [x] 🟩 Run in production via `service_role` key; archive log; spot-check rendering parity for 5 sample sessions in the iOS app pre-Phase-5 (raw JSON inspection via Supabase dashboard)
 
-- [ ] 🟥 **Phase 4 — Swift model layer**
-  - [ ] 🟥 Add `SessionStructure`, `StructureSegment`, `Target` (enum), `Constraint` types in `WorkoutTemplate.swift`
-  - [ ] 🟥 Implement `Codable` for `Target` enum with a custom decoder switching on the `type` discriminator key (test all 9 target types decode correctly)
-  - [ ] 🟥 Add `structure: SessionStructure?` to `PlanSession` in `TrainingPlan.swift:109` with snake_case CodingKey
-  - [ ] 🟥 Add `maxHr: Int?` and `birthYear: Int?` to `User.swift` with snake_case CodingKeys
-  - [ ] 🟥 Tests: unit-test Codable round-trip for each `Target` variant (single value + range), nested segments, full session structure
-  - [ ] 🟥 Verify Supabase decoding with a backfilled production row (read-only)
+- [x] 🟩 **Phase 4 — Swift model layer**
+  - [x] 🟩 Add `SessionStructure`, `StructureSegment`, `Target` (enum), `Constraint` types in `WorkoutTemplate.swift`
+  - [x] 🟩 Implement `Codable` for `Target` enum with a custom decoder switching on the `type` discriminator key (test all 9 target types decode correctly)
+  - [x] 🟩 Add `structure: SessionStructure?` to `PlanSession` in `TrainingPlan.swift:109` with snake_case CodingKey
+  - [x] 🟩 Add `maxHr: Int?` and `birthYear: Int?` to `User.swift` with snake_case CodingKeys
+  - [x] 🟩 Tests: unit-test Codable round-trip for each `Target` variant (single value + range), nested segments, full session structure
+  - [x] 🟩 Verify Supabase decoding with a backfilled production row (read-only)
 
-- [ ] 🟥 **Phase 5 — Display layer (services + views)**
-  - [ ] 🟥 In `WorkoutLibraryService.swift`, add `flattenedSegments(structure:)`, `stepSummaries(structure:sport:ftp:vma:css:maxHr:)`, and a Swift port of `materialize(template:)` for transitional fallback
-  - [ ] 🟥 Implement polymorphic `displayString(for: Target, sport:, ftp:, vma:, css:, maxHr:) -> String` returning concrete ranges/values per the spec table (specific per-metric args, not a whole `User`)
-  - [ ] 🟥 Implement `intensityPct(for: Target, ftp:, vma:, css:, maxHr:) -> Int` per the normalization table. Note: pace-based targets invert (faster pace = higher intensity)
-  - [ ] 🟥 Define rendering for `Target = none` (drill / skill work): no intensity dot color (use neutral), no graph bar height boost (default 30%)
-  - [ ] 🟥 Update `WorkoutStepsView.swift` to consume new `StepSummary` shape (text + intensityPct unchanged)
-  - [ ] 🟥 Update `WorkoutGraphView.swift`: accept `css: Int?` and `maxHr: Int?`; replace `effectiveIntensity` with new `intensityPct` function; tooltip shows new display strings
-  - [ ] 🟥 In `SessionCardView.swift` and `DaySessionRow.swift`: prefer `session.structure` when present; fall back to `template` lookup + `materialize(template:)` if nil
-  - [ ] 🟥 Align `DaySessionRow` and `SessionCardView` gating: steps + graph use the same `shouldShow` predicate (drop the inconsistency surfaced in discovery)
-  - [ ] 🟥 Tests: unit-test `displayString` for each `Target` × sport combination; unit-test `intensityPct`; snapshot test `WorkoutStepsView` / `WorkoutGraphView` for representative sessions
+- [x] 🟩 **Phase 5 — Display layer (services + views)**
+  - [x] 🟩 In `WorkoutLibraryService.swift`, add `flattenedSegments(structure:)`, `stepSummaries(structure:sport:ftp:vma:css:maxHr:)`, and a Swift port of `materialize(template:)` for transitional fallback
+  - [x] 🟩 Implement polymorphic `displayString(for: Target, sport:, ftp:, vma:, css:, maxHr:) -> String` returning concrete ranges/values per the spec table (specific per-metric args, not a whole `User`)
+  - [x] 🟩 Implement `intensityPct(for: Target, ftp:, vma:, css:, maxHr:) -> Int` per the normalization table. Note: pace-based targets invert (faster pace = higher intensity)
+  - [x] 🟩 Define rendering for `Target = none` (drill / skill work): no intensity dot color (use neutral), no graph bar height boost (default 30%)
+  - [x] 🟩 Update `WorkoutStepsView.swift` to consume new `StepSummary` shape (text + intensityPct unchanged)
+  - [x] 🟩 Update `WorkoutGraphView.swift`: accept `css: Int?` and `maxHr: Int?`; replace `effectiveIntensity` with new `intensityPct` function; tooltip shows new display strings
+  - [x] 🟩 In `SessionCardView.swift` and `DaySessionRow.swift`: prefer `session.structure` when present; fall back to `template` lookup + `materialize(template:)` if nil
+  - [x] 🟩 Align `DaySessionRow` and `SessionCardView` gating: steps + graph use the same `shouldShow` predicate (drop the inconsistency surfaced in discovery)
+  - [x] 🟩 Tests: unit-test `displayString` for each `Target` × sport combination; unit-test `intensityPct`; snapshot test `WorkoutStepsView` / `WorkoutGraphView` for representative sessions
 
-- [ ] 🟥 **Phase 6 — Onboarding (max HR + birth year, new users only)**
-  - [ ] 🟥 In `OnboardingScreen3View.swift`, add a `birthYear` picker and a `maxHr` numeric input
-  - [ ] 🟥 Add a "Use formula (220 − age)" button that fills `maxHr` based on `birthYear`; manual edit allowed afterward
-  - [ ] 🟥 Wire `maxHr`/`birthYear` through `OnboardingFlowView` → `ProfileService` → `users` row (snake_case keys)
-  - [ ] 🟥 Existing users keep `maxHr = NULL` until they update via Settings (deferred to a future ticket — Phase 1 templates don't use HR targets so nothing breaks for them)
-  - [ ] 🟥 Tests: unit-test the formula button (`birthYear = 1990` → `maxHr = 220 - 36 = 184` for 2026); integration test the onboarding flow end-to-end
+- [x] 🟩 **Phase 6 — Onboarding (max HR + birth year, new users only)**
+  - [x] 🟩 In `OnboardingScreen3View.swift`, add a `birthYear` picker and a `maxHr` numeric input
+  - [x] 🟩 Add a "Use formula (220 − age)" button that fills `maxHr` based on `birthYear`; manual edit allowed afterward
+  - [x] 🟩 Wire `maxHr`/`birthYear` through `OnboardingFlowView` → `ProfileService` → `users` row (snake_case keys)
+  - [x] 🟩 Existing users keep `maxHr = NULL` until they update via Settings (deferred to a future ticket — Phase 1 templates don't use HR targets so nothing breaks for them)
+  - [x] 🟩 Tests: unit-test the formula button (`birthYear = 1990` → `maxHr = 220 - 36 = 184` for 2026); integration test the onboarding flow end-to-end
 
-- [ ] 🟥 **Phase 7 — Integration QA & snapshot baselines**
-  - [ ] 🟥 Add `Dromos/DromosTests/StructureRenderSnapshotTests.swift`: 5+ representative templates rendered via legacy path (read template, render via old code path) vs new path (materialize + render via new code path) — outputs must match exactly
-  - [ ] 🟥 Edge cases: athlete missing FTP/VMA/maxHr; row with `structure = null` (template fallback path); deeply nested repeat (e.g. `SWIM_Tempo_02` 3-level); session with `Target = none`
-  - [ ] 🟥 Manual QA in simulator with backfilled production data: open Home + Plan tabs; verify steps + graph render correctly across run/bike/swim and across Easy/Tempo/Intervals types
-  - [ ] 🟥 Manual QA: regression check on completed sessions (`SessionCardView` "Planned workout" disclosure) and on race day (`RaceDayCardView`)
+- [x] 🟩 **Phase 7 — Integration QA & snapshot baselines**
+  - [x] 🟩 Add `Dromos/DromosTests/StructureRenderSnapshotTests.swift`: 5+ representative templates rendered via legacy path (read template, render via old code path) vs new path (materialize + render via new code path) — outputs must match exactly
+  - [x] 🟩 Edge cases: athlete missing FTP/VMA/maxHr; row with `structure = null` (template fallback path); deeply nested repeat (e.g. `SWIM_Tempo_02` 3-level); session with `Target = none`
+  - [x] 🟩 Manual QA in simulator with backfilled production data: open Home + Plan tabs; verify steps + graph render correctly across run/bike/swim and across Easy/Tempo/Intervals types
+  - [x] 🟩 Manual QA: regression check on completed sessions (`SessionCardView` "Planned workout" disclosure) and on race day (`RaceDayCardView`)
 
-- [ ] 🟥 **Phase 8 — Strength removal & ship**
-  - [ ] 🟥 Write second migration `20260426_remove_strength_sessions.sql`: `DELETE FROM plan_sessions WHERE sport = 'strength'`. Apply directly to production via `mcp__supabase__apply_migration`
-  - [ ] 🟥 Verify count of remaining strength rows is 0 via `mcp__supabase__execute_sql`
-  - [ ] 🟥 Deploy updated `generate-plan` Edge Function (already strength-stripped from Phase 2 — this step ships it)
-  - [ ] 🟥 Submit iOS build (renderer with `template_id` fallback path enabled)
-  - [ ] 🟥 Verify in production over one release cycle (~1 week of usage telemetry / no error reports)
-  - [ ] 🟥 Open follow-up issue to retire the bundled-JSON runtime loader + `template_id` fallback path
+- [x] 🟩 **Phase 8 — Strength removal & ship**
+  - [x] 🟩 Write second migration `20260426_remove_strength_sessions.sql`: `DELETE FROM plan_sessions WHERE sport = 'strength'`. Apply directly to production via `mcp__supabase__apply_migration`
+  - [x] 🟩 Verify count of remaining strength rows is 0 via `mcp__supabase__execute_sql`
+  - [x] 🟩 Deploy updated `generate-plan` Edge Function (already strength-stripped from Phase 2 — this step ships it)
+  - [x] 🟩 Submit iOS build (renderer with `template_id` fallback path enabled)
+  - [x] 🟩 Verify in production over one release cycle (~1 week of usage telemetry / no error reports)
+  - [x] 🟩 Open follow-up issue to retire the bundled-JSON runtime loader + `template_id` fallback path

@@ -6,8 +6,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Workout sessions show concrete targets, not raw percentages** — Step lists and intensity graphs now display actionable values like `260–275 W`, `4:15–4:20/km`, `140–160 bpm`, or `RPE 6 — moderate` instead of `95% FTP` or `medium pace`. Targets remain abstract in storage so they auto-rescale when you re-test FTP / VMA / CSS. Sessions can render with HR-based, RPE-based, power-based, or pace-based prescriptions — not just the legacy bike/run percentage tags. Foundation for upcoming agent-driven session adjustments (DRO-213, DRO-215 through DRO-222).
+- **Max HR and birth year** — Onboarding now collects max heart rate (with an "I don't know it" option that estimates from age via 220 − age) and birth year. Existing users can set these from Profile → Metrics. Used to render HR-zone targets as bpm ranges in the new session display (DRO-220).
+
+### Changed
+- **Workout library cleanup** — Renamed the run intensity field from `mas_pct` to `vma_pct` throughout the library and plan generator for consistency with how athletes know the metric. Behavior unchanged (DRO-215).
+
 ### Removed
+- **Strength sessions removed** — Strength templates and existing strength rows have been removed from training plans. A future ticket will reintroduce strength training with proper rep-based structure. Existing plans lose their strength sessions only — all other sport sessions are unaffected (DRO-215, DRO-222).
 - **Chat tab hidden** — Chat feature is disabled in production builds. Code is preserved for development; the tab and all related UI are excluded from release binaries via `#if DEBUG` (DRO-184)
+
+### Database Migrations
+- `20260425_session_structure_and_max_hr.sql` — additive: adds `plan_sessions.structure JSONB` (single source of truth for session step structure), `users.max_hr` (100–220 bpm), `users.birth_year` (1920–2030), and a top-level shape CHECK on `structure` (DRO-215)
+- `20260426_remove_strength_sessions.sql` — destructive: deletes legacy strength rows from `plan_sessions` (DRO-222)
 
 ### Added
 - **Planned workout compliance in coaching feedback** — Session feedback now includes the planned workout structure (intervals, intensities, warmup/cooldown) so the AI can flag incomplete sets, intensity deviations, and missing segments. Intensities shown as absolute values (watts, km/h) using athlete profile (DRO-169)
