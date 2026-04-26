@@ -19,7 +19,7 @@ struct MainTabView: View {
     @ObservedObject var authService: AuthService
 
     /// Shared plan service for fetching and caching training plan data.
-    /// Owned here so both Home and Calendar tabs share the same data.
+    /// Owned here so it survives tab switches; the Calendar tab is the only consumer of plan data.
     @StateObject private var planService = PlanService()
 
     /// Shared profile service for fetching and caching user profile data.

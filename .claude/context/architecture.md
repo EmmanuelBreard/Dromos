@@ -9,7 +9,7 @@ Dromos/Dromos/
 ├── App/                              # App entry + root navigation
 │   ├── DromosApp.swift               # @main entry point
 │   ├── RootView.swift                # Auth → Onboarding → Plan → MainTab routing
-│   └── MainTabView.swift             # TabView (Home placeholder/Calendar/Chat/Profile) + PlanService/ProfileService/StravaService owner; ChatService owned here, DEBUG-only
+│   └── MainTabView.swift             # TabView (Home/Calendar/Profile) + PlanService/ProfileService/StravaService owner
 │
 ├── Core/
 │   ├── Configuration.swift           # Reads from Secrets.swift (git-ignored)
@@ -96,7 +96,6 @@ Authenticated + plan → MainTabView
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
 - Home (house icon) → `HomeView` (lightweight placeholder — Dromos logo + "Coming soon"; no service params)
 - Calendar (calendar icon) → `CalendarView` (receives shared `authService`, `planService`, `profileService`, `stravaService`; fetches activities and manages per-session completion status)
-- Chat (bubble.left.fill icon) → `ChatView` (receives shared `chatService`; tab only visible in `#if DEBUG` builds)
 - Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`; chatService is NOT injected)
 
 **Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Calendar:
@@ -118,9 +117,9 @@ Authenticated + plan → MainTabView
 
 No `@EnvironmentObject` — dependencies are passed as parameters.
 
-**ProfileService ownership**: Created in `MainTabView` and shared between `HomeView` and `ProfileView`. Home tab uses it for athlete metrics (FTP, VMA, CSS) in session card workout details, and to gate Strava activity fetching (`isStravaConnected`).
+**ProfileService ownership**: Created in `MainTabView` and shared between `CalendarView` and `ProfileView`. Calendar tab uses it for athlete metrics (FTP, VMA, CSS) in session card workout details, and to gate Strava activity fetching (`isStravaConnected`).
 
-**StravaService + completion status**: `HomeView` receives `stravaService` from `MainTabView`. On appear and tab re-selection, it calls `loadCompletionStatuses(plan:)` which fetches activities for the visible date range and runs `SessionMatcher.match()` to compute `[UUID: SessionCompletionStatus]`. Completed session cards show a green left border; missed cards show a red border and 0.5 opacity dimming. Completed sessions suppress edit-mode move arrows.
+**StravaService + completion status**: `CalendarView` receives `stravaService` from `MainTabView`. On `.task` and on `calendarReset` toggle (tab re-selection), it calls `loadIfNeeded(weekIndex:plan:)` which fetches activities for the visible date range and runs `SessionMatcher.match()` to compute `[UUID: SessionCompletionStatus]`. Completed session cards show a green left border; missed cards show a red border and 0.5 opacity dimming. Completed sessions suppress edit-mode move arrows.
 
 ---
 

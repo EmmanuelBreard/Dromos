@@ -18,8 +18,8 @@ struct CalendarView: View {
     @ObservedObject var profileService: ProfileService
     /// Strava service used to fetch activities for the displayed week and compute completion status.
     @ObservedObject var stravaService: StravaService
-    /// Toggled by MainTabView each time the Calendar tab is re-selected.
-    /// Triggers cache purge for the current week + snap to current week + Strava completion refetch.
+    /// Toggled by `MainTabView` each time the Calendar tab is re-selected.
+    /// Triggers a cache purge for the current week + snap-back to current week + Strava completion refetch.
     /// Using @Binding ensures the change propagates via Combine even when the tab is inactive.
     @Binding var calendarReset: Bool
 

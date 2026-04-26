@@ -53,6 +53,8 @@ extension Color {
         case "Peak":     return .red
         case "Taper":    return .purple
         case "Recovery": return .green
+        // Unknown phase strings render as `.primary` so the badge remains visible
+        // (e.g., during plan-generation race conditions or future phase additions).
         default:         return .primary
         }
     }
