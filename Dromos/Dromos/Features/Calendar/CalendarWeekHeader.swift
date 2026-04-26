@@ -1,5 +1,5 @@
 //
-//  HomeWeekHeader.swift
+//  CalendarWeekHeader.swift
 //  Dromos
 //
 //  Created by Emmanuel Breard on 26/04/2026.
@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-// MARK: - HomeWeekHeader
+// MARK: - CalendarWeekHeader
 
-/// Two-row header for the Home single-week paged view.
+/// Two-row header for the Calendar single-week paged view.
 ///
 /// **Row 1:** chevron-left — Spacer — semantic title — Spacer — chevron-right
 /// **Row 2:** phase dot + phase label — date range (caption, secondary)
@@ -17,7 +17,7 @@ import SwiftUI
 /// Navigation callbacks (`onPrevious` / `onNext`) are owned by the parent.
 /// Chevrons are visually dimmed and `.disabled` when `canGoPrevious` /
 /// `canGoNext` is false.
-struct HomeWeekHeader: View {
+struct CalendarWeekHeader: View {
 
     // MARK: - TitleVariant
 
@@ -146,7 +146,7 @@ struct HomeWeekHeader: View {
         }
     }
 
-    // MARK: - Static helpers (copied from HomeView, kept private here)
+    // MARK: - Static helpers
 
     /// Short-format month name (e.g. "Feb").
     private static let monthFormatter: DateFormatter = {
@@ -208,7 +208,7 @@ struct HomeWeekHeader: View {
         Divider()
 
         // .currentWeek — "Current Week - 3/16"
-        HomeWeekHeader(
+        CalendarWeekHeader(
             weekNumber: 3,
             totalWeeks: 16,
             phase: "Base",
@@ -223,7 +223,7 @@ struct HomeWeekHeader: View {
         Divider()
 
         // .lastWeek — "Last Week - 2/16"
-        HomeWeekHeader(
+        CalendarWeekHeader(
             weekNumber: 2,
             totalWeeks: 16,
             phase: "Base",
@@ -238,7 +238,7 @@ struct HomeWeekHeader: View {
         Divider()
 
         // .nextWeek — "Next Week - 4/16"
-        HomeWeekHeader(
+        CalendarWeekHeader(
             weekNumber: 4,
             totalWeeks: 16,
             phase: "Base",
@@ -253,7 +253,7 @@ struct HomeWeekHeader: View {
         Divider()
 
         // .other — "Week 6 / 16"
-        HomeWeekHeader(
+        CalendarWeekHeader(
             weekNumber: 6,
             totalWeeks: 16,
             phase: "Build",

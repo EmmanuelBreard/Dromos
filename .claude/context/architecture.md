@@ -9,7 +9,7 @@ Dromos/Dromos/
 ├── App/                              # App entry + root navigation
 │   ├── DromosApp.swift               # @main entry point
 │   ├── RootView.swift                # Auth → Onboarding → Plan → MainTab routing
-│   └── MainTabView.swift             # TabView (Home/Calendar/Chat/Profile) + PlanService/ProfileService owner; ChatService owned here, DEBUG-only
+│   └── MainTabView.swift             # TabView (Home placeholder/Calendar/Chat/Profile) + PlanService/ProfileService/StravaService owner; ChatService owned here, DEBUG-only
 │
 ├── Core/
 │   ├── Configuration.swift           # Reads from Secrets.swift (git-ignored)
@@ -34,19 +34,19 @@ Dromos/Dromos/
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 6-screen onboarding flow
-│   ├── Home/                         # Single-week paged dashboard
-│   │   ├── HomeView.swift            # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering)
-│   │   ├── HomeWeekHeader.swift      # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
+│   ├── Home/                         # Lightweight placeholder (Dromos logo + 'Coming soon')
+│   │   ├── HomeView.swift            # Lightweight placeholder (Dromos logo + 'Coming soon')
 │   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status; completed cards always show Strava data with planned workout behind local disclosure
 │   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
 │   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering a GPS route from encoded polyline
 │   │   ├── WorkoutStepsView.swift    # Workout step list with intensity dots (Phase 2)
 │   │   ├── WorkoutGraphView.swift    # Interactive intensity bar chart with tap-to-reveal popovers (Phase 2-3)
-│   │   └── IntensityColorHelper.swift # Shared intensity color gradient function (Phase 2)
-│   ├── Plan/                         # Week-by-week calendar navigator
-│   │   ├── CalendarPlanView.swift    # Plan tab main view (receives profileService for expanded details)
-│   │   ├── WeekHeaderView.swift      # Week nav + phase badge
-│   │   └── DaySessionRow.swift       # Day row with expandable sessions (steps + graph on tap)
+│   │   └── IntensityColorHelper.swift # Shared intensity + phase color gradient functions; Color.intensity(for:isRecovery:) + Color.phaseColor(for:)
+│   ├── Calendar/                     # Single-week paged plan view (formerly Home content)
+│   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering)
+│   │   └── CalendarWeekHeader.swift  # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
+│   ├── Plan/                         # Plan generation flow
+│   │   └── PlanGenerationView.swift  # Triggered from RootView when user has no plan yet
 │   ├── Chat/
 │   │   └── ChatView.swift            # Chat UI: message list, bubbles, typing indicator, input bar, welcome state
 │   └── Profile/
@@ -94,14 +94,13 @@ Authenticated + plan → MainTabView
 ```
 
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
-- Home (house icon) → `HomeView` (receives shared `profileService` + `stravaService`; fetches activities and manages per-session completion status)
-- Calendar (calendar icon) → `CalendarPlanView` (receives shared `profileService`)
+- Home (house icon) → `HomeView` (lightweight placeholder — Dromos logo + "Coming soon"; no service params)
+- Calendar (calendar icon) → `CalendarView` (receives shared `authService`, `planService`, `profileService`, `stravaService`; fetches activities and manages per-session completion status)
 - Chat (bubble.left.fill icon) → `ChatView` (receives shared `chatService`; tab only visible in `#if DEBUG` builds)
 - Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`; chatService is NOT injected)
 
-**Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Home or Calendar:
-- Home: toggles `homeScrollReset` → HomeView snaps `currentWeekIndex` back to current week, purges that week's completion cache, and re-fetches Strava completion (re-tap = refresh)
-- Calendar: toggles `calendarReset` → CalendarPlanView resets `currentWeekIndex` to the week containing today and collapses all expanded sessions
+**Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Calendar:
+- Calendar: toggles `calendarReset` → CalendarView snaps `currentWeekIndex` back to the current week, purges that week's completion cache, and re-fetches Strava completion (re-tap = refresh)
 
 **Local navigation**: `NavigationStack` inside individual tab views.
 
@@ -238,9 +237,7 @@ All services follow:
 **WorkoutStepsView** — Workout step list with intensity-colored dots (Phase 2)
 **WorkoutGraphView** — Interactive horizontal intensity bar chart with tap-to-reveal popovers (Phase 2-3)
 **RestDayCardView** — Bed icon + "Rest Day" label
-**RaceDayCardView** — Trophy icon + "Race Day" label with optional race objective; when given a `template` + `notes`, renders structured race legs (swim/T1/bike/T2/run) with cue text and durations. Race sessions (`sport='race'`) in HomeView are routed here instead of SessionCardView.
-**WeekHeaderView** — Week navigation arrows + phase badge + date range
-**DaySessionRow** — Day header + session list (reused in Home and Plan tabs)
+**RaceDayCardView** — Trophy icon + "Race Day" label with optional race objective; when given a `template` + `notes`, renders structured race legs (swim/T1/bike/T2/run) with cue text and durations. Race sessions (`sport='race'`) in CalendarView are routed here instead of SessionCardView.
 
 **Auth Components** (`AuthComponents.swift` in Features/Auth/):
 - `DromosTextField` — Styled text field with SF Symbol icon, optional secure input, and adaptive gray background

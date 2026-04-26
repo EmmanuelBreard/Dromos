@@ -404,11 +404,43 @@ struct TrainingPlan: Codable, Identifiable {
 // MARK: - Day Info
 
 /// Information about a single day in a week.
-/// Used by both HomeView and CalendarPlanView to display day sections.
+/// Used by `CalendarView` to display day sections.
 struct DayInfo {
     let weekday: Weekday
     let date: Date
     let sessions: [PlanSession]
     let isRestDay: Bool
+}
+
+// MARK: - PlanSession UI Helpers
+
+extension PlanSession {
+
+    /// Sport color for UI display (icon background tint, sport badge).
+    /// Used by SessionCardView and CalendarView.
+    var sportColor: Color {
+        switch sport.lowercased() {
+        case "swim":     return .cyan
+        case "bike":     return .green
+        case "run":      return .orange
+        case "strength": return .purple
+        case "race":     return .yellow
+        default:         return .primary
+        }
+    }
+
+    /// Formats a distance in meters to a readable string (e.g., "1.5 km", "800 m").
+    static func formatDistance(_ meters: Int) -> String {
+        if meters >= 1000 {
+            let km = Double(meters) / 1000.0
+            if km.truncatingRemainder(dividingBy: 1) == 0 {
+                return "\(Int(km)) km"
+            } else {
+                return String(format: "%.1f km", km)
+            }
+        } else {
+            return "\(meters) m"
+        }
+    }
 }
 

@@ -41,4 +41,19 @@ extension Color {
 
         return Color(hue: hue, saturation: 0.65, brightness: 0.85)
     }
+
+    /// Phase color for training plan phases.
+    /// Used by CalendarWeekHeader to color the phase badge dot and label.
+    /// - Parameter phase: Phase name string (e.g. "Base", "Build", "Peak", "Taper", "Recovery")
+    /// - Returns: A Color associated with the given phase.
+    static func phaseColor(for phase: String) -> Color {
+        switch phase {
+        case "Base":     return .blue
+        case "Build":    return .orange
+        case "Peak":     return .red
+        case "Taper":    return .purple
+        case "Recovery": return .green
+        default:         return .primary
+        }
+    }
 }
