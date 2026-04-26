@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Home is now a focused, one-week view** — The Home tab shows a single week at a time (current week by default). Navigate with chevron taps or left/right swipes. The header shows where you are in the plan ("Current Week", "Last Week", "Next Week", or "Week N / Total") plus phase + date range. Re-tapping the Home tab snaps back to the current week and refreshes Strava completion data. Previously: a long scrolling list with a "Show next week" button and no way to look back. (DRO-225)
+
 ### Added
 - **Workout sessions show concrete targets, not raw percentages** — Step lists and intensity graphs now display actionable values like `260–275 W`, `4:15–4:20/km`, `140–160 bpm`, or `RPE 6 — moderate` instead of `95% FTP` or `medium pace`. Targets remain abstract in storage so they auto-rescale when you re-test FTP / VMA / CSS. Sessions can render with HR-based, RPE-based, power-based, or pace-based prescriptions — not just the legacy bike/run percentage tags. Foundation for upcoming agent-driven session adjustments (DRO-213, DRO-215 through DRO-222).
 - **Max HR and birth year** — Onboarding now collects max heart rate (with an "I don't know it" option that estimates from age via 220 − age) and birth year. Existing users can set these from Profile → Metrics. Used to render HR-zone targets as bpm ranges in the new session display (DRO-220).
