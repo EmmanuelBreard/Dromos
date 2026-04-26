@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(./.claude/context/**)",
+      "Edit(./tech-specs/**)",
+      "Edit(./CHANGELOG.md)",
+      "Write(./.claude/context/**)",
+      "Write(./tech-specs/**)",
+      "mcp__linear__get_issue",
+      "mcp__linear__list_issues",
+      "mcp__linear__list_projects",
+      "mcp__linear__list_teams",
+      "mcp__linear__list_issue_labels",
+      "mcp__linear__list_issue_statuses",
+      "mcp__linear__list_comments",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__get_logs",
+      "mcp__supabase__list_migrations"
+    ]
+  }
+}
