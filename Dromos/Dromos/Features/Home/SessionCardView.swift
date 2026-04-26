@@ -17,6 +17,8 @@ struct SessionCardView: View {
     let ftp: Int?
     let vma: Double?
     let css: Int?
+    /// Max heart rate in bpm (for HR-zone targets). DRO-213 Phase 5.
+    var maxHr: Int? = nil
     /// Completion status drives visual treatment: green border (completed), red border + dim (missed), no change (planned).
     var completionStatus: SessionCompletionStatus = .planned
 
@@ -209,23 +211,23 @@ struct SessionCardView: View {
                 .padding(.bottom, 4)
         }
 
-        // Workout steps (only if template has >1 segment or has repeats)
-        if let template = template, session.shouldShowWorkoutSteps(template: template) {
+        // DRO-213 Phase 5: dual-path renderer reads session.structure first; falls back to template lookup.
+        // Steps + graph share the same `shouldShow` predicate so simple swims hide both consistently
+        // (resolves the prior inconsistency where SessionCardView showed graph but DaySessionRow hid it).
+        let canRender = session.structure != nil || template != nil
+        if canRender, workoutLibrary.shouldShowWorkoutSteps(for: session) {
             let steps = workoutLibrary.stepSummaries(
-                for: session.templateId,
-                sport: session.sport,
-                ftp: ftp,
-                vma: vma,
-                css: css
+                for: session,
+                ftp: ftp, vma: vma, css: css, maxHr: maxHr
             )
             if !steps.isEmpty {
                 WorkoutStepsView(steps: steps)
             }
-        }
 
-        // Intensity graph (for all sessions with a template)
-        if template != nil {
-            let segments = workoutLibrary.flattenedSegments(for: session.templateId)
+            let segments = workoutLibrary.flattenedSegments(
+                for: session,
+                ftp: ftp, vma: vma, css: css, maxHr: maxHr
+            )
             if !segments.isEmpty {
                 let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
                 WorkoutGraphView(
@@ -233,11 +235,12 @@ struct SessionCardView: View {
                     totalDurationMinutes: totalDuration,
                     sport: session.sport,
                     ftp: ftp,
-                    vma: vma
+                    vma: vma,
+                    css: css,
+                    maxHr: maxHr
                 )
             }
         }
-
     }
 
 }

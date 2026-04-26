@@ -17,6 +17,10 @@ struct WorkoutGraphView: View {
     let sport: String
     let ftp: Int?
     let vma: Double?
+    /// Critical Swim Speed in seconds per 100m (for swim sport). DRO-213 Phase 5.
+    var css: Int? = nil
+    /// Max heart rate in bpm (for HR-zone targets). DRO-213 Phase 5.
+    var maxHr: Int? = nil
 
     /// Selected segment index for tooltip display
     @State private var selectedSegmentIndex: Int?
@@ -186,6 +190,10 @@ struct WorkoutGraphView: View {
     /// - Parameter segment: The segment
     /// - Returns: Formatted metric string, or nil if not applicable
     private func formatMetric(segment: FlatSegment) -> String? {
+        // DRO-213 Phase 5: structure-based segments carry pre-formatted tooltipMetric.
+        if let metric = segment.tooltipMetric { return metric }
+
+        // Legacy template path — keeps existing per-sport formatting unchanged.
         switch sport.lowercased() {
         case "bike":
             if let intensityPct = segment.intensityPct {
