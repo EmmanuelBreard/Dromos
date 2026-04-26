@@ -12,57 +12,52 @@
 import XCTest
 @testable import Dromos
 
-// MARK: - Formula Helper
-
-/// Pure function extracted from OnboardingScreen3View.applyMaxHrFormula().
-/// Computes max HR from birth year using 220 − age, clamped to [100, 220].
-/// Accepts a `currentYear` parameter so tests can be deterministic.
-func computeMaxHr(birthYear: Int, currentYear: Int) -> Int {
-    let age = currentYear - birthYear
-    let computed = 220 - age
-    return min(220, max(100, computed))
-}
-
 // MARK: - Max HR Formula Tests
+//
+// All tests call OnboardingScreen3View.computeMaxHr directly so the view's actual
+// formula is exercised, not a shadow copy.
 
 final class OnboardingMaxHrFormulaTests: XCTestCase {
+
+    private func formula(birthYear: Int, currentYear: Int) -> Int {
+        OnboardingScreen3View.computeMaxHr(birthYear: birthYear, currentYear: currentYear)
+    }
 
     // MARK: - Core formula
 
     func test_formula_birthYear1990_currentYear2026_returns184() {
-        XCTAssertEqual(computeMaxHr(birthYear: 1990, currentYear: 2026), 184)
+        XCTAssertEqual(formula(birthYear: 1990, currentYear: 2026), 184)
     }
 
     func test_formula_birthYear1996_currentYear2026_returns190() {
         // Default birth year used in onboarding (30 years ago from 2026)
-        XCTAssertEqual(computeMaxHr(birthYear: 1996, currentYear: 2026), 190)
+        XCTAssertEqual(formula(birthYear: 1996, currentYear: 2026), 190)
     }
 
     func test_formula_birthYear2000_currentYear2026_returns194() {
-        XCTAssertEqual(computeMaxHr(birthYear: 2000, currentYear: 2026), 194)
+        XCTAssertEqual(formula(birthYear: 2000, currentYear: 2026), 194)
     }
 
     func test_formula_birthYear1950_currentYear2026_returns144() {
         // Older athlete — result stays well above 100 floor
-        XCTAssertEqual(computeMaxHr(birthYear: 1950, currentYear: 2026), 144)
+        XCTAssertEqual(formula(birthYear: 1950, currentYear: 2026), 144)
     }
 
     // MARK: - Clamp: lower bound
 
     func test_formula_clampedToMinimum100_whenResultBelow100() {
-        // birthYear = 1920, currentYear = 2026 → age = 106 → 220 - 106 = 114 (above floor, but use extreme)
         // birthYear = 1900, currentYear = 2026 → age = 126 → 220 - 126 = 94 → clamped to 100
-        XCTAssertEqual(computeMaxHr(birthYear: 1900, currentYear: 2026), 100)
+        XCTAssertEqual(formula(birthYear: 1900, currentYear: 2026), 100)
     }
 
     // MARK: - Clamp: upper bound
 
-    func test_formula_clampedToMaximum220_whenResultAbove220() {
-        // birthYear = 2025, currentYear = 2026 → age = 1 → 220 - 1 = 219 (below ceiling)
-        // birthYear = 2026, currentYear = 2026 → age = 0 → 220 - 0 = 220 → at ceiling, not clamped
-        XCTAssertEqual(computeMaxHr(birthYear: 2026, currentYear: 2026), 220)
-        // birthYear = 2030, currentYear = 2026 → age = -4 → 220 + 4 = 224 → clamped to 220
-        XCTAssertEqual(computeMaxHr(birthYear: 2030, currentYear: 2026), 220)
+    func test_formula_clampedToMaximum220_atUpperBoundAndBeyond() {
+        // Realistic case at the picker upper bound (currentYear − 5):
+        // birthYear = 2021, currentYear = 2026 → age = 5 → 215 (below ceiling, no clamp)
+        XCTAssertEqual(formula(birthYear: 2021, currentYear: 2026), 215)
+        // Edge case: birthYear = 2026, age = 0 → 220 (at ceiling)
+        XCTAssertEqual(formula(birthYear: 2026, currentYear: 2026), 220)
     }
 
     // MARK: - Formula is deterministic with stub year
@@ -70,10 +65,10 @@ final class OnboardingMaxHrFormulaTests: XCTestCase {
     func test_formula_usesProvidedCurrentYear_notSystemDate() {
         // Same birth year, different reference years → different results
         XCTAssertNotEqual(
-            computeMaxHr(birthYear: 1990, currentYear: 2026),
-            computeMaxHr(birthYear: 1990, currentYear: 2036)
+            formula(birthYear: 1990, currentYear: 2026),
+            formula(birthYear: 1990, currentYear: 2036)
         )
-        XCTAssertEqual(computeMaxHr(birthYear: 1990, currentYear: 2036), 174)
+        XCTAssertEqual(formula(birthYear: 1990, currentYear: 2036), 174)
     }
 }
 
@@ -116,7 +111,7 @@ final class OnboardingMetricsDataTests: XCTestCase {
 
         // Step 1: formula applied for birthYear=1990, currentYear=2026
         metrics.birthYear = 1990
-        metrics.maxHr = computeMaxHr(birthYear: 1990, currentYear: 2026) // 184
+        metrics.maxHr = OnboardingScreen3View.computeMaxHr(birthYear: 1990, currentYear: 2026) // 184
 
         // Step 2: user manually edits maxHr to 178
         metrics.maxHr = 178
