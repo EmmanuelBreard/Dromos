@@ -47,6 +47,8 @@ struct ProfileView: View {
     @State private var editCssSeconds: String = ""
     @State private var editFtp: String = ""
     @State private var editExperienceYears: String = ""
+    @State private var editMaxHr: String = ""
+    @State private var editBirthYear: String = ""
 
     // MARK: - Static Properties
 
@@ -379,6 +381,20 @@ struct ProfileView: View {
                 Text(formatExperience(user.experienceYears))
                     .foregroundColor(.secondary)
             }
+
+            HStack {
+                Text("Max HR")
+                Spacer()
+                Text(formatMaxHr(user.maxHr))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text("Birth Year")
+                Spacer()
+                Text(formatBirthYear(user.birthYear))
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
@@ -427,6 +443,26 @@ struct ProfileView: View {
                 TextField("e.g., 2", text: $editExperienceYears)
                     .keyboardType(.numberPad)
                     .frame(width: 60)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            HStack {
+                Text("Max HR (bpm)")
+                Spacer()
+                TextField("e.g., 184", text: $editMaxHr)
+                    .keyboardType(.numberPad)
+                    .frame(width: 80)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            HStack {
+                Text("Birth Year")
+                Spacer()
+                TextField("e.g., 1990", text: $editBirthYear)
+                    .keyboardType(.numberPad)
+                    .frame(width: 80)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
             }
@@ -516,6 +552,20 @@ struct ProfileView: View {
             }
         }
 
+        // Max HR validation (100-220 bpm — matches DB CHECK constraint)
+        if !editMaxHr.isEmpty {
+            guard let maxHr = Int(editMaxHr), (100...220).contains(maxHr) else {
+                return "Max HR must be between 100 and 220 bpm"
+            }
+        }
+
+        // Birth year validation (1920-2030 — matches DB CHECK constraint)
+        if !editBirthYear.isEmpty {
+            guard let year = Int(editBirthYear), (1920...2030).contains(year) else {
+                return "Birth year must be between 1920 and 2030"
+            }
+        }
+
         // Race date validation (not in the past)
         if editRaceDate < Calendar.current.startOfDay(for: Date()) {
             return "Race date cannot be in the past"
@@ -567,6 +617,8 @@ struct ProfileView: View {
         }
         editFtp = user.ftp.map(String.init) ?? ""
         editExperienceYears = user.experienceYears.map(String.init) ?? ""
+        editMaxHr = user.maxHr.map(String.init) ?? ""
+        editBirthYear = user.birthYear.map(String.init) ?? ""
     }
 
     /// Save profile changes to the database
@@ -609,7 +661,9 @@ struct ProfileView: View {
                     vma: Double(editVma),
                     cssSecondsPer100m: cssSecondsPer100m,
                     ftp: Int(editFtp),
-                    experienceYears: Int(editExperienceYears)
+                    experienceYears: Int(editExperienceYears),
+                    maxHr: Int(editMaxHr),
+                    birthYear: Int(editBirthYear)
                 )
 
                 await MainActor.run {
@@ -681,6 +735,18 @@ struct ProfileView: View {
     private func formatFtp(_ ftp: Int?) -> String {
         guard let ftp = ftp else { return "Not set" }
         return "\(ftp) W"
+    }
+
+    /// Format max HR
+    private func formatMaxHr(_ maxHr: Int?) -> String {
+        guard let maxHr = maxHr else { return "Not set" }
+        return "\(maxHr) bpm"
+    }
+
+    /// Format birth year
+    private func formatBirthYear(_ birthYear: Int?) -> String {
+        guard let birthYear = birthYear else { return "Not set" }
+        return "\(birthYear)"
     }
 
     /// Format experience years

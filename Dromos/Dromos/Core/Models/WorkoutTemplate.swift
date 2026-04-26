@@ -213,6 +213,13 @@ struct SessionStructure: Codable, Equatable {
 
 /// A single segment in a session structure. Recursive — repeat segments contain nested segments.
 /// Uses class for proper recursive Codable (matches existing WorkoutSegment pattern).
+///
+/// **Codable note:** No explicit `CodingKeys` enum. The Supabase client decoder is configured with
+/// `.convertFromSnakeCase` globally (`SupabaseClient.swift:56`), which converts JSON keys like
+/// `duration_minutes` → `durationMinutes` BEFORE looking them up against synthesized CodingKeys.
+/// An explicit snake_case CodingKey would never match the post-conversion key and silently decode
+/// every field as nil. We rely on synthesized CodingKeys (which use the property names verbatim)
+/// so the strategy's conversion lines up.
 final class StructureSegment: Codable, Equatable {
     /// warmup | work | recovery | cooldown | repeat | rest | drill
     var label: String
@@ -227,21 +234,6 @@ final class StructureSegment: Codable, Equatable {
     var restSeconds: Int?
     var recovery: StructureSegment?
     var segments: [StructureSegment]?
-
-    enum CodingKeys: String, CodingKey {
-        case label
-        case durationMinutes = "duration_minutes"
-        case distanceMeters = "distance_meters"
-        case target
-        case cadenceRpm = "cadence_rpm"
-        case constraints
-        case cue
-        case drill
-        case repeats
-        case restSeconds = "rest_seconds"
-        case recovery
-        case segments
-    }
 
     init(
         label: String,

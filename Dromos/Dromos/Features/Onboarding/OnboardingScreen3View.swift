@@ -284,15 +284,20 @@ struct OnboardingScreen3View: View {
                         }
 
                         Button(action: applyMaxHrFormula) {
-                            Label("Use formula (220 − age)", systemImage: "function")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(Color.blue.opacity(0.1))
-                                .foregroundColor(.blue)
-                                .cornerRadius(8)
+                            VStack(spacing: 2) {
+                                Label("I don't know it", systemImage: "questionmark.circle")
+                                    .font(.subheadline)
+                                Text("Estimate from age (220 − age)")
+                                    .font(.caption2)
+                                    .foregroundColor(.blue.opacity(0.8))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(8)
                         }
-                        .accessibilityLabel("Use formula 220 minus age to calculate max heart rate")
+                        .accessibilityLabel("Estimate max heart rate from age using 220 minus age formula")
                     }
                 }
 
