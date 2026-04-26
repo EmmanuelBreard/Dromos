@@ -7,21 +7,6 @@
 
 import SwiftUI
 
-// MARK: - TitleVariant
-
-/// Semantic label variant for the week header title.
-/// Drives the human-readable prefix shown alongside the week number.
-enum TitleVariant {
-    /// The plan's current calendar week: "Current Week - 3/16"
-    case currentWeek
-    /// One week before the current week: "Last Week - 2/16"
-    case lastWeek
-    /// One week after the current week: "Next Week - 4/16"
-    case nextWeek
-    /// Any other week (non-adjacent to current): "Week 6 / 16"
-    case other
-}
-
 // MARK: - HomeWeekHeader
 
 /// Two-row header for the Home single-week paged view.
@@ -33,6 +18,21 @@ enum TitleVariant {
 /// Chevrons are visually dimmed and `.disabled` when `canGoPrevious` /
 /// `canGoNext` is false.
 struct HomeWeekHeader: View {
+
+    // MARK: - TitleVariant
+
+    /// Semantic label variant for the week header title.
+    /// Drives the human-readable prefix shown alongside the week number.
+    enum TitleVariant {
+        /// The plan's current calendar week: "Current Week - 3/16"
+        case currentWeek
+        /// One week before the current week: "Last Week - 2/16"
+        case lastWeek
+        /// One week after the current week: "Next Week - 4/16"
+        case nextWeek
+        /// Any other week (non-adjacent to current): "Week 6 / 16"
+        case other
+    }
 
     // MARK: Props
 
@@ -79,8 +79,11 @@ struct HomeWeekHeader: View {
                             ? Color.secondary.opacity(0.6)
                             : Color.secondary.opacity(0.25)
                     )
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .disabled(!canGoPrevious)
+            .accessibilityLabel("Previous week")
 
             Spacer()
 
@@ -100,8 +103,11 @@ struct HomeWeekHeader: View {
                             ? Color.secondary.opacity(0.6)
                             : Color.secondary.opacity(0.25)
                     )
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .disabled(!canGoNext)
+            .accessibilityLabel("Next week")
         }
     }
 
@@ -146,6 +152,7 @@ struct HomeWeekHeader: View {
     private static let monthFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "MMM"
+        f.locale = Locale(identifier: "en_US_POSIX")
         return f
     }()
 
@@ -156,7 +163,7 @@ struct HomeWeekHeader: View {
     ///
     /// - Parameter start: The Monday (start) of the week.
     /// - Returns: A human-readable date range string.
-    static func weekDateRange(start: Date) -> String {
+    private static func weekDateRange(start: Date) -> String {
         let calendar = Calendar.current
         let endDate = calendar.date(byAdding: .day, value: 6, to: start) ?? start
 
@@ -176,6 +183,7 @@ struct HomeWeekHeader: View {
     /// Converts a day number into its ordinal string (1st, 2nd, 3rd, etc.).
     private static func ordinal(_ day: Int) -> String {
         let suffix: String
+        // Days 11, 12, 13 correctly fall through to "th" via the default case (English-language rule).
         switch day {
         case 1, 21, 31: suffix = "st"
         case 2, 22:     suffix = "nd"
@@ -194,7 +202,7 @@ struct HomeWeekHeader: View {
     components.year = 2026
     components.month = 2
     components.day = 10
-    let sampleStart = Calendar.current.date(from: components)!
+    let sampleStart = Calendar.current.date(from: components) ?? Date()
 
     return VStack(spacing: 0) {
         Divider()
