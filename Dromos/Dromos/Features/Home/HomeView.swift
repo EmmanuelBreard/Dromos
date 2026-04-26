@@ -98,13 +98,26 @@ struct HomeView: View {
     // MARK: - Content View
 
     /// Main content view: HomeWeekHeader + paged TabView (one page per plan week).
+    @ViewBuilder
     private func contentView(plan: TrainingPlan) -> some View {
+        if plan.planWeeks.indices.contains(currentWeekIndex),
+           let weekStart = plan.planWeeks[currentWeekIndex].startDateAsDate {
+            let currentWeek = plan.planWeeks[currentWeekIndex]
+            contentBody(plan: plan, currentWeek: currentWeek, weekStart: weekStart)
+        } else {
+            emptyStateView
+        }
+    }
+
+    /// Inner content body, extracted to allow the bounds/date guard in contentView.
+    @ViewBuilder
+    private func contentBody(plan: TrainingPlan, currentWeek: PlanWeek, weekStart: Date) -> some View {
         VStack(spacing: 0) {
             HomeWeekHeader(
-                weekNumber: plan.planWeeks[currentWeekIndex].weekNumber,
+                weekNumber: currentWeek.weekNumber,
                 totalWeeks: plan.planWeeks.count,
-                phase: plan.planWeeks[currentWeekIndex].phase,
-                weekStartDate: plan.planWeeks[currentWeekIndex].startDateAsDate ?? Date(),
+                phase: currentWeek.phase,
+                weekStartDate: weekStart,
                 titleVariant: titleVariant(for: currentWeekIndex, plan: plan),
                 onPrevious: { goToWeek(currentWeekIndex - 1, plan: plan) },
                 onNext:     { goToWeek(currentWeekIndex + 1, plan: plan) },
@@ -136,8 +149,14 @@ struct HomeView: View {
             }
         }
         .onChange(of: scrollReset) { _, _ in
-            withAnimation(.easeInOut(duration: 0.25)) {
-                currentWeekIndex = plan.currentWeekIndex()
+            let target = plan.currentWeekIndex()
+            // Re-tap is the iOS "refresh" gesture — purge the cached entry for the
+            // current week so loadIfNeeded refetches. Other cached weeks remain.
+            completionCacheByWeek.removeValue(forKey: target)
+            currentWeekIndex = target
+            Task {
+                await loadIfNeeded(weekIndex: target, plan: plan)
+                await generatePendingFeedback(plan: plan, weekIndex: target)
             }
         }
         .onChange(of: stravaService.isSyncing) { oldValue, newValue in
@@ -164,9 +183,8 @@ struct HomeView: View {
                     daySectionView(
                         dayInfo: dayInfo,
                         plan: plan,
-                        weekId: week.id,
-                        weekNumber: week.weekNumber,
-                        weekIndex: weekIndex
+                        weekIndex: weekIndex,
+                        weekNumber: week.weekNumber
                     )
                     .id("\(week.weekNumber)-\(dayInfo.weekday)")
                 }
@@ -181,8 +199,10 @@ struct HomeView: View {
     /// A day section with header, session cards, and optional race day indicator.
     /// In edit mode, each session card shows up/down arrows to move between days.
     /// SessionCardView is skeleton-redacted while the week's Strava fetch is in flight.
-    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekId: UUID, weekNumber: Int, weekIndex: Int) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekIndex: Int, weekNumber: Int) -> some View {
+        let week = plan.planWeeks[weekIndex]
+        let days = plan.daysForWeek(week)
+        return VStack(alignment: .leading, spacing: 12) {
             // Day header with relative label + full date (never redacted)
             Text(dayHeaderLabel(for: dayInfo.date, weekday: dayInfo.weekday))
                 .font(.headline)
@@ -192,7 +212,6 @@ struct HomeView: View {
             if dayInfo.sessions.isEmpty {
                 RestDayCardView()
             } else {
-                let days = plan.daysForWeek(plan.planWeeks.first(where: { $0.id == weekId })!)
                 let dayIndex = days.firstIndex(where: { $0.weekday == dayInfo.weekday }) ?? 0
 
                 ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
@@ -227,7 +246,7 @@ struct HomeView: View {
                                     Button {
                                         moveSessionUp(
                                             session: session, sessionIndex: sessionIndex,
-                                            weekId: weekId, dayInfo: dayInfo,
+                                            weekId: week.id, dayInfo: dayInfo,
                                             days: days, dayIndex: dayIndex
                                         )
                                     } label: {
@@ -240,7 +259,7 @@ struct HomeView: View {
                                     Button {
                                         moveSessionDown(
                                             session: session, sessionIndex: sessionIndex,
-                                            weekId: weekId, dayInfo: dayInfo,
+                                            weekId: week.id, dayInfo: dayInfo,
                                             days: days, dayIndex: dayIndex
                                         )
                                     } label: {
@@ -344,10 +363,11 @@ struct HomeView: View {
         }
     }
 
-    /// Navigates to a week by index (bounds-checked), with animation.
+    /// Navigates to a week by index (bounds-checked).
+    /// Animation is driven by `.animation(.easeInOut(duration: 0.25), value: currentWeekIndex)` on TabView.
     private func goToWeek(_ idx: Int, plan: TrainingPlan) {
         guard idx >= 0, idx < plan.planWeeks.count else { return }
-        withAnimation(.easeInOut(duration: 0.25)) { currentWeekIndex = idx }
+        currentWeekIndex = idx
     }
 
     // MARK: - Helper Methods
@@ -401,8 +421,8 @@ struct HomeView: View {
         guard let from = dates.min(), let to = dates.max() else { return }
 
         // Pad ±1 day to handle UTC vs local timezone edge cases at date boundaries.
-        let paddedFrom = calendar.date(byAdding: .day, value: -1, to: from)!
-        let paddedTo   = calendar.date(byAdding: .day, value:  1, to: to)!
+        let paddedFrom = calendar.date(byAdding: .day, value: -1, to: from) ?? from
+        let paddedTo   = calendar.date(byAdding: .day, value:  1, to: to) ?? to
         let activities = await stravaService.fetchActivities(from: paddedFrom, to: paddedTo)
 
         // Build (session, resolvedDate) tuples for this week's sessions only.
