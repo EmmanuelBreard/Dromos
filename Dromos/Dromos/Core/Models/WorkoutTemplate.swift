@@ -123,25 +123,49 @@ final class WorkoutSegment: Codable {
 struct FlatSegment: Identifiable {
     // FIX #9: Add Identifiable conformance
     let id = UUID()
-    
+
     /// Segment label (e.g., "warmup", "work", "recovery", "cooldown")
     let label: String
-    
+
     /// Total duration of this segment in minutes
     let durationMinutes: Double
-    
-    /// Intensity percentage — ftpPct for bike, masPct for run.
+
+    /// Intensity percentage normalized 0-100 for graph bar height + color.
     /// Drives both bar height and color in the intensity graph.
     let intensityPct: Int?
-    
+
     /// Distance in meters (for swim segments)
     let distanceMeters: Int?
-    
-    /// Pace label (for swim segments, e.g., "easy", "medium", "quick")
+
+    /// Pace label (for swim segments, e.g., "easy", "medium", "quick").
+    /// Used by legacy template path; structure path leaves this nil and uses tooltipMetric instead.
     let pace: String?
-    
+
     /// True for recovery segments between repeats (always shown in green)
     let isRecovery: Bool
+
+    /// Pre-formatted tooltip metric string (e.g., "260–275 W", "RPE 6 — moderate", "5:30/km").
+    /// Populated by the structure-based render path so the graph tooltip can render polymorphic Target output.
+    /// Nil for legacy template path — graph view falls back to its own per-sport formatter.
+    let tooltipMetric: String?
+
+    init(
+        label: String,
+        durationMinutes: Double,
+        intensityPct: Int?,
+        distanceMeters: Int?,
+        pace: String?,
+        isRecovery: Bool,
+        tooltipMetric: String? = nil
+    ) {
+        self.label = label
+        self.durationMinutes = durationMinutes
+        self.intensityPct = intensityPct
+        self.distanceMeters = distanceMeters
+        self.pace = pace
+        self.isRecovery = isRecovery
+        self.tooltipMetric = tooltipMetric
+    }
 }
 
 // MARK: - Step Summary
@@ -178,4 +202,253 @@ struct WorkoutLibrary: Codable {
     let run: [WorkoutTemplate]
     let strength: [WorkoutTemplate]?
     let race: [WorkoutTemplate]?
+}
+
+// MARK: - Session Structure (DRO-213)
+
+/// Top-level structure of a session — what gets stored in plan_sessions.structure JSONB.
+struct SessionStructure: Codable, Equatable {
+    let segments: [StructureSegment]
+}
+
+/// A single segment in a session structure. Recursive — repeat segments contain nested segments.
+/// Uses class for proper recursive Codable (matches existing WorkoutSegment pattern).
+///
+/// **Codable note:** No explicit `CodingKeys` enum. The Supabase client decoder is configured with
+/// `.convertFromSnakeCase` globally (`SupabaseClient.swift:56`), which converts JSON keys like
+/// `duration_minutes` → `durationMinutes` BEFORE looking them up against synthesized CodingKeys.
+/// An explicit snake_case CodingKey would never match the post-conversion key and silently decode
+/// every field as nil. We rely on synthesized CodingKeys (which use the property names verbatim)
+/// so the strategy's conversion lines up.
+final class StructureSegment: Codable, Equatable {
+    /// warmup | work | recovery | cooldown | repeat | rest | drill
+    var label: String
+    var durationMinutes: Double?
+    var distanceMeters: Int?
+    var target: Target?
+    var cadenceRpm: Int?
+    var constraints: [Constraint]?
+    var cue: String?
+    var drill: String?
+    var repeats: Int?
+    var restSeconds: Int?
+    var recovery: StructureSegment?
+    var segments: [StructureSegment]?
+
+    init(
+        label: String,
+        durationMinutes: Double? = nil,
+        distanceMeters: Int? = nil,
+        target: Target? = nil,
+        cadenceRpm: Int? = nil,
+        constraints: [Constraint]? = nil,
+        cue: String? = nil,
+        drill: String? = nil,
+        repeats: Int? = nil,
+        restSeconds: Int? = nil,
+        recovery: StructureSegment? = nil,
+        segments: [StructureSegment]? = nil
+    ) {
+        self.label = label
+        self.durationMinutes = durationMinutes
+        self.distanceMeters = distanceMeters
+        self.target = target
+        self.cadenceRpm = cadenceRpm
+        self.constraints = constraints
+        self.cue = cue
+        self.drill = drill
+        self.repeats = repeats
+        self.restSeconds = restSeconds
+        self.recovery = recovery
+        self.segments = segments
+    }
+
+    static func == (lhs: StructureSegment, rhs: StructureSegment) -> Bool {
+        lhs.label == rhs.label &&
+        lhs.durationMinutes == rhs.durationMinutes &&
+        lhs.distanceMeters == rhs.distanceMeters &&
+        lhs.target == rhs.target &&
+        lhs.cadenceRpm == rhs.cadenceRpm &&
+        lhs.constraints == rhs.constraints &&
+        lhs.cue == rhs.cue &&
+        lhs.drill == rhs.drill &&
+        lhs.repeats == rhs.repeats &&
+        lhs.restSeconds == rhs.restSeconds &&
+        lhs.recovery == rhs.recovery &&
+        lhs.segments == rhs.segments
+    }
+}
+
+/// Polymorphic intensity target — encoded with `type` discriminator.
+enum Target: Codable, Equatable {
+    case ftpPct(value: Double?, min: Double?, max: Double?)
+    case vmaPct(value: Double?, min: Double?, max: Double?)
+    case cssPct(value: Double?, min: Double?, max: Double?)
+    case rpe(value: Double)
+    case hrZone(value: Int)    // 1-5
+    case hrPctMax(value: Double?, min: Double?, max: Double?)
+    case powerWatts(value: Double?, min: Double?, max: Double?)
+    case pacePerKm(value: String)       // e.g. "5:30"
+    case pacePerHundredM(value: String) // e.g. "1:50"
+
+    // MARK: - Custom Codable
+
+    private enum TypeKey: String, CodingKey { case type }
+
+    private enum PayloadKey: String, CodingKey {
+        case value
+        case min
+        case max
+    }
+
+    init(from decoder: Decoder) throws {
+        let typeContainer = try decoder.container(keyedBy: TypeKey.self)
+        let type_ = try typeContainer.decode(String.self, forKey: .type)
+        let container = try decoder.container(keyedBy: PayloadKey.self)
+
+        switch type_ {
+        case "ftp_pct":
+            let value = try container.decodeIfPresent(Double.self, forKey: .value)
+            let min   = try container.decodeIfPresent(Double.self, forKey: .min)
+            let max   = try container.decodeIfPresent(Double.self, forKey: .max)
+            self = .ftpPct(value: value, min: min, max: max)
+
+        case "vma_pct":
+            let value = try container.decodeIfPresent(Double.self, forKey: .value)
+            let min   = try container.decodeIfPresent(Double.self, forKey: .min)
+            let max   = try container.decodeIfPresent(Double.self, forKey: .max)
+            self = .vmaPct(value: value, min: min, max: max)
+
+        case "css_pct":
+            let value = try container.decodeIfPresent(Double.self, forKey: .value)
+            let min   = try container.decodeIfPresent(Double.self, forKey: .min)
+            let max   = try container.decodeIfPresent(Double.self, forKey: .max)
+            self = .cssPct(value: value, min: min, max: max)
+
+        case "rpe":
+            let value = try container.decode(Double.self, forKey: .value)
+            self = .rpe(value: value)
+
+        case "hr_zone":
+            let value = try container.decode(Int.self, forKey: .value)
+            self = .hrZone(value: value)
+
+        case "hr_pct_max":
+            let value = try container.decodeIfPresent(Double.self, forKey: .value)
+            let min   = try container.decodeIfPresent(Double.self, forKey: .min)
+            let max   = try container.decodeIfPresent(Double.self, forKey: .max)
+            self = .hrPctMax(value: value, min: min, max: max)
+
+        case "power_watts":
+            let value = try container.decodeIfPresent(Double.self, forKey: .value)
+            let min   = try container.decodeIfPresent(Double.self, forKey: .min)
+            let max   = try container.decodeIfPresent(Double.self, forKey: .max)
+            self = .powerWatts(value: value, min: min, max: max)
+
+        case "pace_per_km":
+            let value = try container.decode(String.self, forKey: .value)
+            self = .pacePerKm(value: value)
+
+        case "pace_per_100m":
+            let value = try container.decode(String.self, forKey: .value)
+            self = .pacePerHundredM(value: value)
+
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: PayloadKey.value,
+                in: container,
+                debugDescription: "Unknown Target type: \(type_)"
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: PayloadKey.self)
+        var typeContainer = encoder.container(keyedBy: TypeKey.self)
+
+        switch self {
+        case let .ftpPct(value, min, max):
+            try typeContainer.encode("ftp_pct", forKey: .type)
+            try container.encodeIfPresent(value, forKey: .value)
+            try container.encodeIfPresent(min, forKey: .min)
+            try container.encodeIfPresent(max, forKey: .max)
+
+        case let .vmaPct(value, min, max):
+            try typeContainer.encode("vma_pct", forKey: .type)
+            try container.encodeIfPresent(value, forKey: .value)
+            try container.encodeIfPresent(min, forKey: .min)
+            try container.encodeIfPresent(max, forKey: .max)
+
+        case let .cssPct(value, min, max):
+            try typeContainer.encode("css_pct", forKey: .type)
+            try container.encodeIfPresent(value, forKey: .value)
+            try container.encodeIfPresent(min, forKey: .min)
+            try container.encodeIfPresent(max, forKey: .max)
+
+        case let .rpe(value):
+            try typeContainer.encode("rpe", forKey: .type)
+            try container.encode(value, forKey: .value)
+
+        case let .hrZone(value):
+            try typeContainer.encode("hr_zone", forKey: .type)
+            try container.encode(value, forKey: .value)
+
+        case let .hrPctMax(value, min, max):
+            try typeContainer.encode("hr_pct_max", forKey: .type)
+            try container.encodeIfPresent(value, forKey: .value)
+            try container.encodeIfPresent(min, forKey: .min)
+            try container.encodeIfPresent(max, forKey: .max)
+
+        case let .powerWatts(value, min, max):
+            try typeContainer.encode("power_watts", forKey: .type)
+            try container.encodeIfPresent(value, forKey: .value)
+            try container.encodeIfPresent(min, forKey: .min)
+            try container.encodeIfPresent(max, forKey: .max)
+
+        case let .pacePerKm(value):
+            try typeContainer.encode("pace_per_km", forKey: .type)
+            try container.encode(value, forKey: .value)
+
+        case let .pacePerHundredM(value):
+            try typeContainer.encode("pace_per_100m", forKey: .type)
+            try container.encode(value, forKey: .value)
+        }
+    }
+}
+
+/// Secondary constraints (e.g., HR cap).
+enum Constraint: Codable, Equatable {
+    case hrMax(value: Int)
+
+    private enum TypeKey: String, CodingKey { case type }
+    private enum PayloadKey: String, CodingKey { case value }
+
+    init(from decoder: Decoder) throws {
+        let typeContainer = try decoder.container(keyedBy: TypeKey.self)
+        let type_ = try typeContainer.decode(String.self, forKey: .type)
+        let container = try decoder.container(keyedBy: PayloadKey.self)
+
+        switch type_ {
+        case "hr_max":
+            let value = try container.decode(Int.self, forKey: .value)
+            self = .hrMax(value: value)
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: PayloadKey.value,
+                in: container,
+                debugDescription: "Unknown Constraint type: \(type_)"
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var typeContainer = encoder.container(keyedBy: TypeKey.self)
+        var container = encoder.container(keyedBy: PayloadKey.self)
+
+        switch self {
+        case let .hrMax(value):
+            try typeContainer.encode("hr_max", forKey: .type)
+            try container.encode(value, forKey: .value)
+        }
+    }
 }

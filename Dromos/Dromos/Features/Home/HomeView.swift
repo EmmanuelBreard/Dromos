@@ -246,6 +246,7 @@ struct HomeView: View {
                                 ftp: profileService.user?.ftp,
                                 vma: profileService.user?.vma,
                                 css: profileService.user?.cssSecondsPer100m,
+                                maxHr: profileService.user?.maxHr,
                                 completionStatus: status
                             )
 

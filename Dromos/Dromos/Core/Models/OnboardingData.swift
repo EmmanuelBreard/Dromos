@@ -42,6 +42,12 @@ struct MetricsData: Codable {
     /// Average weekly training hours over the last 4 weeks (0-25, step 0.5)
     /// Defaults to 3.0 so the slider is pre-filled (required field).
     var currentWeeklyHours: Double? = 3.0
+
+    /// Maximum heart rate in bpm (100-220, DRO-213 Phase 6)
+    var maxHr: Int?
+
+    /// Year of birth (1920-2020, DRO-213 Phase 6)
+    var birthYear: Int?
 }
 
 // MARK: - Screens 3, 4, 5: Weekly Availability
@@ -104,6 +110,8 @@ struct CompleteOnboardingData: Codable {
     var ftp: Int?
     var experienceYears: Int?
     var currentWeeklyHours: Double?
+    var maxHr: Int?
+    var birthYear: Int?
 
     // Weekly Availability (Screens 3, 4, 5)
     var swimDays: [String]?
@@ -134,6 +142,8 @@ struct CompleteOnboardingData: Codable {
         self.ftp = metrics.ftp
         self.experienceYears = metrics.experienceYears
         self.currentWeeklyHours = metrics.currentWeeklyHours
+        self.maxHr = metrics.maxHr
+        self.birthYear = metrics.birthYear
         self.swimDays = availability?.swimDays.isEmpty == false ? availability?.swimDays : nil
         self.bikeDays = availability?.bikeDays.isEmpty == false ? availability?.bikeDays : nil
         self.runDays = availability?.runDays.isEmpty == false ? availability?.runDays : nil

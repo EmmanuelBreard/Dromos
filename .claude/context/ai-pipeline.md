@@ -1,6 +1,6 @@
 # AI Pipeline Reference
 
-> Last updated: 2026-03-07
+> Last updated: 2026-04-25
 
 ## Overview
 
@@ -89,6 +89,10 @@ Pure conversion, no transformation.
 - Template variety: never same template 2 consecutive weeks (Tempo/Intervals)
 
 **Template variables:** `{{constraints}}` (per-day availability string), `{{block_weeks_json}}`, `{{previously_used}}`, `{{workout_library}}` (simplified format)
+
+**DRO-215 (Phase 1):** `workout-library.json` strength templates removed. `buildSimplifiedLibrary()` in `generate-plan/index.ts` already iterates only `["swim", "bike", "run"]` (see `supabase/functions/generate-plan/index.ts:303`) so no prompt change was needed. Run intensity keys renamed `mas_pct` → `vma_pct` throughout the JSON. The shared materializer (`supabase/functions/_shared/materialize-structure.ts`) handles legacy `mas_pct` keys at materialisation time for edge cases.
+
+**DRO-216 (Phase 2):** `generate-plan/index.ts` now writes `structure` (JSONB) alongside `template_id` at the single insert site. The shared materializer (`_shared/materialize-structure.ts`) is invoked once per session at insert time using a `templateMap` hoisted out of the per-week loop. Post-processing fixers do **not** re-materialize — they swap `template_id` upstream of the insert site. Unknown `template_id` values are accumulated and emit a single per-plan summary log instead of per-session warnings. Sessions with missing `template_id` log defensively and proceed with `structure: null` (renderer falls back to template lookup). `VALID_SPORTS` validation rejects `strength` upstream so no strength sessions are ever generated. Deployed to production at version 35.
 
 ---
 

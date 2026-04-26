@@ -119,6 +119,7 @@ struct PlanSession: Codable, Identifiable {
     var orderInDay: Int
     let feedback: String?
     let matchedActivityId: UUID?
+    let structure: SessionStructure?
 
     // MARK: - Computed Properties
 
@@ -178,6 +179,39 @@ struct PlanSession: Codable, Identifiable {
         } else {
             return "\(minutes) min"
         }
+    }
+
+    /// Memberwise initializer with a default of `nil` for `structure`.
+    /// Keeps existing callsites (e.g. Xcode previews) source-compatible after the
+    /// addition of the `structure` field.
+    init(
+        id: UUID,
+        weekId: UUID,
+        day: String,
+        sport: String,
+        type: String,
+        templateId: String,
+        durationMinutes: Int,
+        isBrick: Bool,
+        notes: String?,
+        orderInDay: Int,
+        feedback: String?,
+        matchedActivityId: UUID?,
+        structure: SessionStructure? = nil
+    ) {
+        self.id = id
+        self.weekId = weekId
+        self.day = day
+        self.sport = sport
+        self.type = type
+        self.templateId = templateId
+        self.durationMinutes = durationMinutes
+        self.isBrick = isBrick
+        self.notes = notes
+        self.orderInDay = orderInDay
+        self.feedback = feedback
+        self.matchedActivityId = matchedActivityId
+        self.structure = structure
     }
 }
 
