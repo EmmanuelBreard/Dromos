@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// Home dashboard view displaying the current week's training sessions.
-/// Shows day-by-day view with rich session cards, auto-scrolling to today.
+/// Home dashboard view displaying a single week's training sessions.
+/// Navigation between weeks via chevron buttons or horizontal swipe (paged TabView).
 /// Shares plan data with Calendar tab via the passed PlanService.
 /// Receives stravaService to fetch activities and compute per-session completion status.
 struct HomeView: View {
@@ -16,7 +16,7 @@ struct HomeView: View {
     @ObservedObject var planService: PlanService
     /// Shared profile service — provides athlete metrics (FTP, VMA, CSS) for session card details.
     @ObservedObject var profileService: ProfileService
-    /// Strava service used to fetch activities for the visible date range and compute completion status.
+    /// Strava service used to fetch activities for the displayed week and compute completion status.
     @ObservedObject var stravaService: StravaService
     /// Toggled by MainTabView each time the Home tab is re-selected.
     /// Using @Binding ensures the change propagates via Combine even when the tab is inactive.
@@ -35,22 +35,25 @@ struct HomeView: View {
         return f
     }()
 
-    /// Reusable date formatter for month abbreviations (e.g., "Feb").
-    private static let monthFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMM"
-        return f
-    }()
+    // MARK: - State
 
-    /// Last visible week index (controls progressive disclosure).
-    @State private var lastVisibleWeekIndex: Int = 0
+    /// Index of the currently displayed week in plan.planWeeks.
+    @State private var currentWeekIndex: Int = 0
 
     /// Whether edit mode is active (shows move arrows on session cards).
     @State private var isEditMode: Bool = false
 
-    /// Maps each session UUID to its computed completion status (planned/completed/missed).
-    /// Populated by `loadCompletionStatuses(plan:)` after fetching Strava activities.
-    @State private var completionStatuses: [UUID: SessionCompletionStatus] = [:]
+    /// Per-week completion status cache. Key = week index, value = session-UUID → status map.
+    /// Populated by `loadIfNeeded(weekIndex:plan:)`. Purged on Strava sync completion.
+    @State private var completionCacheByWeek: [Int: [UUID: SessionCompletionStatus]] = [:]
+
+    /// Set of week indices whose Strava fetch is currently in flight (drives skeleton).
+    @State private var loadingWeeks: Set<Int> = []
+
+    /// Guards the one-time initialisation of `currentWeekIndex` to avoid re-running on every appear.
+    @State private var didInitializeWeekIndex: Bool = false
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -65,7 +68,8 @@ struct HomeView: View {
                     emptyStateView
                 }
             }
-            .navigationTitle("Home")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if planService.trainingPlan != nil {
@@ -93,128 +97,93 @@ struct HomeView: View {
 
     // MARK: - Content View
 
-    /// Main content view with multi-week scrollable sections.
+    /// Main content view: HomeWeekHeader + paged TabView (one page per plan week).
     private func contentView(plan: TrainingPlan) -> some View {
-        let currentWeekIndex = plan.currentWeekIndex()
-        let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex)
-        let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
-        let visibleWeeks = Array(plan.planWeeks[currentWeekIndex...endIndex])
+        VStack(spacing: 0) {
+            HomeWeekHeader(
+                weekNumber: plan.planWeeks[currentWeekIndex].weekNumber,
+                totalWeeks: plan.planWeeks.count,
+                phase: plan.planWeeks[currentWeekIndex].phase,
+                weekStartDate: plan.planWeeks[currentWeekIndex].startDateAsDate ?? Date(),
+                titleVariant: titleVariant(for: currentWeekIndex, plan: plan),
+                onPrevious: { goToWeek(currentWeekIndex - 1, plan: plan) },
+                onNext:     { goToWeek(currentWeekIndex + 1, plan: plan) },
+                canGoPrevious: currentWeekIndex > 0,
+                canGoNext: currentWeekIndex < plan.planWeeks.count - 1
+            )
 
-        return ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Multi-week sections (current week through lastVisibleWeekIndex)
-                    ForEach(Array(visibleWeeks.enumerated()), id: \.element.id) { offset, week in
-                        let weekIndex = currentWeekIndex + offset
-
-                        // Week section header
-                        weekSectionHeader(week: week, currentWeekIndex: currentWeekIndex, weekIndex: weekIndex)
-                            .padding(.horizontal)
-                            .padding(.top, offset == 0 ? 0 : 16)
-                            .padding(.bottom, 8)
-                            .id("week-\(week.weekNumber)")
-
-                        // Day sections for this week
-                        let days = plan.daysForWeek(week)
-                        LazyVStack(spacing: 16) {
-                            ForEach(days, id: \.weekday) { dayInfo in
-                                daySectionView(dayInfo: dayInfo, plan: plan, weekId: week.id, weekNumber: week.weekNumber)
-                                    .id("\(week.weekNumber)-\(dayInfo.weekday)")
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 20)
-                    }
-
-                    // "Show next week" CTA (only if more weeks remain)
-                    if endIndex < plan.planWeeks.count - 1 {
-                        showNextWeekButton
-                    }
+            TabView(selection: $currentWeekIndex) {
+                ForEach(plan.planWeeks.indices, id: \.self) { idx in
+                    weekContent(weekIndex: idx, plan: plan)
+                        .tag(idx)
                 }
             }
-            .background(Color.pageSurface)
-            .task {
-                lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
-                scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
-                await loadCompletionStatuses(plan: plan)
-                await generatePendingFeedback(plan: plan)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.25), value: currentWeekIndex)
+        }
+        .background(Color.pageSurface)
+        .task {
+            if !didInitializeWeekIndex {
+                currentWeekIndex = plan.currentWeekIndex()
+                didInitializeWeekIndex = true
             }
-            .onChange(of: scrollReset) { _, _ in
-                // Tab re-selection: reset weeks and scroll to today (matching first-load behavior).
-                // Task inside .onChange is acceptable — triggered by user action, not view lifecycle.
-                lastVisibleWeekIndex = min(currentWeekIndex + 1, plan.planWeeks.count - 1)
-                scrollToToday(proxy: proxy, plan: plan, currentWeekIndex: currentWeekIndex)
-                Task { await loadCompletionStatuses(plan: plan) }
+            await loadIfNeeded(weekIndex: currentWeekIndex, plan: plan)
+        }
+        .onChange(of: currentWeekIndex) { _, newIdx in
+            Task {
+                await loadIfNeeded(weekIndex: newIdx, plan: plan)
+                await generatePendingFeedback(plan: plan, weekIndex: newIdx)
             }
-            .onChange(of: lastVisibleWeekIndex) { _, _ in
-                Task { await loadCompletionStatuses(plan: plan) }
+        }
+        .onChange(of: scrollReset) { _, _ in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                currentWeekIndex = plan.currentWeekIndex()
             }
-            .onChange(of: stravaService.isSyncing) { oldValue, newValue in
-                // Re-run matching after a Strava sync completes so newly synced activities are reflected.
-                if oldValue && !newValue {
-                    Task {
-                        await loadCompletionStatuses(plan: plan)
-                        await generatePendingFeedback(plan: plan)
-                    }
+        }
+        .onChange(of: stravaService.isSyncing) { oldValue, newValue in
+            // Re-run matching after a Strava sync completes so newly synced activities are reflected.
+            if oldValue && !newValue {
+                completionCacheByWeek.removeAll()
+                Task {
+                    await loadIfNeeded(weekIndex: currentWeekIndex, plan: plan)
+                    await generatePendingFeedback(plan: plan, weekIndex: currentWeekIndex)
                 }
             }
         }
     }
 
-    // MARK: - Week Section Header
+    // MARK: - Week Content
 
-    /// Week section header with title, date range, and phase badge.
-    /// Shows "Current Week" / "Next Week" for the first two weeks, then date range only.
-    private func weekSectionHeader(week: PlanWeek, currentWeekIndex: Int, weekIndex: Int) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    // Title: "Current Week", "Next Week", or date range
-                    if weekIndex == currentWeekIndex {
-                        Text("Current Week")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                    } else if weekIndex == currentWeekIndex + 1 {
-                        Text("Next Week")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                    }
-
-                    // Date range subtitle (always shown)
-                    Text(weekDateRange(week: week))
-                        .font(weekIndex <= currentWeekIndex + 1 ? .subheadline : .title3)
-                        .fontWeight(weekIndex <= currentWeekIndex + 1 ? .regular : .semibold)
-                        .foregroundColor(weekIndex <= currentWeekIndex + 1 ? .secondary : .primary)
+    /// Scrollable day list for a single week page inside the TabView.
+    private func weekContent(weekIndex: Int, plan: TrainingPlan) -> some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                let week = plan.planWeeks[weekIndex]
+                let days = plan.daysForWeek(week)
+                ForEach(days, id: \.weekday) { dayInfo in
+                    daySectionView(
+                        dayInfo: dayInfo,
+                        plan: plan,
+                        weekId: week.id,
+                        weekNumber: week.weekNumber,
+                        weekIndex: weekIndex
+                    )
+                    .id("\(week.weekNumber)-\(dayInfo.weekday)")
                 }
-
-                // Phase badge (always shown)
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(Color.phaseColor(for: week.phase))
-                        .frame(width: 8, height: 8)
-                    Text(week.phase)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color.phaseColor(for: week.phase))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.phaseColor(for: week.phase).opacity(0.15))
-                .clipShape(Capsule())
-
-                Spacer()
             }
+            .padding(.horizontal)
+            .padding(.bottom, 20)
         }
-        .padding(.vertical, 8)
     }
 
     // MARK: - Day Section
 
     /// A day section with header, session cards, and optional race day indicator.
     /// In edit mode, each session card shows up/down arrows to move between days.
-    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekId: UUID, weekNumber: Int) -> some View {
+    /// SessionCardView is skeleton-redacted while the week's Strava fetch is in flight.
+    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekId: UUID, weekNumber: Int, weekIndex: Int) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Day header with relative label + full date
+            // Day header with relative label + full date (never redacted)
             Text(dayHeaderLabel(for: dayInfo.date, weekday: dayInfo.weekday))
                 .font(.headline)
                 .foregroundColor(.primary)
@@ -227,11 +196,10 @@ struct HomeView: View {
                 let dayIndex = days.firstIndex(where: { $0.weekday == dayInfo.weekday }) ?? 0
 
                 ForEach(Array(dayInfo.sessions.enumerated()), id: \.element.id) { sessionIndex, session in
-                    let status = completionStatuses[session.id] ?? .planned
+                    let status = (completionCacheByWeek[weekIndex] ?? [:])[session.id] ?? .planned
 
                     if session.sport.lowercased() == "race" {
-                        // Race sessions render as a rich RaceDayCardView with template-driven legs.
-                        // Edit mode arrows are intentionally omitted — race sessions are fixed in the calendar.
+                        // Race sessions render as a rich RaceDayCardView — never redacted.
                         RaceDayCardView(
                             raceObjective: plan.raceObjective,
                             template: workoutLibrary.template(for: session.templateId),
@@ -249,8 +217,10 @@ struct HomeView: View {
                                 maxHr: profileService.user?.maxHr,
                                 completionStatus: status
                             )
+                            // Skeleton while Strava fetch is in flight (Strava-connected users only).
+                            .redacted(reason: loadingWeeks.contains(weekIndex) ? .placeholder : [])
 
-                            // Edit mode: hide move arrows for completed sessions (they cannot be rescheduled).
+                            // Edit mode: hide move arrows for completed sessions (cannot be rescheduled).
                             if isEditMode && !isCompleted(session.id) {
                                 VStack(spacing: 12) {
                                     // Up: reorder within day first, then cross to previous day
@@ -361,24 +331,23 @@ struct HomeView: View {
         .padding()
     }
 
-    // MARK: - "Show Next Week" CTA
+    // MARK: - Navigation Helpers
 
-    /// Button to progressively reveal more weeks.
-    /// Content appears below without scrolling — user scrolls down naturally.
-    private var showNextWeekButton: some View {
-        Button {
-            lastVisibleWeekIndex += 1
-        } label: {
-            HStack(spacing: 6) {
-                Text("Show next week")
-                Image(systemName: "chevron.down")
-                    .font(.caption)
-            }
-            .font(.subheadline)
-            .fontWeight(.medium)
-            .foregroundColor(.blue)
+    /// Returns the semantic title variant for a given week index.
+    private func titleVariant(for index: Int, plan: TrainingPlan) -> HomeWeekHeader.TitleVariant {
+        let current = plan.currentWeekIndex()
+        switch index {
+        case current:      return .currentWeek
+        case current - 1:  return .lastWeek
+        case current + 1:  return .nextWeek
+        default:           return .other
         }
-        .padding(.vertical, 24)
+    }
+
+    /// Navigates to a week by index (bounds-checked), with animation.
+    private func goToWeek(_ idx: Int, plan: TrainingPlan) {
+        guard idx >= 0, idx < plan.planWeeks.count else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { currentWeekIndex = idx }
     }
 
     // MARK: - Helper Methods
@@ -396,54 +365,6 @@ struct HomeView: View {
         }
     }
 
-    /// Formats a week's date range with ordinal suffixes.
-    /// Examples: "Feb 10th - 16th", "Feb 28th - Mar 6th"
-    private func weekDateRange(week: PlanWeek) -> String {
-        guard let startDate = week.startDateAsDate else { return "Week \(week.weekNumber)" }
-        let endDate = calendar.date(byAdding: .day, value: 6, to: startDate) ?? startDate
-
-        let startDay = calendar.component(.day, from: startDate)
-        let endDay = calendar.component(.day, from: endDate)
-
-        let startMonth = Self.monthFormatter.string(from: startDate)
-        let endMonth = Self.monthFormatter.string(from: endDate)
-
-        if startMonth == endMonth {
-            return "\(startMonth) \(ordinal(startDay)) - \(ordinal(endDay))"
-        } else {
-            return "\(startMonth) \(ordinal(startDay)) - \(endMonth) \(ordinal(endDay))"
-        }
-    }
-
-    /// Converts a day number to its ordinal form (1st, 2nd, 3rd, etc.).
-    private func ordinal(_ day: Int) -> String {
-        let suffix: String
-        switch day {
-        case 1, 21, 31: suffix = "st"
-        case 2, 22: suffix = "nd"
-        case 3, 23: suffix = "rd"
-        default: suffix = "th"
-        }
-        return "\(day)\(suffix)"
-    }
-
-    /// Scrolls to today's section if it exists (using composite week-day IDs).
-    private func scrollToToday(proxy: ScrollViewProxy, plan: TrainingPlan, currentWeekIndex: Int) {
-        guard currentWeekIndex < plan.planWeeks.count else { return }
-        let currentWeek = plan.planWeeks[currentWeekIndex]
-        let days = plan.daysForWeek(currentWeek)
-
-        // Find today's weekday in the current week.
-        // Delay allows view to re-render after lastVisibleWeekIndex reset.
-        if let todayInfo = days.first(where: { calendar.isDateInToday($0.date) }) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo("\(currentWeek.weekNumber)-\(todayInfo.weekday)", anchor: .top)
-                }
-            }
-        }
-    }
-
     /// Gets swim distance for a session from the workout library.
     /// Returns nil for non-swim sessions.
     private func swimDistance(for session: PlanSession) -> Int? {
@@ -454,87 +375,79 @@ struct HomeView: View {
     // MARK: - Completion Status
 
     /// Returns true when the session has a confirmed Strava match.
+    /// Reads from the currently displayed week's cache.
     /// Used to suppress edit-mode move arrows on completed sessions.
     private func isCompleted(_ sessionId: UUID) -> Bool {
-        if case .completed? = completionStatuses[sessionId] { return true }
+        if case .completed? = (completionCacheByWeek[currentWeekIndex] ?? [:])[sessionId] { return true }
         return false
     }
 
-    /// Fetches Strava activities for the visible date range and builds the completion status map.
+    /// Fetches Strava activities for the given week and populates the per-week cache.
     ///
-    /// Early-exits if the user has not connected Strava — all sessions remain `.planned`.
-    /// Covers the full range of currently visible weeks so completion state is always accurate.
-    /// Existing statuses remain visible during fetch; overwritten on completion.
-    private func loadCompletionStatuses(plan: TrainingPlan) async {
-        // Only compute when Strava is connected — avoids unnecessary network calls.
+    /// - Skips if Strava is not connected (user remains on `.planned`).
+    /// - Skips if the cache already has an entry for this week (instant backtrack).
+    /// - Skips if a fetch for this week is already in flight.
+    private func loadIfNeeded(weekIndex: Int, plan: TrainingPlan) async {
         guard profileService.user?.isStravaConnected == true else { return }
+        guard completionCacheByWeek[weekIndex] == nil else { return }
+        guard !loadingWeeks.contains(weekIndex) else { return }
 
-        let currentWeekIndex = plan.currentWeekIndex()
-        let safeLastVisible = max(currentWeekIndex, lastVisibleWeekIndex)
-        let endIndex = min(safeLastVisible, plan.planWeeks.count - 1)
-        // Start from week 0 so past weeks also get completion statuses (completed/missed).
-        let visibleWeeks = Array(plan.planWeeks[0...endIndex])
+        loadingWeeks.insert(weekIndex)
+        defer { loadingWeeks.remove(weekIndex) }
 
-        let allDates = visibleWeeks.flatMap { plan.daysForWeek($0) }.map(\.date)
-        guard let fromDate = allDates.min(), let toDate = allDates.max() else { return }
+        let week = plan.planWeeks[weekIndex]
+        let days = plan.daysForWeek(week)
+        let dates = days.map(\.date)
+        guard let from = dates.min(), let to = dates.max() else { return }
 
         // Pad ±1 day to handle UTC vs local timezone edge cases at date boundaries.
-        let paddedFrom = calendar.date(byAdding: .day, value: -1, to: fromDate)!
-        let paddedTo = calendar.date(byAdding: .day, value: 1, to: toDate)!
-
-        // Fetch activities covering the padded visible range.
+        let paddedFrom = calendar.date(byAdding: .day, value: -1, to: from)!
+        let paddedTo   = calendar.date(byAdding: .day, value:  1, to: to)!
         let activities = await stravaService.fetchActivities(from: paddedFrom, to: paddedTo)
 
-        // Build (session, resolvedDate) tuples for all visible sessions.
+        // Build (session, resolvedDate) tuples for this week's sessions only.
         var sessionTuples: [(session: PlanSession, date: Date)] = []
-        for week in visibleWeeks {
-            guard let weekStartDate = week.startDateAsDate else { continue }
-            let days = plan.daysForWeek(week)
-            for dayInfo in days {
-                for session in dayInfo.sessions {
-                    let resolvedDate = Weekday(fullName: session.day)
-                        .map { $0.date(relativeTo: weekStartDate) }
-                        ?? dayInfo.date
-                    sessionTuples.append((session: session, date: resolvedDate))
-                }
+        guard let weekStartDate = week.startDateAsDate else { return }
+        for dayInfo in days {
+            for session in dayInfo.sessions {
+                let resolved = Weekday(fullName: session.day)
+                    .map { $0.date(relativeTo: weekStartDate) } ?? dayInfo.date
+                sessionTuples.append((session, resolved))
             }
         }
 
-        // Run the matching engine and publish results.
-        completionStatuses = SessionMatcher.match(sessions: sessionTuples, activities: activities)
+        completionCacheByWeek[weekIndex] = SessionMatcher.match(
+            sessions: sessionTuples,
+            activities: activities
+        )
     }
 
     // MARK: - Session Feedback
 
-    /// For each newly completed session that lacks feedback, trigger AI feedback generation.
-    /// Fires sequentially to avoid rate limits. Silently skips failures.
-    private func generatePendingFeedback(plan: TrainingPlan) async {
+    /// For each completed session in the displayed week that lacks feedback,
+    /// triggers AI feedback generation. Fires sequentially to avoid rate limits.
+    /// Scoped to the displayed week only — avoids silent fan-out as user paginates.
+    private func generatePendingFeedback(plan: TrainingPlan, weekIndex: Int) async {
         guard profileService.user?.isStravaConnected == true else { return }
+        guard let statuses = completionCacheByWeek[weekIndex] else { return }
 
+        let weekSessionIds = Set(plan.planWeeks[weekIndex].planSessions.map(\.id))
         var didGenerate = false
 
-        // Order is non-deterministic but acceptable — each call is idempotent
-        for (sessionId, status) in completionStatuses {
+        for (sessionId, status) in statuses {
+            guard weekSessionIds.contains(sessionId) else { continue }
             guard case .completed(let activity) = status else { continue }
-
-            // Find the PlanSession to check if feedback already exists
-            let session = plan.planWeeks
-                .flatMap(\.planSessions)
-                .first { $0.id == sessionId }
+            let session = plan.planWeeks[weekIndex].planSessions.first { $0.id == sessionId }
             guard let session, session.feedback == nil else { continue }
 
-            // Fire Edge Function — result is written to DB
             let feedback = await stravaService.generateSessionFeedback(
                 sessionId: sessionId,
                 activityId: activity.id
             )
-
-            if feedback != nil {
-                didGenerate = true
-            }
+            if feedback != nil { didGenerate = true }
         }
 
-        // Refresh plan once at the end to pick up all new feedback without showing a spinner
+        // Refresh plan once at the end to pick up all new feedback without showing a spinner.
         if didGenerate {
             await planService.refreshPlan(userId: plan.userId)
         }
