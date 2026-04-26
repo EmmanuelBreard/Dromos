@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dromos prototype — Home — Completed session</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <style>
+    body {
+      background: #2a2a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      padding: var(--space-xl) var(--space-lg);
+      gap: var(--space-xl);
+      color: #fff;
+    }
+    .frame {
+      display: flex; flex-direction: column;
+      gap: var(--space-md);
+      align-items: center;
+    }
+    .frame .meta {
+      font: var(--weight-medium) var(--type-meta-small)/1.4 var(--font-system);
+      color: rgba(255, 255, 255, 0.7);
+      width: var(--device-width);
+    }
+    .frame .meta h1 {
+      font-size: var(--type-headline);
+      font-weight: var(--weight-semibold);
+      margin-bottom: var(--space-xs);
+      color: #fff;
+    }
+    .device {
+      width: var(--device-width);
+      height: var(--device-height);
+      background: var(--color-page-surface);
+      border-radius: 48px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .status-bar {
+      height: var(--status-bar-height);
+      padding: 14px var(--space-xl) 0;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      font: var(--weight-semibold) 15px/1 var(--font-system);
+      color: var(--color-text-primary);
+      flex-shrink: 0;
+    }
+    .screen {
+      flex: 1;
+      overflow-y: auto;
+      color: var(--color-text-primary);
+    }
+    .tab-bar {
+      height: var(--tab-bar-height);
+      padding: var(--space-md) 0 var(--safe-bottom);
+      background: var(--color-card-surface);
+      border-top: 0.5px solid var(--color-divider);
+      display: flex; justify-content: space-around; align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .tab-bar .tab {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      color: var(--color-text-secondary);
+      font: var(--weight-medium) 10px/1 var(--font-system);
+    }
+    .tab-bar .tab.active { color: var(--color-accent); }
+    .tab-bar .tab svg { width: 26px; height: 26px; }
+
+    /* Sport progress */
+    .sport-progress {
+      margin: var(--space-md) var(--space-lg);
+      padding: var(--space-md) var(--space-lg);
+      background: var(--color-card-surface);
+      border-radius: var(--radius-lg);
+      display: flex; gap: var(--space-md);
+    }
+    .sport { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .sport .name {
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .sport .nums {
+      font: var(--weight-regular) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .sport .nums .done { color: var(--color-text-primary); font-weight: var(--weight-semibold); }
+    .sport .track { height: 4px; background: var(--color-divider); border-radius: 2px; overflow: hidden; }
+    .sport .track .fill { height: 100%; background: var(--color-accent); border-radius: 2px; }
+
+    /* Today completed */
+    .today {
+      padding: 0 var(--space-lg) var(--space-xl);
+    }
+    .today-card {
+      background: var(--color-card-surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-lg);
+    }
+
+    .completed-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: var(--space-sm);
+    }
+    .completed-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--color-accent);
+    }
+    .completed-tag .check {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--color-accent);
+      color: var(--color-accent-fg);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px;
+    }
+    .completed-meta .summary {
+      font: var(--weight-regular) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .session-name {
+      font: var(--weight-bold) var(--type-title-large)/var(--leading-snug) var(--font-system);
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-md);
+    }
+
+    /* Coach feedback — replaces the rationale slot for completed sessions */
+    .feedback-block {
+      padding: var(--space-md) var(--space-lg);
+      background: var(--color-success-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-lg);
+    }
+    .feedback-label {
+      display: flex; align-items: center; gap: 6px;
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .feedback-text {
+      font: var(--weight-regular) var(--type-body)/var(--leading-normal) var(--font-system);
+      color: var(--color-text-primary);
+    }
+
+    /* GPS map placeholder */
+    .map {
+      height: 160px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #15202b;
+      margin-bottom: var(--space-lg);
+      position: relative;
+    }
+    .map svg {
+      width: 100%; height: 100%;
+      display: block;
+    }
+    .map .map-meta {
+      position: absolute;
+      bottom: var(--space-sm);
+      left: var(--space-md);
+      display: flex; gap: var(--space-sm); align-items: baseline;
+      font: var(--weight-medium) var(--type-meta-small)/1 var(--font-system);
+      color: rgba(255,255,255,0.85);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Actual vs planned grid */
+    .actual-vs-planned {
+      border-top: 0.5px solid var(--color-divider);
+      padding-top: var(--space-md);
+      margin-bottom: var(--space-md);
+    }
+    .stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: baseline;
+      column-gap: var(--space-md);
+      padding: var(--space-sm) 0;
+    }
+    .stat-row + .stat-row { border-top: 0.5px dashed var(--color-divider); }
+    .stat-row .stat-label {
+      font: var(--weight-regular) var(--type-meta-small)/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .stat-row .stat-actual {
+      font: var(--weight-semibold) var(--type-body)/1.2 var(--font-system);
+      color: var(--color-text-primary);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .stat-row .stat-planned {
+      font: var(--weight-regular) var(--type-meta-small)/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .stat-row.header {
+      border-top: none;
+      padding-bottom: 4px;
+    }
+    .stat-row.header .stat-label,
+    .stat-row.header .stat-actual,
+    .stat-row.header .stat-planned {
+      font: var(--weight-medium) 10px/1 var(--font-system);
+      color: var(--color-text-tertiary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Disclosure to view planned workout */
+    .disclosure {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: var(--space-md);
+      border-top: 0.5px solid var(--color-divider);
+      cursor: pointer;
+    }
+    .disclosure .text {
+      font: var(--weight-medium) var(--type-body)/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+    }
+    .disclosure .chev {
+      font: var(--weight-medium) 14px/1 var(--font-system);
+      color: var(--color-text-tertiary);
+    }
+
+    /* Week strip */
+    .week-strip-section { padding: 0 var(--space-lg) var(--space-xl); }
+    .week-strip-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: var(--space-md);
+    }
+    .week-strip-header .label {
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .week-strip-header .nav {
+      font: var(--weight-medium) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-accent);
+    }
+    .week-strip { display: flex; gap: var(--space-sm); }
+    .day-pill {
+      flex: 1; background: var(--color-card-surface);
+      border-radius: var(--radius-md); padding: var(--space-sm) 4px;
+      text-align: center; min-height: 60px;
+      display: flex; flex-direction: column; justify-content: center; gap: 2px;
+    }
+    .day-pill.done { background: var(--color-success-subtle); }
+    .day-pill.today {
+      background: var(--color-text-primary);
+      color: var(--color-card-surface);
+    }
+    .day-pill .dow {
+      font: var(--weight-medium) 10px/1 var(--font-system);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--color-text-secondary);
+    }
+    .day-pill.today .dow { color: rgba(255,255,255,0.55); }
+    .day-pill.done .dow { color: var(--color-text-secondary); }
+    .day-pill .glyph {
+      font: var(--weight-semibold) 11px/1.1 var(--font-system);
+      color: var(--color-text-primary);
+    }
+    .day-pill.today .glyph { color: #fff; }
+    .day-pill .dur {
+      font: var(--weight-regular) 10px/1 var(--font-system);
+      color: var(--color-text-tertiary);
+    }
+    .day-pill.today .dur { color: rgba(255,255,255,0.55); }
+    .day-pill.done .dur { color: var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+
+  <!-- Frame 1: Completed without map -->
+  <div class="frame">
+    <div class="meta">
+      <h1>Completed — no GPS map</h1>
+      <p>Indoor session, treadmill, or no GPS recorded. Stats + coach feedback only.</p>
+    </div>
+    <div class="device">
+      <div class="status-bar"><span>9:41</span><span>●●●●●</span></div>
+      <main class="screen">
+
+        <section class="sport-progress">
+          <div class="sport">
+            <span class="name">Swim</span>
+            <span class="nums"><span class="done">0:55</span> / 2:15</span>
+            <div class="track"><div class="fill" style="width: 40%;"></div></div>
+          </div>
+          <div class="sport">
+            <span class="name">Bike</span>
+            <span class="nums"><span class="done">0:00</span> / 4:50</span>
+            <div class="track"><div class="fill" style="width: 0%;"></div></div>
+          </div>
+          <div class="sport">
+            <span class="name">Run</span>
+            <span class="nums"><span class="done">1:02</span> / 3:15</span>
+            <div class="track"><div class="fill" style="width: 32%;"></div></div>
+          </div>
+        </section>
+
+        <section class="today">
+          <div class="today-card">
+            <div class="completed-meta">
+              <span class="completed-tag"><span class="check">✓</span>Completed today</span>
+              <span class="summary">1h 02' · run</span>
+            </div>
+            <h2 class="session-name">VO2 intervals 5×3'</h2>
+
+            <div class="feedback-block">
+              <div class="feedback-label">Coach feedback</div>
+              <p class="feedback-text">
+                Strong execution. Held work blocks at 3:25–3:30/km — slight overshoot on rep 4, recovered well. Heart-rate ceiling at 178 confirms threshold is climbing.
+              </p>
+            </div>
+
+            <div class="actual-vs-planned">
+              <div class="stat-row header">
+                <span class="stat-label">Metric</span>
+                <span class="stat-actual">Actual</span>
+                <span class="stat-planned">Planned</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Duration</span>
+                <span class="stat-actual">1h 02'</span>
+                <span class="stat-planned">1h 00'</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Distance</span>
+                <span class="stat-actual">8.4 km</span>
+                <span class="stat-planned">~8 km</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Avg pace</span>
+                <span class="stat-actual">4:32/km</span>
+                <span class="stat-planned">varied</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">HR avg / max</span>
+                <span class="stat-actual">162 / 178</span>
+                <span class="stat-planned">&gt;170 work</span>
+              </div>
+            </div>
+
+            <div class="disclosure">
+              <span class="text">View planned workout</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="week-strip-section">
+          <div class="week-strip-header">
+            <span class="label">This week</span>
+            <span class="nav">Open plan ›</span>
+          </div>
+          <div class="week-strip">
+            <div class="day-pill done"><div class="dow">Mon</div><div class="glyph">Swim</div><div class="dur">55'</div></div>
+            <div class="day-pill today"><div class="dow">Tue</div><div class="glyph">Run ✓</div><div class="dur">1h02</div></div>
+            <div class="day-pill"><div class="dow">Wed</div><div class="glyph">Bike</div><div class="dur">1h</div></div>
+            <div class="day-pill"><div class="dow">Thu</div><div class="glyph">Run+Sw</div><div class="dur">1h20</div></div>
+            <div class="day-pill"><div class="dow">Fri</div><div class="glyph">Bk+Sw</div><div class="dur">1h35</div></div>
+            <div class="day-pill"><div class="dow">Sat</div><div class="glyph">Bike</div><div class="dur">3h</div></div>
+            <div class="day-pill"><div class="dow">Sun</div><div class="glyph">Run</div><div class="dur">1h30</div></div>
+          </div>
+        </section>
+
+      </main>
+      <nav class="tab-bar">
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 7v11h-6v-7H9v7H3V10z"/></svg>
+          <span>Today</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 6v10h14V10H5z"/></svg>
+          <span>Plan</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+          <span>Profile</span>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Frame 2: Completed with map -->
+  <div class="frame">
+    <div class="meta">
+      <h1>Completed — with GPS map</h1>
+      <p>Outdoor run with Strava polyline. Map sits between feedback and stats — visual proof, not chrome.</p>
+    </div>
+    <div class="device">
+      <div class="status-bar"><span>9:41</span><span>●●●●●</span></div>
+      <main class="screen">
+
+        <section class="sport-progress">
+          <div class="sport">
+            <span class="name">Swim</span>
+            <span class="nums"><span class="done">0:55</span> / 2:15</span>
+            <div class="track"><div class="fill" style="width: 40%;"></div></div>
+          </div>
+          <div class="sport">
+            <span class="name">Bike</span>
+            <span class="nums"><span class="done">0:00</span> / 4:50</span>
+            <div class="track"><div class="fill" style="width: 0%;"></div></div>
+          </div>
+          <div class="sport">
+            <span class="name">Run</span>
+            <span class="nums"><span class="done">1:02</span> / 3:15</span>
+            <div class="track"><div class="fill" style="width: 32%;"></div></div>
+          </div>
+        </section>
+
+        <section class="today">
+          <div class="today-card">
+            <div class="completed-meta">
+              <span class="completed-tag"><span class="check">✓</span>Completed today</span>
+              <span class="summary">1h 02' · run</span>
+            </div>
+            <h2 class="session-name">VO2 intervals 5×3'</h2>
+
+            <div class="feedback-block">
+              <div class="feedback-label">Coach feedback</div>
+              <p class="feedback-text">
+                Strong execution. Held work blocks at 3:25–3:30/km — slight overshoot on rep 4, recovered well. Heart-rate ceiling at 178 confirms threshold is climbing.
+              </p>
+            </div>
+
+            <div class="actual-vs-planned">
+              <div class="stat-row header">
+                <span class="stat-label">Metric</span>
+                <span class="stat-actual">Actual</span>
+                <span class="stat-planned">Planned</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Duration</span>
+                <span class="stat-actual">1h 02'</span>
+                <span class="stat-planned">1h 00'</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Distance</span>
+                <span class="stat-actual">8.4 km</span>
+                <span class="stat-planned">~8 km</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Avg pace</span>
+                <span class="stat-actual">4:32/km</span>
+                <span class="stat-planned">varied</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">HR avg / max</span>
+                <span class="stat-actual">162 / 178</span>
+                <span class="stat-planned">&gt;170 work</span>
+              </div>
+            </div>
+
+            <!-- GPS map (after stats per product call) -->
+            <div class="map" aria-label="GPS route map" style="margin-top: var(--space-lg);">
+              <svg viewBox="0 0 358 160" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <linearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1a2533"/>
+                    <stop offset="100%" stop-color="#0e1620"/>
+                  </linearGradient>
+                </defs>
+                <rect width="358" height="160" fill="url(#mapBg)"/>
+                <g stroke="rgba(255,255,255,0.04)" stroke-width="0.5">
+                  <line x1="0" y1="40" x2="358" y2="40"/>
+                  <line x1="0" y1="80" x2="358" y2="80"/>
+                  <line x1="0" y1="120" x2="358" y2="120"/>
+                  <line x1="89" y1="0" x2="89" y2="160"/>
+                  <line x1="179" y1="0" x2="179" y2="160"/>
+                  <line x1="269" y1="0" x2="269" y2="160"/>
+                </g>
+                <path
+                  d="M40 120 Q 60 100, 80 95 T 130 70 Q 160 50, 200 55 T 260 80 Q 290 95, 320 70 L 330 50"
+                  fill="none"
+                  stroke="#0FAE89"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <circle cx="40" cy="120" r="5" fill="#FFFFFF" stroke="#0FAE89" stroke-width="2"/>
+                <circle cx="330" cy="50" r="5" fill="#0FAE89" stroke="#FFFFFF" stroke-width="2"/>
+              </svg>
+              <div class="map-meta">
+                <span>8.4 km</span>
+                <span style="color: rgba(255,255,255,0.5)">·</span>
+                <span>+42 m</span>
+              </div>
+            </div>
+
+            <div class="disclosure" style="margin-top: var(--space-lg);">
+              <span class="text">View planned workout</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="week-strip-section">
+          <div class="week-strip-header">
+            <span class="label">This week</span>
+            <span class="nav">Open plan ›</span>
+          </div>
+          <div class="week-strip">
+            <div class="day-pill done"><div class="dow">Mon</div><div class="glyph">Swim</div><div class="dur">55'</div></div>
+            <div class="day-pill today"><div class="dow">Tue</div><div class="glyph">Run ✓</div><div class="dur">1h02</div></div>
+            <div class="day-pill"><div class="dow">Wed</div><div class="glyph">Bike</div><div class="dur">1h</div></div>
+            <div class="day-pill"><div class="dow">Thu</div><div class="glyph">Run+Sw</div><div class="dur">1h20</div></div>
+            <div class="day-pill"><div class="dow">Fri</div><div class="glyph">Bk+Sw</div><div class="dur">1h35</div></div>
+            <div class="day-pill"><div class="dow">Sat</div><div class="glyph">Bike</div><div class="dur">3h</div></div>
+            <div class="day-pill"><div class="dow">Sun</div><div class="glyph">Run</div><div class="dur">1h30</div></div>
+          </div>
+        </section>
+
+      </main>
+      <nav class="tab-bar">
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 7v11h-6v-7H9v7H3V10z"/></svg>
+          <span>Today</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 6v10h14V10H5z"/></svg>
+          <span>Plan</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+          <span>Profile</span>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+</body>
+</html>

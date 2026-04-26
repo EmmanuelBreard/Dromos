@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dromos prototype — Home session display — Arc</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <style>
+    body {
+      background: #2a2a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-xl) var(--space-lg);
+      gap: var(--space-lg);
+      color: #fff;
+    }
+    .meta {
+      font: var(--weight-medium) var(--type-meta-small)/1.4 var(--font-system);
+      color: rgba(255, 255, 255, 0.7);
+      max-width: var(--device-width);
+    }
+    .meta h1 {
+      font-size: var(--type-headline);
+      font-weight: var(--weight-semibold);
+      margin-bottom: var(--space-xs);
+      color: #fff;
+    }
+    .device {
+      width: var(--device-width);
+      height: var(--device-height);
+      background: var(--color-page-surface);
+      border-radius: 48px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .status-bar {
+      height: var(--status-bar-height);
+      padding: 14px var(--space-xl) 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font: var(--weight-semibold) 15px/1 var(--font-system);
+      color: var(--color-text-primary);
+      flex-shrink: 0;
+    }
+
+    .screen {
+      flex: 1;
+      overflow-y: auto;
+      color: var(--color-text-primary);
+    }
+
+    .tab-bar {
+      height: var(--tab-bar-height);
+      padding: var(--space-md) 0 var(--safe-bottom);
+      background: var(--color-card-surface);
+      border-top: 0.5px solid var(--color-divider);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .tab-bar .tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--color-text-secondary);
+      font: var(--weight-medium) 10px/1 var(--font-system);
+    }
+    .tab-bar .tab.active { color: var(--color-accent); }
+    .tab-bar .tab svg { width: 26px; height: 26px; }
+
+    /* ========== ARC-SPECIFIC ========== */
+
+    .top {
+      padding: var(--space-md) var(--space-lg) var(--space-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .top .phase {
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .top .countdown {
+      font: var(--weight-regular) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+    }
+
+    /* The arc — week as a single bar with intensity-weighted columns */
+    .arc {
+      padding: var(--space-md) var(--space-lg) var(--space-lg);
+    }
+    .arc .arc-title {
+      font: var(--weight-bold) var(--type-title)/var(--leading-snug) var(--font-system);
+      letter-spacing: -0.01em;
+      margin-bottom: var(--space-md);
+    }
+    .arc .arc-title .quiet {
+      color: var(--color-text-secondary);
+      font-weight: var(--weight-regular);
+    }
+
+    .arc-bar {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      height: 96px;
+      padding: 0 0 var(--space-sm);
+    }
+    .arc-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: stretch;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .arc-col .bar {
+      width: 100%;
+      border-radius: 4px;
+      background: var(--color-text-tertiary);
+      transition: background var(--duration-fast) var(--easing-ios);
+    }
+    .arc-col.done .bar {
+      background: var(--color-text-primary);
+      opacity: 0.85;
+    }
+    .arc-col.today .bar {
+      background: var(--color-accent);
+    }
+    .arc-col.rest .bar {
+      background: transparent;
+      border-bottom: 2px dashed var(--color-text-tertiary);
+      height: 2px !important;
+    }
+
+    .arc-labels {
+      display: flex;
+      gap: 6px;
+      padding-top: var(--space-xs);
+    }
+    .arc-labels .lbl {
+      flex: 1;
+      text-align: center;
+      font: var(--weight-medium) 10px/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .arc-labels .lbl .num {
+      display: block;
+      font: var(--weight-regular) 11px/1.2 var(--font-system);
+      color: var(--color-text-tertiary);
+      letter-spacing: 0;
+      margin-top: 2px;
+    }
+    .arc-labels .lbl.today {
+      color: var(--color-accent);
+    }
+    .arc-labels .lbl.today .num { color: var(--color-accent); }
+    .arc-labels .lbl.done { color: var(--color-text-primary); }
+
+    /* Today expanded — sits inside the same context as the arc */
+    .today-expanded {
+      margin: 0 var(--space-lg) var(--space-lg);
+      background: var(--color-card-surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-lg);
+    }
+    .today-expanded .lead {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--space-sm);
+    }
+    .today-expanded .lead .label {
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .today-expanded .lead .dur {
+      font: var(--weight-regular) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .today-expanded .name {
+      font: var(--weight-bold) var(--type-title)/var(--leading-snug) var(--font-system);
+      letter-spacing: -0.01em;
+      margin-bottom: var(--space-sm);
+    }
+    .today-expanded .why {
+      font: var(--weight-regular) var(--type-body)/var(--leading-normal) var(--font-system);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-md);
+    }
+
+    /* Workout shape — small intensity profile inside the today card */
+    .workout-shape {
+      display: flex;
+      align-items: flex-end;
+      height: 36px;
+      gap: 2px;
+      margin-bottom: var(--space-md);
+    }
+    .workout-shape .seg {
+      border-radius: 2px;
+    }
+    .workout-shape .seg.warmup    { flex: 12; height: 35%; background: var(--intensity-easy); }
+    .workout-shape .seg.work      { flex: 8;  height: 90%; background: var(--intensity-tempo); }
+    .workout-shape .seg.recovery  { flex: 3;  height: 25%; background: var(--intensity-easy); }
+    .workout-shape .seg.cooldown  { flex: 10; height: 30%; background: var(--intensity-easy); }
+
+    .targets-inline {
+      display: flex;
+      gap: var(--space-md);
+      margin-bottom: var(--space-md);
+    }
+    .targets-inline .t {
+      flex: 1;
+    }
+    .targets-inline .t .lbl {
+      font: var(--weight-regular) var(--type-meta-small)/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      margin-bottom: 2px;
+    }
+    .targets-inline .t .val {
+      font: var(--weight-semibold) var(--type-headline)/1.2 var(--font-system);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .open-row {
+      display: flex;
+      gap: var(--space-sm);
+    }
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--color-accent);
+      color: var(--color-accent-fg);
+      font: var(--weight-semibold) var(--type-body)/1 var(--font-system);
+    }
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: transparent;
+      border: 1px solid var(--color-divider);
+      color: var(--color-text-primary);
+    }
+
+    /* Tap targets for other days — what happens when not today */
+    .other-days {
+      padding: 0 var(--space-lg) var(--space-xl);
+    }
+    .other-days .label {
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: var(--space-md);
+    }
+    .day-row {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-md);
+      padding: var(--space-md) 0;
+      border-top: 0.5px solid var(--color-divider);
+    }
+    .day-row .day {
+      width: 40px;
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .day-row .name {
+      flex: 1;
+      font: var(--weight-regular) var(--type-body)/1.2 var(--font-system);
+    }
+    .day-row .dur {
+      font: var(--weight-regular) var(--type-body)/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .day-row.done .name { color: var(--color-text-secondary); text-decoration: line-through; text-decoration-color: var(--color-text-tertiary); }
+    .day-row.rest .name { color: var(--color-text-tertiary); font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="meta">
+    <h1>Home session display — Option 3: Arc</h1>
+    <p>The shape of the week is the hero. Compact intensity spine; today expanded inline. Tap any day to swap context.</p>
+  </div>
+
+  <div class="device">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>●●●●●</span>
+    </div>
+
+    <main class="screen">
+
+      <div class="top">
+        <span class="phase">Build · Week 3 of 4</span>
+        <span class="countdown">Nimes · 5 weeks</span>
+      </div>
+
+      <!-- The arc: visual shape of the week, weighted by intensity * duration -->
+      <section class="arc">
+        <h2 class="arc-title">This week <span class="quiet">— 8h, peaks Saturday</span></h2>
+
+        <div class="arc-bar">
+          <div class="arc-col done">
+            <div class="bar" style="height: 32%;"></div>
+          </div>
+          <div class="arc-col today">
+            <div class="bar" style="height: 70%;"></div>
+          </div>
+          <div class="arc-col">
+            <div class="bar" style="height: 60%;"></div>
+          </div>
+          <div class="arc-col rest">
+            <div class="bar"></div>
+          </div>
+          <div class="arc-col">
+            <div class="bar" style="height: 28%;"></div>
+          </div>
+          <div class="arc-col">
+            <div class="bar" style="height: 95%;"></div>
+          </div>
+          <div class="arc-col">
+            <div class="bar" style="height: 80%;"></div>
+          </div>
+        </div>
+
+        <div class="arc-labels">
+          <span class="lbl done">Mon<span class="num">45'</span></span>
+          <span class="lbl today">Tue<span class="num">1h</span></span>
+          <span class="lbl">Wed<span class="num">2h30</span></span>
+          <span class="lbl">Thu<span class="num">—</span></span>
+          <span class="lbl">Fri<span class="num">50'</span></span>
+          <span class="lbl">Sat<span class="num">1h30</span></span>
+          <span class="lbl">Sun<span class="num">1h45</span></span>
+        </div>
+      </section>
+
+      <!-- Today expanded — connects to the arc above -->
+      <section class="today-expanded">
+        <div class="lead">
+          <span class="label">Today · Tue 28 Apr</span>
+          <span class="dur">1h · run</span>
+        </div>
+        <h3 class="name">Threshold intervals 4×8'</h3>
+        <p class="why">
+          Sharpens your top sustainable pace before Saturday's brick. Hold work blocks at the edge of comfortable — not redline.
+        </p>
+
+        <div class="workout-shape" aria-label="Workout intensity shape">
+          <div class="seg warmup" title="Warm-up 12'"></div>
+          <div class="seg work" title="Work 8'"></div>
+          <div class="seg recovery" title="Recovery 3'"></div>
+          <div class="seg work" title="Work 8'"></div>
+          <div class="seg recovery" title="Recovery 3'"></div>
+          <div class="seg work" title="Work 8'"></div>
+          <div class="seg recovery" title="Recovery 3'"></div>
+          <div class="seg work" title="Work 8'"></div>
+          <div class="seg cooldown" title="Cool-down 10'"></div>
+        </div>
+
+        <div class="targets-inline">
+          <div class="t">
+            <div class="lbl">Work pace</div>
+            <div class="val">4:35/km</div>
+          </div>
+          <div class="t">
+            <div class="lbl">Reps</div>
+            <div class="val">4 × 8'</div>
+          </div>
+          <div class="t">
+            <div class="lbl">Recovery</div>
+            <div class="val">3' jog</div>
+          </div>
+        </div>
+
+        <div class="open-row">
+          <button class="btn-primary">Open session</button>
+          <button class="btn-secondary" aria-label="Adjust">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Other days, compact — context for what's coming -->
+      <section class="other-days">
+        <div class="label">Coming up</div>
+        <div class="day-row">
+          <span class="day">Wed</span>
+          <span class="name">Long Z2 ride · 200W</span>
+          <span class="dur">2h30</span>
+        </div>
+        <div class="day-row rest">
+          <span class="day">Thu</span>
+          <span class="name">Full rest</span>
+          <span class="dur">—</span>
+        </div>
+        <div class="day-row">
+          <span class="day">Fri</span>
+          <span class="name">Easy run · 5:10/km</span>
+          <span class="dur">50'</span>
+        </div>
+        <div class="day-row">
+          <span class="day">Sat</span>
+          <span class="name">Race-pace brick</span>
+          <span class="dur">1h30</span>
+        </div>
+        <div class="day-row">
+          <span class="day">Sun</span>
+          <span class="name">Long Z2 run</span>
+          <span class="dur">1h45</span>
+        </div>
+      </section>
+
+    </main>
+
+    <nav class="tab-bar">
+      <div class="tab active">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 7v11h-6v-7H9v7H3V10z"/></svg>
+        <span>Today</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 6v10h14V10H5z"/></svg>
+        <span>Plan</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+        <span>Profile</span>
+      </div>
+    </nav>
+  </div>
+</body>
+</html>

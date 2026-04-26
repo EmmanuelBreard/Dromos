@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dromos prototype — {{FEATURE}} — {{OPTION_NAME}}</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <style>
+    /*
+     * Page chrome — gives the prototype a clean iPhone-like frame
+     * so we can review on desktop without pretending it's a hi-fi mock.
+     */
+    body {
+      background: #2a2a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-xl) var(--space-lg);
+      gap: var(--space-lg);
+      color: #fff;
+    }
+    .meta {
+      font: var(--weight-medium) var(--type-meta-small)/1.4 var(--font-system);
+      color: rgba(255, 255, 255, 0.7);
+      max-width: var(--device-width);
+    }
+    .meta h1 {
+      font-size: var(--type-headline);
+      font-weight: var(--weight-semibold);
+      margin-bottom: var(--space-xs);
+      color: #fff;
+    }
+    .device {
+      width: var(--device-width);
+      height: var(--device-height);
+      background: var(--color-page-surface);
+      border-radius: 48px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Status bar — minimal, just for realism */
+    .status-bar {
+      height: var(--status-bar-height);
+      padding: 14px var(--space-xl) 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font: var(--weight-semibold) 15px/1 var(--font-system);
+      color: var(--color-text-primary);
+      flex-shrink: 0;
+    }
+
+    /* Main scroll area */
+    .screen {
+      flex: 1;
+      overflow-y: auto;
+      color: var(--color-text-primary);
+    }
+
+    /* Tab bar — only show if relevant; remove for full-screen flows */
+    .tab-bar {
+      height: var(--tab-bar-height);
+      padding: var(--space-md) 0 var(--safe-bottom);
+      background: var(--color-card-surface);
+      border-top: 0.5px solid var(--color-divider);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .tab-bar .tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--color-text-secondary);
+      font: var(--weight-medium) 10px/1 var(--font-system);
+    }
+    .tab-bar .tab.active { color: var(--color-accent); }
+    .tab-bar .tab svg { width: 26px; height: 26px; }
+
+    /* ========== TYPOGRAPHY UTILITIES ========== */
+    .t-hero      { font: var(--weight-bold) var(--type-hero)/var(--leading-tight) var(--font-rounded); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .t-title-l   { font: var(--weight-bold) var(--type-title-large)/var(--leading-snug) var(--font-system); letter-spacing: -0.02em; }
+    .t-title     { font: var(--weight-bold) var(--type-title)/var(--leading-snug) var(--font-system); letter-spacing: -0.01em; }
+    .t-headline  { font: var(--weight-semibold) var(--type-headline)/var(--leading-snug) var(--font-system); }
+    .t-body      { font: var(--weight-regular) var(--type-body)/var(--leading-normal) var(--font-system); }
+    .t-body-em   { font: var(--weight-semibold) var(--type-body)/var(--leading-normal) var(--font-system); }
+    .t-caption   { font: var(--weight-regular) var(--type-caption)/var(--leading-normal) var(--font-system); color: var(--color-text-secondary); }
+    .t-meta      { font: var(--weight-regular) var(--type-meta-small)/var(--leading-normal) var(--font-system); color: var(--color-text-secondary); }
+    .t-mono      { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+    /* ========== COMPONENT PRIMITIVES (use in prototypes) ========== */
+    .card {
+      background: var(--color-card-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      background: var(--color-success-subtle);
+      font: var(--weight-medium) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-primary);
+    }
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 50px;
+      border-radius: var(--radius-md);
+      background: var(--color-accent);
+      color: var(--color-accent-fg);
+      font: var(--weight-semibold) var(--type-body)/1 var(--font-system);
+    }
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 50px;
+      border-radius: var(--radius-md);
+      background: transparent;
+      border: 1px solid var(--color-divider);
+      color: var(--color-text-primary);
+      font: var(--weight-semibold) var(--type-body)/1 var(--font-system);
+    }
+    .section { padding: var(--space-lg); }
+    .section + .section { padding-top: var(--space-xl); }
+    .stack > * + * { margin-top: var(--space-md); }
+    .stack-lg > * + * { margin-top: var(--space-lg); }
+    .stack-xl > * + * { margin-top: var(--space-xl); }
+  </style>
+</head>
+<body>
+  <div class="meta">
+    <h1>{{FEATURE}} — {{OPTION_NAME}}</h1>
+    <p>{{ONE_LINE_DESCRIPTION}}</p>
+  </div>
+
+  <div class="device">
+    <!-- Status bar — keep as-is unless the prototype is full-screen -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>●●●●●</span>
+    </div>
+
+    <!-- ============ SCREEN CONTENT GOES HERE ============ -->
+    <main class="screen">
+      <!-- Replace this section with the actual prototype content. -->
+      <!-- Use real Dromos data: real workout names, real paces, real dates. -->
+      <!-- Per Stance #9: every prescribed thing must show its rationale. -->
+    </main>
+    <!-- =================================================== -->
+
+    <!-- Tab bar — DELETE this block if the screen is full-screen / modal -->
+    <nav class="tab-bar">
+      <div class="tab active">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 7v11h-6v-7H9v7H3V10z"/></svg>
+        <span>Today</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 6v10h14V10H5z"/></svg>
+        <span>Plan</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+        <span>Profile</span>
+      </div>
+    </nav>
+  </div>
+</body>
+</html>

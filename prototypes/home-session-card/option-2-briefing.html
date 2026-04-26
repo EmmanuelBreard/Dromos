@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dromos prototype — Home session display — Briefing</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <style>
+    body {
+      background: #2a2a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--space-xl) var(--space-lg);
+      gap: var(--space-lg);
+      color: #fff;
+    }
+    .meta {
+      font: var(--weight-medium) var(--type-meta-small)/1.4 var(--font-system);
+      color: rgba(255, 255, 255, 0.7);
+      max-width: var(--device-width);
+    }
+    .meta h1 {
+      font-size: var(--type-headline);
+      font-weight: var(--weight-semibold);
+      margin-bottom: var(--space-xs);
+      color: #fff;
+    }
+    .device {
+      width: var(--device-width);
+      height: var(--device-height);
+      background: var(--color-page-surface);
+      border-radius: 48px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .status-bar {
+      height: var(--status-bar-height);
+      padding: 14px var(--space-xl) 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font: var(--weight-semibold) 15px/1 var(--font-system);
+      color: var(--color-text-primary);
+      flex-shrink: 0;
+    }
+
+    .screen {
+      flex: 1;
+      overflow-y: auto;
+      color: var(--color-text-primary);
+    }
+
+    .tab-bar {
+      height: var(--tab-bar-height);
+      padding: var(--space-md) 0 var(--safe-bottom);
+      background: var(--color-card-surface);
+      border-top: 0.5px solid var(--color-divider);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .tab-bar .tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--color-text-secondary);
+      font: var(--weight-medium) 10px/1 var(--font-system);
+    }
+    .tab-bar .tab.active { color: var(--color-accent); }
+    .tab-bar .tab svg { width: 26px; height: 26px; }
+
+    /* ========== BRIEFING-SPECIFIC ========== */
+
+    /* The brief reads like editorial prose — masthead, dateline, body */
+    .masthead {
+      padding: var(--space-xl) var(--space-lg) var(--space-md);
+    }
+    .masthead .kicker {
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: var(--space-sm);
+    }
+    .masthead .headline {
+      font: var(--weight-bold) var(--type-title-large)/var(--leading-snug) var(--font-system);
+      letter-spacing: -0.02em;
+    }
+    .masthead .headline em {
+      font-style: normal;
+      color: var(--color-text-secondary);
+      font-weight: var(--weight-regular);
+    }
+
+    .briefing-body {
+      padding: 0 var(--space-lg);
+    }
+    .briefing-body p {
+      font: var(--weight-regular) var(--type-body)/1.55 var(--font-system);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-md);
+    }
+    .briefing-body p .num {
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--weight-semibold);
+    }
+    .briefing-body p .quiet {
+      color: var(--color-text-secondary);
+    }
+
+    /* Summary line — the prescription, very compact */
+    .session-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: var(--space-md) 0;
+      border-top: 0.5px solid var(--color-divider);
+      gap: var(--space-md);
+    }
+    .session-line .name {
+      font: var(--weight-semibold) var(--type-headline)/1.2 var(--font-system);
+    }
+    .session-line .num {
+      font: var(--weight-regular) var(--type-headline)/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .session-line.muted .name,
+    .session-line.muted .num {
+      color: var(--color-text-secondary);
+      font-weight: var(--weight-regular);
+    }
+
+    .briefing-body .open-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font: var(--weight-semibold) var(--type-body)/1 var(--font-system);
+      color: var(--color-accent);
+      margin-top: var(--space-sm);
+    }
+    .briefing-body .open-cta::after {
+      content: '›';
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    /* Week ahead — set off in a quieter section */
+    .week-ahead {
+      padding: var(--space-xl) var(--space-lg) var(--space-md);
+      border-top: 0.5px solid var(--color-divider);
+      margin-top: var(--space-xl);
+    }
+    .week-ahead .section-label {
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: var(--space-md);
+    }
+    .week-ahead .standfirst {
+      font: var(--weight-regular) var(--type-body)/1.55 var(--font-system);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-lg);
+    }
+
+    .day-line {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-md);
+      padding: var(--space-md) 0;
+      border-top: 0.5px solid var(--color-divider);
+    }
+    .day-line .day {
+      width: 64px;
+      font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system);
+      color: var(--color-text-secondary);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .day-line .session {
+      flex: 1;
+      font: var(--weight-regular) var(--type-body)/1.4 var(--font-system);
+    }
+    .day-line .dur {
+      font: var(--weight-regular) var(--type-body)/1.4 var(--font-system);
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .day-line.rest .session {
+      color: var(--color-text-secondary);
+      font-style: italic;
+    }
+    .day-line .why {
+      flex-basis: 100%;
+      margin-top: 2px;
+      font: var(--weight-regular) var(--type-meta-small)/1.4 var(--font-system);
+      color: var(--color-text-secondary);
+    }
+    .day-line.with-why { flex-wrap: wrap; }
+
+    .footer-spacer { height: var(--space-xxl); }
+  </style>
+</head>
+<body>
+  <div class="meta">
+    <h1>Home session display — Option 2: Briefing</h1>
+    <p>Coach voice as the structure. Prose-led, prescription embedded in language. No icons, no chips, no dashboards.</p>
+  </div>
+
+  <div class="device">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>●●●●●</span>
+    </div>
+
+    <main class="screen">
+
+      <!-- Editorial masthead -->
+      <header class="masthead">
+        <div class="kicker">Tuesday, 28 April · Build, week 3 of 4</div>
+        <h1 class="headline">Today is a sharpener. <em>Hold the work at the edge of comfortable.</em></h1>
+      </header>
+
+      <!-- Briefing prose — the rationale IS the content -->
+      <section class="briefing-body">
+        <p>
+          Threshold intervals — <span class="num">4 × 8'</span> at <span class="num">4:35/km</span>, with three minutes of jog between. This is the third threshold session of the block, and the fitness shows: <span class="quiet">last Tuesday's average pace held at 4:38, heart rate two beats lower than week one.</span>
+        </p>
+        <p>
+          The work matters because Saturday's race-pace brick is approaching. Threshold pace is the ceiling you'll lean into off the bike. Sharpening it now means more headroom on race day.
+        </p>
+
+        <div class="session-line">
+          <span class="name">Threshold intervals 4×8'</span>
+          <span class="num">1h · run</span>
+        </div>
+
+        <a class="open-cta" href="#">Open session</a>
+      </section>
+
+      <!-- Week ahead — restated as reading, not as cards -->
+      <section class="week-ahead">
+        <div class="section-label">The week ahead</div>
+        <p class="standfirst">
+          Eight hours total. Wednesday's long ride banks aerobic durability; Saturday's brick is the test. Sunday is the longest run of the block.
+        </p>
+
+        <div class="day-line with-why">
+          <span class="day">Wed</span>
+          <span class="session">Long Z2 ride</span>
+          <span class="dur">2h30 · 200W</span>
+          <span class="why">Steady aerobic load — banks the durability you'll lean on in the back half of the race.</span>
+        </div>
+
+        <div class="day-line rest">
+          <span class="day">Thu</span>
+          <span class="session">Full rest</span>
+          <span class="dur">—</span>
+        </div>
+
+        <div class="day-line">
+          <span class="day">Fri</span>
+          <span class="session">Easy run</span>
+          <span class="dur">50' · 5:10/km</span>
+        </div>
+
+        <div class="day-line with-why">
+          <span class="day">Sat</span>
+          <span class="session">Race-pace brick</span>
+          <span class="dur">1h bike + 30' run</span>
+          <span class="why">Run off the bike at race pace — teaches your legs the transition before it counts.</span>
+        </div>
+
+        <div class="day-line with-why">
+          <span class="day">Sun</span>
+          <span class="session">Long Z2 run</span>
+          <span class="dur">1h45 · 5:30/km</span>
+          <span class="why">Longest run of the block — tomorrow's pace ceiling depends on this floor.</span>
+        </div>
+      </section>
+
+      <div class="footer-spacer"></div>
+
+    </main>
+
+    <nav class="tab-bar">
+      <div class="tab active">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 7v11h-6v-7H9v7H3V10z"/></svg>
+        <span>Today</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 6v10h14V10H5z"/></svg>
+        <span>Plan</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+        <span>Profile</span>
+      </div>
+    </nav>
+  </div>
+</body>
+</html>
