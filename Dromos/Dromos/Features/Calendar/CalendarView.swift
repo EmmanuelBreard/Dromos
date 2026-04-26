@@ -114,26 +114,35 @@ struct CalendarView: View {
     @ViewBuilder
     private func contentBody(plan: TrainingPlan, currentWeek: PlanWeek, weekStart: Date) -> some View {
         VStack(spacing: 0) {
-            CalendarWeekHeader(
-                weekNumber: currentWeek.weekNumber,
-                totalWeeks: plan.planWeeks.count,
-                phase: currentWeek.phase,
-                weekStartDate: weekStart,
-                titleVariant: titleVariant(for: currentWeekIndex, plan: plan),
-                onPrevious: { goToWeek(currentWeekIndex - 1, plan: plan) },
-                onNext:     { goToWeek(currentWeekIndex + 1, plan: plan) },
-                canGoPrevious: currentWeekIndex > 0,
-                canGoNext: currentWeekIndex < plan.planWeeks.count - 1
-            )
+            // Gate the header + paged TabView on first-paint initialisation. Without this gate
+            // the TabView renders at index 0, then `.task` snaps it to the current week, and
+            // the `.animation` modifier scrubs visibly through every intervening week.
+            if didInitializeWeekIndex {
+                CalendarWeekHeader(
+                    weekNumber: currentWeek.weekNumber,
+                    totalWeeks: plan.planWeeks.count,
+                    phase: currentWeek.phase,
+                    weekStartDate: weekStart,
+                    titleVariant: titleVariant(for: currentWeekIndex, plan: plan),
+                    onPrevious: { goToWeek(currentWeekIndex - 1, plan: plan) },
+                    onNext:     { goToWeek(currentWeekIndex + 1, plan: plan) },
+                    canGoPrevious: currentWeekIndex > 0,
+                    canGoNext: currentWeekIndex < plan.planWeeks.count - 1
+                )
 
-            TabView(selection: $currentWeekIndex) {
-                ForEach(plan.planWeeks.indices, id: \.self) { idx in
-                    weekContent(weekIndex: idx, plan: plan)
-                        .tag(idx)
+                TabView(selection: $currentWeekIndex) {
+                    ForEach(plan.planWeeks.indices, id: \.self) { idx in
+                        weekContent(weekIndex: idx, plan: plan)
+                            .tag(idx)
+                    }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.25), value: currentWeekIndex)
+            } else {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.25), value: currentWeekIndex)
         }
         .background(Color.pageSurface)
         .task {
