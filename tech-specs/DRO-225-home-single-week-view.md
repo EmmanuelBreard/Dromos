@@ -1,6 +1,6 @@
 # DRO-225: Home — single-week view with chevron + swipe navigation
 
-**Overall Progress:** `50%`
+**Overall Progress:** `90%`
 
 ## TLDR
 Replace Home's progressively-revealing multi-week ScrollView with a paged single-week view. Top header gets two lines: a chevron-flanked semantic title (`Current Week - 3/16`) and a Calendar-style phase + date label on one line. Navigation via prev/next chevrons or left/right swipe. Removes auto-scroll-to-today, the "Show next week" button, and the "Home" navigation title. Strava completion fetch is scoped to the displayed week with a per-week in-memory cache; cards skeleton-render via `.redacted` while loading.
@@ -213,41 +213,41 @@ private func goToWeek(_ idx: Int, plan: TrainingPlan) {
   - [x] 🟩 Chevrons disabled style: `Color.secondary.opacity(0.25)`; enabled: `Color.secondary.opacity(0.6)`.
   - [x] 🟩 SwiftUI preview with all 4 `TitleVariant` cases.
 
-- [ ] 🟥 **Step 2: Replace HomeView state**
-  - [ ] 🟥 Remove `@State lastVisibleWeekIndex`, `@State completionStatuses`.
-  - [ ] 🟥 Add `@State currentWeekIndex`, `@State completionCacheByWeek`, `@State loadingWeeks`.
+- [x] 🟩 **Step 2: Replace HomeView state**
+  - [x] 🟩 Remove `@State lastVisibleWeekIndex`, `@State completionStatuses`.
+  - [x] 🟩 Add `@State currentWeekIndex`, `@State completionCacheByWeek`, `@State loadingWeeks`.
 
-- [ ] 🟥 **Step 3: Replace HomeView body with paged TabView**
-  - [ ] 🟥 Remove the `ScrollViewReader` + multi-week `ForEach` block.
-  - [ ] 🟥 Build new `contentView(plan:)` per the shape above: `HomeWeekHeader` + `TabView` + `tabViewStyle(.page(indexDisplayMode: .never))`.
-  - [ ] 🟥 Initial `currentWeekIndex` = `plan.currentWeekIndex()` on first appear (set inside `.task` if `currentWeekIndex == 0` and plan is loaded — guard against re-init on every appear).
-  - [ ] 🟥 Inner per-week scroll: keep `ScrollView` + `LazyVStack` + existing `daySectionView` calls.
-  - [ ] 🟥 Update `daySectionView` to read status from `completionCacheByWeek[currentWeekIndex]`.
+- [x] 🟩 **Step 3: Replace HomeView body with paged TabView**
+  - [x] 🟩 Remove the `ScrollViewReader` + multi-week `ForEach` block.
+  - [x] 🟩 Build new `contentView(plan:)` per the shape above: `HomeWeekHeader` + `TabView` + `tabViewStyle(.page(indexDisplayMode: .never))`.
+  - [x] 🟩 Initial `currentWeekIndex` = `plan.currentWeekIndex()` on first appear (set inside `.task` if `currentWeekIndex == 0` and plan is loaded — guard against re-init on every appear).
+  - [x] 🟩 Inner per-week scroll: keep `ScrollView` + `LazyVStack` + existing `daySectionView` calls.
+  - [x] 🟩 Update `daySectionView` to read status from `completionCacheByWeek[currentWeekIndex]`.
 
-- [ ] 🟥 **Step 4: Remove `.navigationTitle("Home")`**
-  - [ ] 🟥 Drop the navigation title. Keep the toolbar Edit button (its `ToolbarItem` placement on `.topBarTrailing` works without a title).
-  - [ ] 🟥 Verify the Edit button still renders correctly without a title bar text. If iOS hides the toolbar entirely without a title, set `.navigationTitle("")` + `.navigationBarTitleDisplayMode(.inline)` to keep the bar visible.
+- [x] 🟩 **Step 4: Remove `.navigationTitle("Home")`**
+  - [x] 🟩 Drop the navigation title. Keep the toolbar Edit button (its `ToolbarItem` placement on `.topBarTrailing` works without a title).
+  - [x] 🟩 Verify the Edit button still renders correctly without a title bar text. If iOS hides the toolbar entirely without a title, set `.navigationTitle("")` + `.navigationBarTitleDisplayMode(.inline)` to keep the bar visible.
 
-- [ ] 🟥 **Step 5: Scoped completion + skeleton loading**
-  - [ ] 🟥 Implement `loadIfNeeded(weekIndex:plan:)` per spec.
-  - [ ] 🟥 Apply `.redacted(reason: loadingWeeks.contains(weekIndex) ? .placeholder : [])` on `SessionCardView` only (not RestDayCardView / RaceDayCardView / day header label).
-  - [ ] 🟥 Wire `.task` and `.onChange(of: currentWeekIndex)` to call `loadIfNeeded`.
-  - [ ] 🟥 Wire `.onChange(of: stravaService.isSyncing)` to purge cache and reload current week.
+- [x] 🟩 **Step 5: Scoped completion + skeleton loading**
+  - [x] 🟩 Implement `loadIfNeeded(weekIndex:plan:)` per spec.
+  - [x] 🟩 Apply `.redacted(reason: loadingWeeks.contains(weekIndex) ? .placeholder : [])` on `SessionCardView` only (not RestDayCardView / RaceDayCardView / day header label).
+  - [x] 🟩 Wire `.task` and `.onChange(of: currentWeekIndex)` to call `loadIfNeeded`.
+  - [x] 🟩 Wire `.onChange(of: stravaService.isSyncing)` to purge cache and reload current week.
 
-- [ ] 🟥 **Step 6: Scoped feedback generation**
-  - [ ] 🟥 Replace existing `generatePendingFeedback(plan:)` with `generatePendingFeedback(plan:weekIndex:)` per spec.
-  - [ ] 🟥 Call after each successful `loadIfNeeded` and on Strava sync completion.
+- [x] 🟩 **Step 6: Scoped feedback generation**
+  - [x] 🟩 Replace existing `generatePendingFeedback(plan:)` with `generatePendingFeedback(plan:weekIndex:)` per spec.
+  - [x] 🟩 Call after each successful `loadIfNeeded` and on Strava sync completion.
 
-- [ ] 🟥 **Step 7: Tab re-tap reset**
-  - [ ] 🟥 In `.onChange(of: scrollReset)`, set `currentWeekIndex = plan.currentWeekIndex()`. No scroll.
-  - [ ] 🟥 Confirm transition animates via the existing `withAnimation` wrapper on TabView selection.
+- [x] 🟩 **Step 7: Tab re-tap reset**
+  - [x] 🟩 In `.onChange(of: scrollReset)`, set `currentWeekIndex = plan.currentWeekIndex()`. No scroll.
+  - [x] 🟩 Confirm transition animates via the existing `withAnimation` wrapper on TabView selection.
 
-- [ ] 🟥 **Step 8: Delete dead code**
-  - [ ] 🟥 Remove `scrollToToday(proxy:plan:currentWeekIndex:)` and all references.
-  - [ ] 🟥 Remove `weekSectionHeader(week:currentWeekIndex:weekIndex:)`.
-  - [ ] 🟥 Remove `showNextWeekButton`.
-  - [ ] 🟥 Remove `weekDateRange` + `ordinal` from HomeView (now in `HomeWeekHeader`).
-  - [ ] 🟥 Remove the static `dayDateFormatter` + `monthFormatter` if no longer referenced (verify against `dayHeaderLabel` — `dayDateFormatter` is still used there, keep it; `monthFormatter` was only used by `weekDateRange`, drop it).
+- [x] 🟩 **Step 8: Delete dead code**
+  - [x] 🟩 Remove `scrollToToday(proxy:plan:currentWeekIndex:)` and all references.
+  - [x] 🟩 Remove `weekSectionHeader(week:currentWeekIndex:weekIndex:)`.
+  - [x] 🟩 Remove `showNextWeekButton`.
+  - [x] 🟩 Remove `weekDateRange` + `ordinal` from HomeView (now in `HomeWeekHeader`).
+  - [x] 🟩 Remove the static `dayDateFormatter` + `monthFormatter` if no longer referenced (verify against `dayHeaderLabel` — `dayDateFormatter` is still used there, keep it; `monthFormatter` was only used by `weekDateRange`, drop it).
 
 - [ ] 🟥 **Step 9: Manual QA**
   - [ ] 🟥 Land on current week; chevrons + swipe both navigate ±1 week.
