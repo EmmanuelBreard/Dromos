@@ -157,6 +157,8 @@ final class ProfileService: ObservableObject {
                 let friDuration: Int?
                 let satDuration: Int?
                 let sunDuration: Int?
+                let maxHr: Int?
+                let birthYear: Int?
             }
 
             let update = OnboardingUpdate(
@@ -177,7 +179,9 @@ final class ProfileService: ObservableObject {
                 thuDuration: data.thuDuration,
                 friDuration: data.friDuration,
                 satDuration: data.satDuration,
-                sunDuration: data.sunDuration
+                sunDuration: data.sunDuration,
+                maxHr: data.maxHr,
+                birthYear: data.birthYear
             )
 
             try await client
