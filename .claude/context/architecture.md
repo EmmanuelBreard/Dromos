@@ -34,8 +34,9 @@ Dromos/Dromos/
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 6-screen onboarding flow
-│   ├── Home/                         # Multi-week rolling dashboard
-│   │   ├── HomeView.swift            # Rolling week view with auto-scroll to today + edit mode (session reordering) + completion status display
+│   ├── Home/                         # Single-week paged dashboard
+│   │   ├── HomeView.swift            # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering)
+│   │   ├── HomeWeekHeader.swift      # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
 │   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status; completed cards always show Strava data with planned workout behind local disclosure
 │   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
 │   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering a GPS route from encoded polyline
@@ -99,7 +100,7 @@ Authenticated + plan → MainTabView
 - Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`; chatService is NOT injected)
 
 **Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Home or Calendar:
-- Home: toggles `homeScrollReset` → HomeView scrolls to today's day section and resets progressive disclosure
+- Home: toggles `homeScrollReset` → HomeView snaps `currentWeekIndex` back to current week, purges that week's completion cache, and re-fetches Strava completion (re-tap = refresh)
 - Calendar: toggles `calendarReset` → CalendarPlanView resets `currentWeekIndex` to the week containing today and collapses all expanded sessions
 
 **Local navigation**: `NavigationStack` inside individual tab views.

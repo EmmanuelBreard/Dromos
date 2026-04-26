@@ -1,6 +1,6 @@
 # DRO-225: Home — single-week view with chevron + swipe navigation
 
-**Overall Progress:** `90%`
+**Overall Progress:** `100%`
 
 ## TLDR
 Replace Home's progressively-revealing multi-week ScrollView with a paged single-week view. Top header gets two lines: a chevron-flanked semantic title (`Current Week - 3/16`) and a Calendar-style phase + date label on one line. Navigation via prev/next chevrons or left/right swipe. Removes auto-scroll-to-today, the "Show next week" button, and the "Home" navigation title. Strava completion fetch is scoped to the displayed week with a per-week in-memory cache; cards skeleton-render via `.redacted` while loading.
@@ -249,19 +249,19 @@ private func goToWeek(_ idx: Int, plan: TrainingPlan) {
   - [x] 🟩 Remove `weekDateRange` + `ordinal` from HomeView (now in `HomeWeekHeader`).
   - [x] 🟩 Remove the static `dayDateFormatter` + `monthFormatter` if no longer referenced (verify against `dayHeaderLabel` — `dayDateFormatter` is still used there, keep it; `monthFormatter` was only used by `weekDateRange`, drop it).
 
-- [ ] 🟥 **Step 9: Manual QA**
-  - [ ] 🟥 Land on current week; chevrons + swipe both navigate ±1 week.
-  - [ ] 🟥 Chevrons disabled at week 1 and last week (visually faded, non-tappable).
-  - [ ] 🟥 Title variants render: `Current Week - 3/16`, `Last Week - 2/16`, `Next Week - 4/16`, `Week 6 / 16`.
-  - [ ] 🟥 Phase + date row sits on one line at standard text size.
-  - [ ] 🟥 Skeleton placeholders appear over session cards on week change while Strava fetch is in flight (Strava-connected user only).
-  - [ ] 🟥 Backtracking to a previously visited week → instant render, no skeleton.
-  - [ ] 🟥 Strava sync completion → cache purges, current week refetches.
-  - [ ] 🟥 Strava-disconnected user: no skeletons, all sessions show as `.planned`.
-  - [ ] 🟥 Tab re-tap from another week → snaps back to current week.
-  - [ ] 🟥 Edit mode still works within the displayed week (move arrows visible, completed sessions suppress arrows).
-  - [ ] 🟥 Race day: `RaceDayCardView` renders correctly when displayed week contains race date.
-  - [ ] 🟥 No "Home" title in the navigation bar.
+- [x] 🟩 **Step 9: Manual QA**
+  - [x] 🟩 Land on current week; chevrons + swipe both navigate ±1 week.
+  - [x] 🟩 Chevrons disabled at week 1 and last week (visually faded, non-tappable).
+  - [x] 🟩 Title variants render: `Current Week - 3/16`, `Last Week - 2/16`, `Next Week - 4/16`, `Week 6 / 16`.
+  - [x] 🟩 Phase + date row sits on one line at standard text size.
+  - [x] 🟩 Skeleton placeholders appear over session cards on week change while Strava fetch is in flight (Strava-connected user only).
+  - [x] 🟩 Backtracking to a previously visited week → instant render, no skeleton.
+  - [x] 🟩 Strava sync completion → cache purges, current week refetches.
+  - [x] 🟩 Strava-disconnected user: no skeletons, all sessions show as `.planned`.
+  - [x] 🟩 Tab re-tap from another week → snaps back to current week.
+  - [x] 🟩 Edit mode still works within the displayed week (move arrows visible, completed sessions suppress arrows).
+  - [x] 🟩 Race day: `RaceDayCardView` renders correctly when displayed week contains race date.
+  - [x] 🟩 No "Home" title in the navigation bar.
 
-- [ ] 🟥 **Step 10: Update context docs**
-  - [ ] 🟥 Update `.claude/context/architecture.md` per the section above.
+- [x] 🟩 **Step 10: Update context docs**
+  - [x] 🟩 Update `.claude/context/architecture.md` per the section above.
