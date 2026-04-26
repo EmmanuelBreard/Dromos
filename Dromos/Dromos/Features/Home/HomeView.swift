@@ -150,13 +150,19 @@ struct HomeView: View {
         }
         .onChange(of: scrollReset) { _, _ in
             let target = plan.currentWeekIndex()
-            // Re-tap is the iOS "refresh" gesture — purge the cached entry for the
-            // current week so loadIfNeeded refetches. Other cached weeks remain.
+            // Re-tap is the iOS "refresh" gesture — purge the cached entry so the
+            // current week refetches. Other cached weeks remain.
             completionCacheByWeek.removeValue(forKey: target)
-            currentWeekIndex = target
-            Task {
-                await loadIfNeeded(weekIndex: target, plan: plan)
-                await generatePendingFeedback(plan: plan, weekIndex: target)
+            if currentWeekIndex == target {
+                // Already on target — onChange(of: currentWeekIndex) won't fire,
+                // so trigger the refetch explicitly.
+                Task {
+                    await loadIfNeeded(weekIndex: target, plan: plan)
+                    await generatePendingFeedback(plan: plan, weekIndex: target)
+                }
+            } else {
+                // Different week — onChange(of: currentWeekIndex) handles the refetch.
+                currentWeekIndex = target
             }
         }
         .onChange(of: stravaService.isSyncing) { oldValue, newValue in
@@ -183,8 +189,7 @@ struct HomeView: View {
                     daySectionView(
                         dayInfo: dayInfo,
                         plan: plan,
-                        weekIndex: weekIndex,
-                        weekNumber: week.weekNumber
+                        weekIndex: weekIndex
                     )
                     .id("\(week.weekNumber)-\(dayInfo.weekday)")
                 }
@@ -199,7 +204,7 @@ struct HomeView: View {
     /// A day section with header, session cards, and optional race day indicator.
     /// In edit mode, each session card shows up/down arrows to move between days.
     /// SessionCardView is skeleton-redacted while the week's Strava fetch is in flight.
-    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekIndex: Int, weekNumber: Int) -> some View {
+    private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekIndex: Int) -> some View {
         let week = plan.planWeeks[weekIndex]
         let days = plan.daysForWeek(week)
         return VStack(alignment: .leading, spacing: 12) {
