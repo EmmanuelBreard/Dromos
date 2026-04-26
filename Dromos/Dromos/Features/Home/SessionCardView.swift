@@ -212,8 +212,7 @@ struct SessionCardView: View {
         }
 
         // DRO-213 Phase 5: dual-path renderer reads session.structure first; falls back to template lookup.
-        // Steps + graph share the same `shouldShow` predicate so simple swims hide both consistently
-        // (resolves the prior inconsistency where SessionCardView showed graph but DaySessionRow hid it).
+        // Steps + graph share the same `shouldShow` predicate so simple swims hide both consistently.
         let canRender = session.structure != nil || template != nil
         if canRender, workoutLibrary.shouldShowWorkoutSteps(for: session) {
             let steps = workoutLibrary.stepSummaries(

@@ -13,13 +13,13 @@ enum AppTab: Hashable {
 }
 
 /// Main tab navigation for authenticated users.
-/// Provides access to Home, Calendar, and Profile sections.
+/// Provides access to Home (placeholder), Calendar (paged single-week plan view), and Profile sections.
 /// Owns the PlanService, ProfileService, and StravaService, sharing them between tabs.
 struct MainTabView: View {
     @ObservedObject var authService: AuthService
 
     /// Shared plan service for fetching and caching training plan data.
-    /// Owned here so both Home and Calendar tabs share the same data.
+    /// Owned here so it survives tab switches; the Calendar tab is the only consumer of plan data.
     @StateObject private var planService = PlanService()
 
     /// Shared profile service for fetching and caching user profile data.
@@ -31,27 +31,21 @@ struct MainTabView: View {
     @StateObject private var stravaService = StravaService()
 
 
-    /// Tracks the currently selected tab for scroll-reset on Home re-selection.
+    /// Tracks the currently selected tab.
     @State private var selectedTab: AppTab = .home
 
-    /// Toggled each time the Home tab is re-selected; the toggle (not the value) drives
-    /// scroll reset in HomeView via a @Binding that stays live even when the tab is inactive.
-    @State private var homeScrollReset: Bool = false
-
-    /// Toggled each time the Calendar tab is re-selected; the toggle (not the value) drives
-    /// week reset in CalendarPlanView via a @Binding that stays live even when the tab is inactive.
+    /// Toggled when the Calendar tab is re-selected. Triggers cache purge for the current week + snap to current week + Strava completion refetch in CalendarView.
     @State private var calendarReset: Bool = false
 
     /// Observed scene phase to trigger foreground-resume syncs.
     @Environment(\.scenePhase) private var scenePhase
 
     /// Custom binding that triggers view resets on tab navigation.
-    /// Fires for both tab switches (Calendar→Home) and same-tab re-taps (Home→Home).
+    /// Fires for both tab switches (Profile→Calendar) and same-tab re-taps (Calendar→Calendar).
     private var tabSelection: Binding<AppTab> {
         Binding(
             get: { selectedTab },
             set: { newValue in
-                if newValue == .home { homeScrollReset.toggle() }
                 if newValue == .calendar { calendarReset.toggle() }
                 selectedTab = newValue
             }
@@ -61,20 +55,15 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: tabSelection) {
             Tab("Home", systemImage: "house", value: .home) {
-                HomeView(
+                HomeView()
+            }
+
+            Tab("Calendar", systemImage: "calendar", value: .calendar) {
+                CalendarView(
                     authService: authService,
                     planService: planService,
                     profileService: profileService,
                     stravaService: stravaService,
-                    scrollReset: $homeScrollReset
-                )
-            }
-
-            Tab("Calendar", systemImage: "calendar", value: .calendar) {
-                CalendarPlanView(
-                    authService: authService,
-                    planService: planService,
-                    profileService: profileService,
                     calendarReset: $calendarReset
                 )
             }
