@@ -98,25 +98,6 @@ struct HomeView: View {
         selectedDay ?? todayWeekday()
     }
 
-    /// Non-optional binding over `selectedDay` for the paged hero `TabView`.
-    /// Reads the effective day (falling back to today) and canonicalises a write
-    /// of "today" back to `nil` so pill-tap and swipe both share the same source
-    /// of truth. Without this canonicalisation, a swipe to today would leave
-    /// `selectedDay == .someWeekday`, which would keep the today pill showing the
-    /// non-today selected outline — diverging from pill-tap behaviour.
-    private var effectiveSelectedDayBinding: Binding<Weekday> {
-        Binding(
-            get: { selectedDay ?? todayWeekday() },
-            set: { newValue in
-                if newValue == todayWeekday() {
-                    selectedDay = nil
-                } else {
-                    selectedDay = newValue
-                }
-            }
-        )
-    }
-
     var body: some View {
         NavigationStack {
             ScrollViewReader { scrollProxy in
@@ -137,7 +118,7 @@ struct HomeView: View {
                                 .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .accessibilityAddTraits(.isHeader)
-                            heroPager
+                            todayHero
                         } else if planService.isLoadingPlan {
                             // Cold-launch guard: while the plan fetch is in flight, show a
                             // centered spinner instead of flashing EmptyHomeHero. Without this
@@ -200,48 +181,17 @@ struct HomeView: View {
 
     // MARK: - Today Hero State Router
 
-    /// Paged horizontal-swipe pager wrapping the day hero. One page per weekday
-    /// in the current week (Mon→Sun), bound to the same `selectedDay` state that
-    /// powers the WeekDayStrip pill outline + day-label — so swipe and pill-tap
-    /// stay in lockstep.
-    ///
-    /// TabView paged style natively blocks past first/last index, mirroring
-    /// CalendarView's plan-boundary behaviour scoped to the 7-day week (no
-    /// wrap-around).
-    ///
-    /// Height: `minHeight: 480, idealHeight: 720, maxHeight: .infinity`. TabView
-    /// paged style needs a deterministic height; flexing within these bounds keeps
-    /// the tallest case (multi-step VO2 with workout shape + step list) on-screen
-    /// while letting shorter cards (rest day) breathe with whitespace below. The
-    /// outer ScrollView still owns vertical scroll, so taller content flows past
-    /// the hero's intrinsic height naturally.
-    @ViewBuilder
-    private var heroPager: some View {
-        TabView(selection: effectiveSelectedDayBinding) {
-            ForEach(Weekday.allCases, id: \.self) { weekday in
-                dayHero(for: weekday)
-                    .tag(weekday)
-            }
-        }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .frame(minHeight: 480, idealHeight: 720, maxHeight: .infinity)
-        // Match CalendarView's swipe animation — DESIGN.md §5 requires non-bouncy.
-        .animation(.easeInOut(duration: 0.25), value: effectiveSelectedDay)
-    }
-
-    /// Routes the central hero slot to the right card variant for `weekday`:
+    /// Routes the central hero slot to the right card variant based on the
+    /// `effectiveSelectedDay` (today by default; any other weekday when the user
+    /// has tapped a pill in the WeekDayStrip):
     /// - empty day → rest
     /// - race-day flag → race card
     /// - exactly 1 session → single planned/completed/missed card
     /// - 2+ sessions → multi-session stack with header + sorted cards
-    ///
-    /// Parameterised on `weekday` (not `effectiveSelectedDay`) so the paged
-    /// `TabView` can render every weekday's content concurrently — only the
-    /// selected page is visible, but adjacent pages are pre-rendered for the
-    /// swipe transition.
     @ViewBuilder
-    private func dayHero(for weekday: Weekday) -> some View {
-        let daysSessions = (currentWeek?.sessionsByDay[weekday] ?? [])
+    private var todayHero: some View {
+        let day = effectiveSelectedDay
+        let daysSessions = (currentWeek?.sessionsByDay[day] ?? [])
             .sorted { $0.orderInDay < $1.orderInDay }
 
         if daysSessions.isEmpty {
@@ -262,15 +212,15 @@ struct HomeView: View {
                 notes: race.notes
             )
         } else if daysSessions.count == 1 {
-            cardForSession(daysSessions[0], sequenceContext: nil, weekday: weekday)
+            cardForSession(daysSessions[0], sequenceContext: nil)
         } else {
-            multiSessionStack(sessions: daysSessions, weekday: weekday)
+            multiSessionStack(sessions: daysSessions)
         }
     }
 
     /// Multi-session day: caption header + sorted card list (planned-on-top, completed-below).
     @ViewBuilder
-    private func multiSessionStack(sessions: [PlanSession], weekday: Weekday) -> some View {
+    private func multiSessionStack(sessions: [PlanSession]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 // Day prefix dropped — the external day label above the hero already
@@ -301,8 +251,7 @@ struct HomeView: View {
             ForEach(Array(sorted.enumerated()), id: \.element.id) { index, session in
                 cardForSession(
                     session,
-                    sequenceContext: (index: index + 1, total: sorted.count),
-                    weekday: weekday
+                    sequenceContext: (index: index + 1, total: sorted.count)
                 )
             }
         }
@@ -318,8 +267,7 @@ struct HomeView: View {
     @ViewBuilder
     private func cardForSession(
         _ session: PlanSession,
-        sequenceContext: (index: Int, total: Int)?,
-        weekday: Weekday
+        sequenceContext: (index: Int, total: Int)?
     ) -> some View {
         let template = workoutLibrary.template(for: session.templateId)
         let ftp = profileService.user?.ftp
