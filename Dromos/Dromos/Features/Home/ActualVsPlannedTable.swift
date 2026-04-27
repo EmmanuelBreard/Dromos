@@ -20,6 +20,12 @@ import SwiftUI
 struct ActualVsPlannedTable: View {
     let session: PlanSession
     let activity: StravaActivity
+    /// Total planned distance (meters), summed by the caller from the workout's flattened
+    /// segments. `nil` (or `0`) → render `—` in the Planned column. Non-nil and > 0 →
+    /// formatted via `formatDistance(meters:)` for visual parity with the Actual column.
+    /// Lifted to the call site (rather than recomputing here) so this view stays a pure
+    /// renderer with no dependency on `WorkoutLibraryService`.
+    var plannedDistanceMeters: Int? = nil
 
     // MARK: - Body
 
@@ -77,6 +83,15 @@ struct ActualVsPlannedTable: View {
         let planned: String
     }
 
+    /// Renders the Planned column for the Distance row.
+    /// Mirrors the Actual column's `formatDistance` so a 2400m planned swim and a 2400m
+    /// completed swim render identically (`2.4 km`). Falls back to `—` when no planned
+    /// distance is available (e.g. duration-only run/bike workouts).
+    private var plannedDistanceCell: String {
+        guard let meters = plannedDistanceMeters, meters > 0 else { return "—" }
+        return Self.formatDistance(meters: Double(meters))
+    }
+
     /// Sport-aware row builders. Each branch decides which rows to surface and in what
     /// order. Bike skips the `Avg power` row when `averageWatts` is nil (no power meter).
     private var rows: [Row] {
@@ -91,7 +106,7 @@ struct ActualVsPlannedTable: View {
                 Row(
                     metric: "Distance",
                     actual: Self.formatDistance(meters: activity.distance),
-                    planned: "—"
+                    planned: plannedDistanceCell
                 ),
                 Row(
                     metric: "Avg pace",
@@ -122,7 +137,7 @@ struct ActualVsPlannedTable: View {
             out.append(Row(
                 metric: "Distance",
                 actual: Self.formatDistance(meters: activity.distance),
-                planned: "—"
+                planned: plannedDistanceCell
             ))
             out.append(Row(
                 metric: "HR avg",
@@ -140,7 +155,7 @@ struct ActualVsPlannedTable: View {
                 Row(
                     metric: "Distance",
                     actual: Self.formatDistance(meters: activity.distance),
-                    planned: "—"
+                    planned: plannedDistanceCell
                 ),
                 Row(
                     metric: "Avg pace",
@@ -325,7 +340,20 @@ private let _swimActivity = StravaActivity(
         .background(Color.pageSurface)
 }
 
-#Preview("Swim") {
+#Preview("Swim — with planned distance") {
+    // 2400m = 400 WU + 8×100 + 4×200 + 400 CD (Monday tempo swim from QA bug repro).
+    ActualVsPlannedTable(
+        session: _swimSession,
+        activity: _swimActivity,
+        plannedDistanceMeters: 2400
+    )
+    .padding(16)
+    .background(Color.cardSurface)
+    .padding()
+    .background(Color.pageSurface)
+}
+
+#Preview("Swim — no planned distance (fallback)") {
     ActualVsPlannedTable(session: _swimSession, activity: _swimActivity)
         .padding(16)
         .background(Color.cardSurface)

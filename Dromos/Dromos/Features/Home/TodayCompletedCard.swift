@@ -48,6 +48,15 @@ struct TodayCompletedCard: View {
         )
     }
 
+    /// Sum of `distanceMeters` across all flattened segments. Returns `nil` when zero so
+    /// `ActualVsPlannedTable` falls back to `—` (e.g. duration-only run/bike sessions where
+    /// no segment carries an explicit distance — the "2k @5:30/km" cue-text case is out of
+    /// scope; see DRO-231 QA notes).
+    private var plannedDistanceMeters: Int? {
+        let total = segments.compactMap { $0.distanceMeters }.reduce(0, +)
+        return total > 0 ? total : nil
+    }
+
     private var steps: [StepSummary] {
         workoutLibrary.stepSummaries(
             for: session, ftp: ftp, vma: vma, css: css, maxHr: maxHr
@@ -84,7 +93,11 @@ struct TodayCompletedCard: View {
                 isLoading: shouldExpectFeedback
             )
 
-            ActualVsPlannedTable(session: session, activity: activity)
+            ActualVsPlannedTable(
+                session: session,
+                activity: activity,
+                plannedDistanceMeters: plannedDistanceMeters
+            )
 
             if let polyline = activity.summaryPolyline, !polyline.isEmpty {
                 mapBlock(polyline: polyline)
