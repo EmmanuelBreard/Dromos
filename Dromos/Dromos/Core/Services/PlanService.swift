@@ -267,7 +267,9 @@ final class PlanService: ObservableObject {
     /// when no planned sessions of that sport exist).
     ///
     /// Pure function: no published-state mutation, no I/O.
-    func weeklySportTotals(
+    // TODO(follow-up): Promote (done, total) to a shared `SportTotals` struct returned directly,
+    // once a 2nd caller appears. The view currently re-wraps in SportProgressStrip.SportTotals.
+    nonisolated func weeklySportTotals(
         for week: PlanWeek,
         with activities: [StravaActivity]
     ) -> [String: (done: Int, total: Int)] {
@@ -294,10 +296,11 @@ final class PlanService: ObservableObject {
 
         for session in week.planSessions {
             let key = session.sport.lowercased()
-            guard result[key] != nil else { continue }
-            result[key]!.total += session.durationMinutes
+            // Explicit allowlist: strip only renders SWIM / BIKE / RUN. Skips strength, race, etc.
+            guard ["swim", "bike", "run"].contains(key) else { continue }
+            result[key, default: (0, 0)].total += session.durationMinutes
             if case .completed(let activity) = matched[session.id] ?? .planned {
-                result[key]!.done += Int(activity.movingTime / 60)
+                result[key, default: (0, 0)].done += Int((Double(activity.movingTime) / 60.0).rounded())
             }
         }
         return result
