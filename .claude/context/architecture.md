@@ -34,14 +34,27 @@ Dromos/Dromos/
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 6-screen onboarding flow
-│   ├── Home/                         # Lightweight placeholder (Dromos logo + 'Coming soon')
-│   │   ├── HomeView.swift            # Lightweight placeholder (Dromos logo + 'Coming soon')
-│   │   ├── SessionCardView.swift     # Rich session card + RestDayCardView + RaceDayCardView; renders green/red border + dimming per completion status; completed cards always show Strava data with planned workout behind local disclosure
-│   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
-│   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering a GPS route from encoded polyline
-│   │   ├── WorkoutStepsView.swift    # Workout step list with intensity dots (Phase 2)
-│   │   ├── WorkoutGraphView.swift    # Interactive intensity bar chart with tap-to-reveal popovers (Phase 2-3)
-│   │   └── IntensityColorHelper.swift # Shared intensity + phase color gradient functions; Color.intensity(for:isRecovery:) + Color.phaseColor(for:)
+│   ├── Home/                         # Today screen — sport-progress strip + today hero card(s) + week strip (DRO-231)
+│   │   ├── HomeView.swift            # Composes the Today screen: SportProgressStrip + state-routed today hero (planned/completed/missed/multi/rest/race/empty) + WeekDayStrip; lifecycle: .task / Strava-sync listener / homeReset re-tap (sync + scroll-to-top) / pull-to-refresh
+│   │   ├── SportProgressStrip.swift  # 3-column SWIM/BIKE/RUN done-vs-planned per week, accent fill bar capped at 100% (DRO-234)
+│   │   ├── TodayPlannedCard.swift    # Planned-state today card: header + name + rationale + WorkoutShape + WorkoutStepList (DRO-235)
+│   │   ├── TodayCompletedCard.swift  # Completed-state today card: CompletedTag + name + CoachFeedbackBlock + ActualVsPlannedTable + optional GPS map + planned-workout disclosure (DRO-235)
+│   │   ├── TodayMissedCard.swift     # Missed-state today card: MissedTag + dimmed name (no rationale/shape/steps/CTA) (DRO-235)
+│   │   ├── ActualVsPlannedTable.swift # Sport-aware 3-col grid (Metric/Actual/Planned) — run / bike (skip power if nil) / swim (DRO-235)
+│   │   ├── WorkoutShape.swift        # 56pt-tall horizontal intensity bar wrapper around segment data (DRO-233)
+│   │   ├── WorkoutStepList.swift     # Step list with nested RepeatBlock accent left-border + multiplier prefix (DRO-233)
+│   │   ├── CoachFeedbackBlock.swift  # Soft accent fill block with feedback / silent-skeleton loading / hidden states; honors accessibilityReduceMotion (DRO-233)
+│   │   ├── CompletedTag.swift        # Green ✓ "COMPLETED TODAY" pill (DRO-233)
+│   │   ├── MissedTag.swift           # Red ✗ "NOT COMPLETED" pill using Color.errorStrong (DRO-233)
+│   │   ├── SessionSequenceBadge.swift # Numbered circle (1/2) for multi-session days (DRO-233)
+│   │   ├── EmptyHomeHero.swift       # No-plan empty state: Dromos mark + "Generate your first plan" + CTA (DRO-236)
+│   │   ├── WeekDayStrip.swift        # 7-pill week row with PillState (today/completed/planned/missed/rest); pills not tappable in v1 (DRO-236)
+│   │   ├── SessionCardView.swift     # Legacy rich session card used by Calendar tab; also hosts restyled RestDayCardView + RaceDayCardView (DRO-236 restyles)
+│   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for Calendar's completed cards (legacy; ActualVsPlannedTable is the new equivalent on Home — see DRO-240 for consolidation)
+│   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering GPS route from encoded polyline; stroke now Color.accentColor (was .blue, changed in DRO-235 — affects Calendar too)
+│   │   ├── WorkoutStepsView.swift    # Legacy workout step list with intensity dots (Calendar uses this; Home uses the new WorkoutStepList)
+│   │   ├── WorkoutGraphView.swift    # Legacy interactive intensity bar chart with tap-to-reveal popovers (Calendar uses this; Home uses the new WorkoutShape)
+│   │   └── IntensityColorHelper.swift # Color extensions: Color.intensity(for:isRecovery:), Color.phaseColor(for:), Color.errorStrong (auto-synthesized from ErrorStrong.colorset)
 │   ├── Calendar/                     # Single-week paged plan view (formerly Home content)
 │   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering)
 │   │   └── CalendarWeekHeader.swift  # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
@@ -94,11 +107,12 @@ Authenticated + plan → MainTabView
 ```
 
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
-- Home (house icon) → `HomeView` (lightweight placeholder — Dromos logo + "Coming soon"; no service params)
-- Calendar (calendar icon) → `CalendarView` (receives shared `authService`, `planService`, `profileService`, `stravaService`; fetches activities and manages per-session completion status)
+- Home (house icon) → `HomeView` (Today screen; receives shared `authService`, `planService`, `profileService`, `stravaService`, plus a `homeReset` binding for tab re-tap)
+- Calendar (calendar icon) → `CalendarView` (receives shared `authService`, `planService`, `profileService`, `stravaService`, plus `calendarReset`; fetches activities and manages per-session completion status)
 - Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`; chatService is NOT injected)
 
-**Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to Calendar:
+**Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to:
+- Home: toggles `homeReset` → HomeView triggers a Strava sync, refetches completion + sport totals, and scrolls the outer `ScrollView` to top
 - Calendar: toggles `calendarReset` → CalendarView snaps `currentWeekIndex` back to the current week, purges that week's completion cache, and re-fetches Strava completion (re-tap = refresh)
 
 **Local navigation**: `NavigationStack` inside individual tab views.
@@ -244,6 +258,7 @@ All services follow:
 
 **Color Extensions:**
 - `Color.phaseColor(for:)` — Base=blue, Build=orange, Peak=red, Taper=purple, Recovery=green
+- `Color.errorStrong` — solid red (light `#FF3B30` / dark `#FF453A`); auto-synthesized from `Assets.xcassets/ErrorStrong.colorset` (DRO-233). Used for missed-state tags + week-strip pill states. Companion to existing `Color.errorSubtle` (alpha fill).
 - `PlanSession.sportColor` — swim=cyan, bike=green, run=orange, strength=purple, race=yellow
 - `PlanSession.typeColor` — Easy=green, Tempo=orange, Intervals=red, Race=yellow
 - `PlanSession.sportEmoji` — 🏊‍♂️, 🚴‍♂️, 🏃‍♂️, 💪, 🏁

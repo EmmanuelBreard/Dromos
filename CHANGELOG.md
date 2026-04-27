@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **New Home (Today) tab** — Replaces the placeholder with a focused Today screen: sport-progress strip on top (Swim/Bike/Run weekly hours done vs planned), week-day pill strip below, an external day label (`Today` / `Tomorrow` / `Yesterday` / `April 29th`), and the session card(s) for the selected day as the hero. Tap any pill to preview that day's session — pill stays outlined while previewed, the same components render planned / completed (with optional GPS map) / missed / rest / race / empty states. Coach feedback shows a silent shimmer while the AI generates it; actual-vs-planned comparison surfaces per-sport metrics (run/bike/swim) including segment-summed planned distance for swims. Pull-to-refresh syncs Strava; tab re-tap snaps back to today and refreshes (DRO-231).
+
 ### Changed
 - **Single-week paged view moved from Home to Calendar tab** — The paged single-week view introduced in DRO-225 now lives on the Calendar tab. The previous Calendar implementation (week-by-week list with inline-expandable session rows) has been removed. The Home tab is now a placeholder ("Coming soon") reserved for an upcoming dashboard. Re-tapping the Calendar tab snaps back to the current week and refreshes Strava completion data. (DRO-230)
 - **Home is now a focused, one-week view** — The (now Calendar) tab shows a single week at a time (current week by default). Navigate with chevron taps or left/right swipes. The header shows where you are in the plan ("Current Week", "Last Week", "Next Week", or "Week N / Total") plus phase + date range. Previously: a long scrolling list with a "Show next week" button and no way to look back. (DRO-225)

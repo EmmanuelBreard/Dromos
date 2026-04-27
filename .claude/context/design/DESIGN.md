@@ -35,6 +35,7 @@ These are universal. Every screen, every component, every prototype.
 | `Color.successSubtle` | `accent @ 0.12` | `accent @ 0.18` | Completed-state backgrounds |
 | `Color.warningSubtle` | `#FF9500 @ 0.12` | `#FF9F0A @ 0.18` | Edits, attention |
 | `Color.errorSubtle` | `#FF3B30 @ 0.12` | `#FF453A @ 0.18` | Missed, failed |
+| `Color.errorStrong` | `#FF3B30` | `#FF453A` | Missed-state tag glyph + label (`MissedTag`). Solid form of `errorSubtle`. |
 
 ### Decisions baked in
 

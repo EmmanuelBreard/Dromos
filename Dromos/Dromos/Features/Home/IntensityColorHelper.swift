@@ -58,4 +58,15 @@ extension Color {
         default:         return .primary
         }
     }
+
+    // MARK: - Asset-backed color tokens
+    //
+    // `Color.errorStrong` is generated automatically by Xcode from the `ErrorStrong`
+    // colorset in `Assets.xcassets` — see `GeneratedAssetSymbols.swift`. We do **not**
+    // declare a manual extension here because that would collide with the synthesized
+    // symbol. Light `#FF3B30` / dark `#FF453A` per DESIGN.md §1. Used by `MissedTag`
+    // and any other "not completed / failure" affordance.
+    //
+    // If you add another asset-backed color and want the same generated treatment,
+    // just add the colorset — no Swift extension needed.
 }

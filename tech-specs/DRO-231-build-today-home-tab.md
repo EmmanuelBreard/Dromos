@@ -1,6 +1,8 @@
 # DRO-231: Build Today (Home) tab — Anchor + Shape design
 
-**Overall Progress:** `0%`
+**Overall Progress:** `100%` 🟩
+
+> **Status: Shipped.** All 5 phases (DRO-233 through DRO-237) merged on `feature/DRO-231-build-today-home-tab`, plus 4 QA-driven follow-ups: tappable week-strip pills, external day label + week-strip reorder, planned distance from segments, and PR #67 (horizontal swipe) reverted at the user's request. Follow-up tickets DRO-238/239/240/241 capture deferred polish.
 
 ## TLDR
 
