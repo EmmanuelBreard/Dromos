@@ -45,12 +45,20 @@ struct HomeView: View {
     /// passes don't re-hit Supabase between completion lookups.
     @State private var activities: [StravaActivity] = []
 
+    /// Drives the sheet presentation of `PlanGenerationView` from `EmptyHomeHero`'s CTA.
+    /// PlanGenerationView owns its own services and dismisses itself on success — when
+    /// generation completes, `planService.trainingPlan` flips to non-nil and the empty
+    /// branch naturally retreats.
+    @State private var showPlanGeneration = false
+
     private let workoutLibrary = WorkoutLibraryService.shared
     private let calendar = Calendar.current
 
     /// Current week, derived from `currentWeekIndex()` since `TrainingPlan` doesn't
     /// expose a direct `currentWeek()` accessor. Returns nil when no plan is loaded
     /// or the index is out of bounds (defensive — should not happen in practice).
+    // TODO(DRO-241): cache this — body eval calls it multiple times per render and each
+    // call is O(N) over plan weeks. Pass as a parameter or memoize on plan.id change.
     private var currentWeek: PlanWeek? {
         guard let plan = planService.trainingPlan else { return nil }
         let idx = plan.currentWeekIndex()
@@ -63,20 +71,20 @@ struct HomeView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     VStack(spacing: 24) {
-                        if planService.trainingPlan == nil {
-                            // Empty state takes the whole canvas — strip + week-strip are hidden
-                            // because the user has no plan to derive them from.
-                            EmptyHomeHero(onGeneratePlan: {
-                                // TODO(DRO-237 follow-up): Wire to plan-generation flow.
-                                // RootView routes to PlanGenerationView when `authService.hasPlan == false`,
-                                // but there's no programmatic re-entry from inside MainTabView today.
-                                // Leaving as a no-op so the QA pass / human reviewer can decide whether
-                                // to surface a sheet, deep-link, or status mutation.
-                            })
-                        } else {
+                        if let _ = planService.trainingPlan {
                             SportProgressStrip(totals: sportTotalsForStrip())
                             todayHero
                             WeekDayStrip(days: weekPills)
+                        } else if planService.isLoadingPlan {
+                            // Cold-launch guard: while the plan fetch is in flight, show a
+                            // centered spinner instead of flashing EmptyHomeHero. Without this
+                            // the empty hero appears for ~1 frame then swaps to the today screen.
+                            ProgressView()
+                                .frame(maxWidth: .infinity, minHeight: 200)
+                        } else {
+                            // Empty state takes the whole canvas — strip + week-strip are hidden
+                            // because the user has no plan to derive them from.
+                            EmptyHomeHero(onGeneratePlan: { showPlanGeneration = true })
                         }
                     }
                     .padding(.horizontal, 16)
@@ -86,6 +94,13 @@ struct HomeView: View {
                 .background(Color.pageSurface)
                 .refreshable {
                     await stravaService.syncActivities()
+                }
+                .sheet(isPresented: $showPlanGeneration) {
+                    // PlanGenerationView owns its own PlanService/ProfileService/StravaService
+                    // (@StateObject inside). On successful generation, `authService.hasPlan` flips
+                    // and `planService.trainingPlan` becomes non-nil — at which point the empty
+                    // branch retreats. The view dismisses itself on success.
+                    PlanGenerationView(authService: authService)
                 }
                 .task {
                     await loadCompletionAndTotals()
@@ -137,6 +152,10 @@ struct HomeView: View {
             // Race day card. Coexists with the strip + week-strip — does NOT take over
             // the canvas. raceObjective falls back to the session.type when no plan-level
             // objective is captured (matches CalendarView behavior).
+            //
+            // Race-day takeover: when today contains a race session, render the race card alone.
+            // Any co-occurring sessions (e.g., shake-out runs) are intentionally hidden.
+            // Revisit if athletes report missing race-day shake-outs (TBD product call).
             RaceDayCardView(
                 raceObjective: race.type,
                 template: workoutLibrary.template(for: race.templateId),
@@ -175,6 +194,8 @@ struct HomeView: View {
                 if aCompleted != bCompleted { return !aCompleted }
                 return a.orderInDay < b.orderInDay
             }
+            // Badge index reflects PRESENTATION order (planned-on-top), not session.orderInDay.
+            // See DRO-237 spec: planned/missed cards above completed cards within the day.
             ForEach(Array(sorted.enumerated()), id: \.element.id) { index, session in
                 cardForSession(
                     session,
@@ -185,8 +206,10 @@ struct HomeView: View {
     }
 
     /// Builds the right card variant for a session based on its completion status.
-    /// Uses `AnyView` because the switch returns three different concrete view types —
-    /// acceptable here since the call site has at most a few children per render.
+    /// `@ViewBuilder` lets SwiftUI see all three concrete view types in the result builder
+    /// (wrapped in an internal `_ConditionalContent`), preserving view diffing across
+    /// status transitions without the type-erasure cost of `AnyView`.
+    @ViewBuilder
     private func cardForSession(
         _ session: PlanSession,
         sequenceContext: (index: Int, total: Int)?
@@ -199,28 +222,22 @@ struct HomeView: View {
 
         switch completionStatuses[session.id] ?? .planned {
         case .planned:
-            return AnyView(
-                TodayPlannedCard(
-                    session: session,
-                    template: template,
-                    ftp: ftp, vma: vma, css: css, maxHr: maxHr,
-                    sequenceContext: sequenceContext
-                )
+            TodayPlannedCard(
+                session: session,
+                template: template,
+                ftp: ftp, vma: vma, css: css, maxHr: maxHr,
+                sequenceContext: sequenceContext
             )
         case .completed(let activity):
-            return AnyView(
-                TodayCompletedCard(
-                    session: session,
-                    activity: activity,
-                    template: template,
-                    ftp: ftp, vma: vma, css: css, maxHr: maxHr,
-                    sequenceContext: sequenceContext
-                )
+            TodayCompletedCard(
+                session: session,
+                activity: activity,
+                template: template,
+                ftp: ftp, vma: vma, css: css, maxHr: maxHr,
+                sequenceContext: sequenceContext
             )
         case .missed:
-            return AnyView(
-                TodayMissedCard(session: session, sequenceContext: sequenceContext)
-            )
+            TodayMissedCard(session: session, sequenceContext: sequenceContext)
         }
     }
 
@@ -241,6 +258,10 @@ struct HomeView: View {
     /// - No current week → no-op (state unchanged).
     /// - Empty/failed Strava fetch → all sessions resolve to `.planned` or `.missed`
     ///   per `SessionMatcher`'s past/future cutoff.
+    // TODO(DRO-241): de-dup the cold-launch double-fetch. HomeView.task fires this once,
+    // then MainTabView's loadData() triggers Strava sync → onChange(isSyncing) fires this
+    // again. Acceptable trade-off today (second pass returns post-sync data) but worth a
+    // dedupe gate (e.g., in-flight request token).
     private func loadCompletionAndTotals() async {
         guard let week = currentWeek else { return }
         guard let weekStart = week.startDateAsDate else { return }
@@ -384,6 +405,7 @@ struct HomeView: View {
 
     /// Today's weekday derived from `Calendar.current`. `Weekday.from(date:)` does not
     /// exist in the model — we compute it here so HomeView is self-contained.
+    // TODO(DRO-241): move into `Weekday` as `static func today(calendar:)` for reuse.
     private func todayWeekday() -> Weekday {
         let comp = calendar.component(.weekday, from: Date())
         // Calendar weekday: Sun=1 ... Sat=7. Map to our Mon-first enum.
@@ -395,7 +417,12 @@ struct HomeView: View {
         case 5: return .thursday
         case 6: return .friday
         case 7: return .saturday
-        default: return .monday
+        default:
+            // Calendar.weekday is contractually 1...7 — getting here means Apple changed
+            // the API or the calendar was misconfigured. Crash in debug to catch it; in
+            // release fall through to Monday as a safe default rather than abort.
+            assertionFailure("Unexpected Calendar weekday component: \(comp)")
+            return .monday
         }
     }
 }
