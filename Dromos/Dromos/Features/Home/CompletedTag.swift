@@ -28,7 +28,9 @@ struct CompletedTag: View {
         }
         .foregroundColor(.accentColor)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(label.lowercased().capitalized)
+        // Hardcoded sentence-case mapping for the two known labels — `.capitalized`
+        // produces "Completed Today" (Title Case) which regresses VoiceOver tone.
+        .accessibilityLabel(label == "COMPLETED" ? "Completed" : "Completed today")
     }
 }
 

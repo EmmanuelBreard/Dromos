@@ -62,6 +62,18 @@ struct HomeView: View {
     private let workoutLibrary = WorkoutLibraryService.shared
     private let calendar = Calendar.current
 
+    /// Cached formatter for single-session card date captions ("MON 28 APR").
+    /// Hoisted to a static `let` so it's allocated once per process — `DateFormatter`
+    /// init is expensive and was previously rebuilt on every body render. Locale is
+    /// pinned to `en_US_POSIX` so the format stays stable in English regardless of
+    /// the device locale (matches the rest of the app's English copy).
+    private static let dayHeaderFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "EEE d MMM"
+        return f
+    }()
+
     /// Current week, derived from `currentWeekIndex()` since `TrainingPlan` doesn't
     /// expose a direct `currentWeek()` accessor. Returns nil when no plan is loaded
     /// or the index is out of bounds (defensive — should not happen in practice).
@@ -169,10 +181,10 @@ struct HomeView: View {
             .sorted { $0.orderInDay < $1.orderInDay }
 
         if daysSessions.isEmpty {
-            // RestDayCardView renders its own header — works for any day, since the
-            // copy is "Rest day" rather than "TODAY · Rest day". Out of scope to
-            // re-style for previewed days (see DRO-231-week-strip-tap spec).
-            RestDayCardView(notes: nil)
+            // Rest day. headerLabel swaps the "TODAY" caption for the previewed-day
+            // date (e.g. "MON 28 APR") when the user is previewing a non-today pill.
+            // Same helper the today cards use; nil preserves the "TODAY" header.
+            RestDayCardView(notes: nil, headerLabel: singleSessionHeaderLabel())
         } else if let race = daysSessions.first(where: { $0.sport.lowercased() == "race" }) {
             // Race day card. Coexists with the strip + week-strip — does NOT take over
             // the canvas. raceObjective falls back to the session.type when no plan-level
@@ -479,9 +491,7 @@ struct HomeView: View {
             return weekday.abbreviation.uppercased()
         }
         let date = weekday.date(relativeTo: weekStart)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE d MMM"
-        return formatter.string(from: date).uppercased()
+        return Self.dayHeaderFormatter.string(from: date).uppercased()
     }
 
     // MARK: - Formatting Helpers
