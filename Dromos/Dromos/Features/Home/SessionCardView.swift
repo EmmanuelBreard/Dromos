@@ -247,35 +247,16 @@ struct SessionCardView: View {
 // MARK: - Rest Day Card
 
 /// Restyled rest-day card for the Today/Home tab.
-/// Header row: TODAY label + "Rest day" pill, then bold "Rest day" title,
-/// optional rationale text (rendered only when non-nil/non-empty — no fallback copy).
+/// "Rest day" title is the only top-level text in the card; rationale text renders below
+/// only when non-nil/non-empty. The day anchor (Today / Yesterday / April 29th) is
+/// rendered as an external section header above the card by `HomeView`, not inside it.
 /// Notes default to nil so legacy Calendar callers still compile.
 struct RestDayCardView: View {
     var notes: String? = nil
-    /// Override for the small uppercase header label (defaults to "TODAY").
-    /// HomeView passes the previewed-day date caption (e.g. "MON 28 APR") when the
-    /// user is previewing a non-today rest day via the WeekDayStrip. Calendar
-    /// callers leave this nil to preserve the legacy "TODAY" header.
-    var headerLabel: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header row: TODAY tag + spacer + "Rest day" subtitle
-            HStack {
-                Text(headerLabel ?? "TODAY")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(1.2)
-
-                Spacer()
-
-                Text("Rest day")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            // Session name
+            // Session name — sole top-level label inside the card.
             Text("Rest day")
                 .font(.title2)
                 .fontWeight(.bold)

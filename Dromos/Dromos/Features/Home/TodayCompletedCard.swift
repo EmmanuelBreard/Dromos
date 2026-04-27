@@ -29,12 +29,6 @@ struct TodayCompletedCard: View {
     let css: Int?
     let maxHr: Int?
     let sequenceContext: (index: Int, total: Int)?
-    /// Optional override for the single-session header label (e.g. `"MON 28 APR"`).
-    /// When non-nil, the header renders the date caption alongside a shortened
-    /// `CompletedTag(label: "COMPLETED")` (the temporal "TODAY" word would be wrong
-    /// when previewing a past day). `nil` keeps the original `CompletedTag()` so
-    /// existing call sites are unchanged. Only consulted when `sequenceContext == nil`.
-    var headerLabel: String? = nil
 
     @State private var showPlannedWorkout = false
 
@@ -46,6 +40,15 @@ struct TodayCompletedCard: View {
         workoutLibrary.flattenedSegments(
             for: session, ftp: ftp, vma: vma, css: css, maxHr: maxHr
         )
+    }
+
+    /// Sum of `distanceMeters` across all flattened segments. Returns `nil` when zero so
+    /// `ActualVsPlannedTable` falls back to `—` (e.g. duration-only run/bike sessions where
+    /// no segment carries an explicit distance — the "2k @5:30/km" cue-text case is out of
+    /// scope; see DRO-231 QA notes).
+    private var plannedDistanceMeters: Int? {
+        let total = segments.compactMap { $0.distanceMeters }.reduce(0, +)
+        return total > 0 ? total : nil
     }
 
     private var steps: [StepSummary] {
@@ -84,7 +87,11 @@ struct TodayCompletedCard: View {
                 isLoading: shouldExpectFeedback
             )
 
-            ActualVsPlannedTable(session: session, activity: activity)
+            ActualVsPlannedTable(
+                session: session,
+                activity: activity,
+                plannedDistanceMeters: plannedDistanceMeters
+            )
 
             if let polyline = activity.summaryPolyline, !polyline.isEmpty {
                 mapBlock(polyline: polyline)
@@ -122,13 +129,6 @@ struct TodayCompletedCard: View {
                 Text("\(session.sport.capitalized) · \(session.type.lowercased())")
                     .font(.caption)
                     .foregroundColor(.secondary)
-            } else if let headerLabel {
-                Text(headerLabel)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .tracking(1)
-                    .foregroundColor(.secondary)
-                CompletedTag(label: "COMPLETED")
             } else {
                 CompletedTag()
             }

@@ -11,39 +11,27 @@ import SwiftUI
 /// Uppercase, tracked, with the SF Symbols filled checkmark — same visual weight as
 /// `MissedTag` so the two read as a paired family across Today states.
 ///
-/// `label` defaults to `"COMPLETED TODAY"` for the today-hero use case. Callers
-/// previewing a past day pass `"COMPLETED"` to drop the temporal word — the date
-/// caption renders separately in that case (see `TodayCompletedCard`).
+/// Always renders the static `"COMPLETED"` label. The temporal anchor (e.g. "Today",
+/// "Yesterday", "April 29th") is now rendered as an external section header above the
+/// hero card, so this tag is purely a state badge.
 struct CompletedTag: View {
-    var label: String = "COMPLETED TODAY"
-
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.caption)
-            Text(label)
+            Text("COMPLETED")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .tracking(1)
         }
         .foregroundColor(.accentColor)
         .accessibilityElement(children: .combine)
-        // Hardcoded sentence-case mapping for the two known labels — `.capitalized`
-        // produces "Completed Today" (Title Case) which regresses VoiceOver tone.
-        .accessibilityLabel(label == "COMPLETED" ? "Completed" : "Completed today")
+        .accessibilityLabel("Completed")
     }
 }
 
-#Preview("CompletedTag — today (default)") {
+#Preview("CompletedTag") {
     CompletedTag()
-        .padding(16)
-        .background(Color.cardSurface)
-        .padding()
-        .background(Color.pageSurface)
-}
-
-#Preview("CompletedTag — past day (shorter label)") {
-    CompletedTag(label: "COMPLETED")
         .padding(16)
         .background(Color.cardSurface)
         .padding()

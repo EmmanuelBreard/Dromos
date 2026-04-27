@@ -21,12 +21,10 @@ struct TodayPlannedCard: View {
     let css: Int?
     let maxHr: Int?
     /// Multi-session context: 1-based `index` within the day, plus `total` count.
-    /// `nil` means single-session day → render the `TODAY` label instead of a numbered badge.
+    /// `nil` means single-session day → header collapses to just the right-side caption.
+    /// The day anchor (Today / Yesterday / April 29th) is rendered as an external
+    /// section header above the card by `HomeView`, not inside the card.
     let sequenceContext: (index: Int, total: Int)?
-    /// Optional override for the single-session header label (e.g. `"MON 28 APR"`).
-    /// `nil` keeps the original `"TODAY"` label so existing callers behave unchanged.
-    /// Only consulted when `sequenceContext == nil` — the badge owns the multi-session header.
-    var headerLabel: String? = nil
 
     /// Cached library reference. Singleton — safe to capture as a stored property.
     private let workoutLibrary = WorkoutLibraryService.shared
@@ -97,12 +95,6 @@ struct TodayPlannedCard: View {
                 SessionSequenceBadge(index: ctx.index)
                 Text("\(session.sport.capitalized) · \(session.type.lowercased())")
                     .font(.caption)
-                    .foregroundColor(.secondary)
-            } else {
-                Text(headerLabel ?? "TODAY")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .tracking(1)
                     .foregroundColor(.secondary)
             }
             Spacer(minLength: 8)
@@ -176,16 +168,25 @@ private let _previewEveningRun = PlanSession(
 )
 
 #Preview("Single planned (run intervals)") {
+    // Mirrors HomeView's hero layout: external "Today" section header above the
+    // card. Demonstrates that the in-card date caption is gone and the external
+    // label carries the temporal anchor.
     ScrollView {
-        TodayPlannedCard(
-            session: _previewVO2Session,
-            template: nil,
-            ftp: nil,
-            vma: 17.0,
-            css: nil,
-            maxHr: 188,
-            sequenceContext: nil
-        )
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Today")
+                .font(.title3)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            TodayPlannedCard(
+                session: _previewVO2Session,
+                template: nil,
+                ftp: nil,
+                vma: 17.0,
+                css: nil,
+                maxHr: 188,
+                sequenceContext: nil
+            )
+        }
         .padding(16)
     }
     .background(Color.pageSurface)
