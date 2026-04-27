@@ -102,11 +102,24 @@ struct TodayPlannedCard: View {
                     .foregroundColor(.secondary)
             }
             Spacer(minLength: 8)
-            Text("\(session.formattedDuration) · \(session.sport.lowercased())")
+            Text("\(Self.formatDurationApostrophe(minutes: session.durationMinutes)) · \(session.sport.lowercased())")
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundColor(.secondary)
         }
+    }
+
+    /// Mirrors the apostrophe glyph format used by `TodayCompletedCard` (and the Phase 1
+    /// step list) so the right-side caption reads identically across the three card
+    /// variants. Intentionally local — `session.formattedDuration` is still consumed
+    /// elsewhere with the verbose `"60 min"` style.
+    private static func formatDurationApostrophe(minutes: Int) -> String {
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            return m == 0 ? "\(h)h" : "\(h)h \(m)'"
+        }
+        return "\(minutes)'"
     }
 }
 

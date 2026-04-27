@@ -64,7 +64,7 @@ struct TodayCompletedCard: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             header
 
             Text(session.displayName)
@@ -86,6 +86,8 @@ struct TodayCompletedCard: View {
 
             disclosureButton
 
+            // TODO: WorkoutLibraryService.flattenedSegments/stepSummaries are not memoized.
+            // For ≤30-segment workouts this is sub-ms; revisit if profiling shows render cost on disclosure toggle.
             if showPlannedWorkout {
                 if !segments.isEmpty {
                     WorkoutShape(segments: segments)
@@ -152,8 +154,8 @@ struct TodayCompletedCard: View {
                 .fontWeight(.semibold)
                 .monospacedDigit()
                 .foregroundColor(.primary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
                 .background(
                     Capsule(style: .continuous)
                         .fill(.ultraThinMaterial)

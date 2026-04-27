@@ -32,8 +32,8 @@ struct ActualVsPlannedTable: View {
                 headerCell("PLANNED", alignment: .trailing)
             }
 
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                Divider()
+            ForEach(rows) { row in
+                Divider().gridCellColumns(3)
                 GridRow {
                     Text(row.metric)
                         .font(.body)
@@ -67,7 +67,8 @@ struct ActualVsPlannedTable: View {
     // MARK: - Row construction
 
     /// A single rendered row in the table.
-    private struct Row {
+    private struct Row: Identifiable {
+        let id = UUID()
         let metric: String
         let actual: String
         let planned: String
@@ -163,6 +164,9 @@ struct ActualVsPlannedTable: View {
     // MARK: - Format helpers
     // Static so they're easy to unit-test if we ever pull them out — they have no
     // dependency on view state.
+    //
+    // TODO(DRO-240): Consolidate with ActualMetricsView formatters into Core/Formatting/ActivityFormatters.swift.
+    // Two surfaces currently maintain near-identical helpers with subtly different output strings.
 
     /// Formats moving time as `Hh MM'` when ≥ 1 hour, `MM'` otherwise. Always uses
     /// the apostrophe time-glyph for consistency with the Phase 1 step list.
@@ -198,21 +202,23 @@ struct ActualVsPlannedTable: View {
     }
 
     /// Converts an average speed in m/s into a `M:SS/km` pace string for run.
+    /// Rounds total seconds first, then decomposes — avoids the boundary bug where
+    /// truncated minutes + rounded seconds produce e.g. `5:00/km` for 359.7 s.
     static func formatPacePerKm(speedMps: Double?) -> String {
         guard let mps = speedMps, mps > 0 else { return "—" }
         let secondsPerKm = 1000.0 / mps
-        let minutes = Int(secondsPerKm) / 60
-        let seconds = Int(secondsPerKm.rounded()) % 60
-        return String(format: "%d:%02d/km", minutes, seconds)
+        let total = Int(secondsPerKm.rounded())
+        return String(format: "%d:%02d/km", total / 60, total % 60)
     }
 
     /// Converts an average speed in m/s into a `M:SS/100m` pace string for swim.
+    /// Rounds total seconds first, then decomposes — avoids the boundary bug where
+    /// truncated minutes + rounded seconds produce e.g. `5:00/100m` for 359.7 s.
     static func formatPacePer100m(speedMps: Double?) -> String {
         guard let mps = speedMps, mps > 0 else { return "—" }
         let secondsPer100 = 100.0 / mps
-        let minutes = Int(secondsPer100) / 60
-        let seconds = Int(secondsPer100.rounded()) % 60
-        return String(format: "%d:%02d/100m", minutes, seconds)
+        let total = Int(secondsPer100.rounded())
+        return String(format: "%d:%02d/100m", total / 60, total % 60)
     }
 
     /// Formats average heart rate. Returns `"—"` when nil (manual entry, no HR strap).
