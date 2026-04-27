@@ -14,7 +14,9 @@ import SwiftUI
 /// One pill in the WeekDayStrip. Carries weekday label, an SF Symbol glyph,
 /// optional duration label, and the visual state (today / completed / planned / missed / rest).
 struct DayPill: Identifiable {
-    let id = UUID()
+    /// Stable identity derived from `weekday` (each weekday is unique within a 7-pill strip).
+    /// Avoids regenerating IDs on parent re-renders, which would defeat SwiftUI diffing.
+    var id: Weekday { weekday }
     let weekday: Weekday
     let glyph: String
     let durationLabel: String?
@@ -41,7 +43,10 @@ struct WeekDayStrip: View {
     let days: [DayPill]
 
     var body: some View {
-        HStack(spacing: 8) {
+        // Debug-only invariant: callers must provide exactly 7 pills (one per weekday).
+        // `assert` is stripped from release builds, so this is free at runtime in production.
+        assert(days.count == 7, "WeekDayStrip expects exactly 7 pills")
+        return HStack(spacing: 8) {
             ForEach(days) { pill in
                 pillView(for: pill)
             }
@@ -53,25 +58,30 @@ struct WeekDayStrip: View {
     @ViewBuilder
     private func pillView(for pill: DayPill) -> some View {
         VStack(spacing: 2) {
+            // Day-of-week label (Mon/Tue/...)
+            // For `.today` we explicitly invert to `cardSurface` because the pill background
+            // is `Color.primary`. SwiftUI's HierarchicalShapeStyle does not auto-invert against
+            // custom backgrounds, so we override here rather than rely on `.foregroundStyle(.secondary)`.
             Text(pill.weekday.abbreviation)
                 .font(.caption2)
-                .foregroundColor(textColor(for: pill.state, role: .secondary))
+                .modifier(DowTextStyle(state: pill.state))
                 .textCase(.uppercase)
                 .tracking(0.8)
 
+            // Sport / state glyph
             Image(systemName: pill.glyph)
                 .font(.caption.weight(.semibold))
-                .foregroundColor(textColor(for: pill.state, role: .primary))
+                .modifier(GlyphTextStyle(state: pill.state))
 
             if let durationLabel = pill.durationLabel {
                 Text(durationLabel)
                     .font(.caption2)
-                    .foregroundColor(textColor(for: pill.state, role: .tertiary))
+                    .modifier(DurationTextStyle(state: pill.state))
             }
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: 60)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
         .background(background(for: pill.state))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -94,24 +104,57 @@ struct WeekDayStrip: View {
             Color.cardSurface
         }
     }
+}
 
-    /// Text role within a pill — used to map secondary/tertiary text to the right color
-    /// while overriding everything to `cardSurface` when the pill is "today".
-    private enum TextRole { case primary, secondary, tertiary }
+// MARK: - Pill text styles
 
-    private func textColor(for state: PillState, role: TextRole) -> Color {
-        if state == .today {
-            // White-on-dark — use cardSurface so it adapts in light/dark.
-            return .cardSurface
+/// Day-of-week label styling.
+/// `.today` inverts to `cardSurface` (sits on `Color.primary` background); everything else
+/// uses the SwiftUI hierarchical `.secondary` shape style.
+private struct DowTextStyle: ViewModifier {
+    let state: PillState
+
+    func body(content: Content) -> some View {
+        switch state {
+        case .today:
+            content.foregroundStyle(Color.cardSurface)
+        default:
+            content.foregroundStyle(.secondary)
         }
-        if state == .rest {
-            // Rest day uses muted text across all roles.
-            return .secondary
+    }
+}
+
+/// Glyph styling.
+/// `.today` inverts to `cardSurface`; `.rest` uses `.tertiary` (genuinely lower contrast,
+/// distinguishing it from `.planned` even on the same `cardSurface` background); everything
+/// else uses `.primary`.
+private struct GlyphTextStyle: ViewModifier {
+    let state: PillState
+
+    func body(content: Content) -> some View {
+        switch state {
+        case .today:
+            content.foregroundStyle(Color.cardSurface)
+        case .rest:
+            content.foregroundStyle(.tertiary)
+        case .completed, .planned, .missed:
+            content.foregroundStyle(.primary)
         }
-        switch role {
-        case .primary:   return .primary
-        case .secondary: return .secondary
-        case .tertiary:  return .secondary.opacity(0.7)
+    }
+}
+
+/// Duration-label styling.
+/// `.today` uses `cardSurface.opacity(0.6)` for de-emphasis on the inverted background;
+/// everything else uses `.tertiary`.
+private struct DurationTextStyle: ViewModifier {
+    let state: PillState
+
+    func body(content: Content) -> some View {
+        switch state {
+        case .today:
+            content.foregroundStyle(Color.cardSurface.opacity(0.6))
+        default:
+            content.foregroundStyle(.tertiary)
         }
     }
 }

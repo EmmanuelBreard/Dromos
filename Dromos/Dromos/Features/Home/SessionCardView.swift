@@ -57,7 +57,7 @@ struct SessionCardView: View {
                     .font(.title2)
                     .frame(width: 40, height: 40)
                     .background(session.sportColor.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 2) {
                     // Workout name
@@ -253,10 +253,6 @@ struct SessionCardView: View {
 struct RestDayCardView: View {
     var notes: String? = nil
 
-    init(notes: String? = nil) {
-        self.notes = notes
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Header row: TODAY tag + spacer + "Rest day" subtitle
@@ -314,14 +310,17 @@ struct RaceDayCardView: View {
             HStack(spacing: 12) {
                 Image(systemName: "trophy.fill")
                     .font(.title2)
+                    // TODO(DRO-239): Replace .orange with design-token color (DESIGN.md §1).
                     .foregroundColor(.orange)
                     .frame(width: 40, height: 40)
+                    // TODO(DRO-239): Replace Color.orange with design-token color (DESIGN.md §1).
                     .background(Color.orange.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Race Day")
                         .font(.headline)
+                        // TODO(DRO-239): Replace .orange with design-token color (DESIGN.md §1).
                         .foregroundColor(.orange)
 
                     if let objective = raceObjective {
