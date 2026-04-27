@@ -12,13 +12,15 @@ import SwiftUI
 ///
 /// Top → bottom layout:
 /// 1. `SportProgressStrip` — week-to-date completion vs. plan, by sport.
-/// 2. `todayHero` — state-routed card(s) for today's session(s):
+/// 2. `WeekDayStrip` — 7-pill weekly overview (drives `selectedDay`).
+/// 3. External day label — `Today` / `Tomorrow` / `Yesterday` / `April 29th`.
+///    Section header above the hero card; replaces the in-card date captions.
+/// 4. `todayHero` — state-routed card(s) for the previewed day's session(s):
 ///    - Empty plan → `EmptyHomeHero`
-///    - No sessions today → `RestDayCardView`
+///    - No sessions → `RestDayCardView`
 ///    - Race day → `RaceDayCardView`
 ///    - 1 session → `TodayPlannedCard` / `TodayCompletedCard` / `TodayMissedCard`
 ///    - 2+ sessions → header + ordered stack (planned-on-top, then completed)
-/// 3. `WeekDayStrip` — 7-pill weekly overview.
 ///
 /// Lifecycle:
 /// - `.task` → first load.
@@ -62,15 +64,18 @@ struct HomeView: View {
     private let workoutLibrary = WorkoutLibraryService.shared
     private let calendar = Calendar.current
 
-    /// Cached formatter for single-session card date captions ("MON 28 APR").
+    /// Cached formatter for the external day label's full-date variant ("April 29").
+    /// The ordinal suffix ("th") is appended separately by `dayLabel(for:)`; this
+    /// formatter only emits `MMMM d` so the ordinal logic stays in Swift rather than
+    /// being baked into a locale-specific `DateFormatter` setting.
     /// Hoisted to a static `let` so it's allocated once per process — `DateFormatter`
     /// init is expensive and was previously rebuilt on every body render. Locale is
     /// pinned to `en_US_POSIX` so the format stays stable in English regardless of
     /// the device locale (matches the rest of the app's English copy).
-    private static let dayHeaderFormatter: DateFormatter = {
+    private static let monthDayFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "EEE d MMM"
+        f.dateFormat = "MMMM d"
         return f
     }()
 
@@ -100,11 +105,20 @@ struct HomeView: View {
                     VStack(spacing: 24) {
                         if let _ = planService.trainingPlan {
                             SportProgressStrip(totals: sportTotalsForStrip())
-                            todayHero
                             WeekDayStrip(
                                 days: weekPills(selected: selectedDay),
                                 onPillTap: handlePillTap
                             )
+                            // External day-anchor section header. Sits between the
+                            // week strip and the hero so the user always has a clear
+                            // textual cue about which day they're previewing.
+                            Text(dayLabel(for: effectiveSelectedDay))
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityAddTraits(.isHeader)
+                            todayHero
                         } else if planService.isLoadingPlan {
                             // Cold-launch guard: while the plan fetch is in flight, show a
                             // centered spinner instead of flashing EmptyHomeHero. Without this
@@ -181,10 +195,9 @@ struct HomeView: View {
             .sorted { $0.orderInDay < $1.orderInDay }
 
         if daysSessions.isEmpty {
-            // Rest day. headerLabel swaps the "TODAY" caption for the previewed-day
-            // date (e.g. "MON 28 APR") when the user is previewing a non-today pill.
-            // Same helper the today cards use; nil preserves the "TODAY" header.
-            RestDayCardView(notes: nil, headerLabel: singleSessionHeaderLabel())
+            // Rest day. The day anchor is rendered by the external day label above
+            // the card, so the rest-day card itself no longer carries a header row.
+            RestDayCardView(notes: nil)
         } else if let race = daysSessions.first(where: { $0.sport.lowercased() == "race" }) {
             // Race day card. Coexists with the strip + week-strip — does NOT take over
             // the canvas. raceObjective falls back to the session.type when no plan-level
@@ -210,9 +223,9 @@ struct HomeView: View {
     private func multiSessionStack(sessions: [PlanSession]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                // Header swaps "TODAY" for the previewed weekday's short label
-                // (e.g. "THU") when the user is previewing a non-today day.
-                Text("\(multiSessionHeaderPrefix()) · \(sessions.count) SESSIONS")
+                // Day prefix dropped — the external day label above the hero already
+                // carries the temporal anchor (Today / Yesterday / April 29th).
+                Text("\(sessions.count) SESSIONS")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.secondary)
@@ -249,11 +262,8 @@ struct HomeView: View {
     /// (wrapped in an internal `_ConditionalContent`), preserving view diffing across
     /// status transitions without the type-erasure cost of `AnyView`.
     ///
-    /// `headerLabel` is computed from `effectiveSelectedDay` and only consumed by the
-    /// single-session branch of each card (multi-session uses the `SessionSequenceBadge`).
-    /// Passing `nil` keeps the legacy "TODAY" / "COMPLETED TODAY" / "NOT COMPLETED"
-    /// captions; passing e.g. `"MON 28 APR"` swaps in the date caption used when
-    /// previewing a non-today day.
+    /// The day anchor (Today / Yesterday / April 29th) is rendered by the external day
+    /// label above the hero, so cards no longer carry a date caption inside their header.
     @ViewBuilder
     private func cardForSession(
         _ session: PlanSession,
@@ -264,8 +274,6 @@ struct HomeView: View {
         let vma = profileService.user?.vma
         let css = profileService.user?.cssSecondsPer100m
         let maxHr = profileService.user?.maxHr
-        // Only meaningful for the single-session branch; ignored when sequenceContext != nil.
-        let label = singleSessionHeaderLabel()
 
         switch completionStatuses[session.id] ?? .planned {
         case .planned:
@@ -273,8 +281,7 @@ struct HomeView: View {
                 session: session,
                 template: template,
                 ftp: ftp, vma: vma, css: css, maxHr: maxHr,
-                sequenceContext: sequenceContext,
-                headerLabel: label
+                sequenceContext: sequenceContext
             )
         case .completed(let activity):
             TodayCompletedCard(
@@ -282,14 +289,12 @@ struct HomeView: View {
                 activity: activity,
                 template: template,
                 ftp: ftp, vma: vma, css: css, maxHr: maxHr,
-                sequenceContext: sequenceContext,
-                headerLabel: label
+                sequenceContext: sequenceContext
             )
         case .missed:
             TodayMissedCard(
                 session: session,
-                sequenceContext: sequenceContext,
-                headerLabel: label
+                sequenceContext: sequenceContext
             )
         }
     }
@@ -459,39 +464,51 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Header Label Helpers
+    // MARK: - Day Label Helpers
 
-    /// Single-session card header label. Returns `nil` when the previewed day is
-    /// today — preserves the original "TODAY" / "COMPLETED TODAY" / "NOT COMPLETED"
-    /// captions inside the cards. Otherwise returns the date caption (e.g. "MON 28 APR")
-    /// the cards render via their `headerLabel` override.
-    private func singleSessionHeaderLabel() -> String? {
-        let day = effectiveSelectedDay
-        if day == todayWeekday() { return nil }
-        return headerLabel(for: day)
-    }
+    /// External section header above the hero card. Returns one of:
+    /// - `"Today"` when the previewed day equals today.
+    /// - `"Tomorrow"` / `"Yesterday"` when adjacent to today within the current week.
+    /// - `"April 29th"` (full month name + ordinal day) for any other day.
+    ///
+    /// "Adjacent" is computed as today's index ± 1 within the Mon-first `Weekday`
+    /// enum, scoped to the current week — the WeekDayStrip never previews a day
+    /// outside the current week, so we don't need cross-week edges.
+    /// Defensive fallback: if `currentWeek` lacks a `startDate`, we drop back to
+    /// the weekday's full name (e.g. `"Wednesday"`) so the label is never empty.
+    private func dayLabel(for weekday: Weekday) -> String {
+        let today = todayWeekday()
+        if weekday == today { return "Today" }
 
-    /// Multi-session header prefix — `"TODAY"` when the previewed day is today,
-    /// otherwise the 3-letter weekday abbreviation (`"THU"`). Kept short so the
-    /// header reads `THU · 2 SESSIONS` (vs. the much longer `MON 28 APR · 2 SESSIONS`).
-    private func multiSessionHeaderPrefix() -> String {
-        let day = effectiveSelectedDay
-        if day == todayWeekday() { return "TODAY" }
-        return day.abbreviation.uppercased()
-    }
+        if let dayIdx = Weekday.allCases.firstIndex(of: weekday),
+           let todayIdx = Weekday.allCases.firstIndex(of: today) {
+            if dayIdx == todayIdx + 1 { return "Tomorrow" }
+            if dayIdx == todayIdx - 1 { return "Yesterday" }
+        }
 
-    /// Renders a weekday as the date caption used by single-session card headers
-    /// (`"MON 28 APR"`). Falls back to the bare 3-letter abbreviation if the
-    /// current week's start date isn't available — defensive only; in practice
-    /// `currentWeek` is non-nil whenever the WeekDayStrip is on screen.
-    private func headerLabel(for weekday: Weekday) -> String {
-        if weekday == todayWeekday() { return "TODAY" }
         guard let week = currentWeek,
               let weekStart = week.startDateAsDate else {
-            return weekday.abbreviation.uppercased()
+            return weekday.fullName
         }
         let date = weekday.date(relativeTo: weekStart)
-        return Self.dayHeaderFormatter.string(from: date).uppercased()
+        let monthDay = Self.monthDayFormatter.string(from: date)
+        let dayOfMonth = calendar.component(.day, from: date)
+        return "\(monthDay)\(Self.ordinalSuffix(for: dayOfMonth))"
+    }
+
+    /// English ordinal suffix for a day-of-month integer.
+    /// 1→st, 2→nd, 3→rd, 4–20→th, 21→st, 22→nd, 23→rd, 24–30→th, 31→st.
+    /// Pure function, kept private to HomeView since the day label is the only
+    /// surface that needs it; promote to a util only when a second caller appears.
+    private static func ordinalSuffix(for day: Int) -> String {
+        let mod100 = day % 100
+        if (11...13).contains(mod100) { return "th" }
+        switch day % 10 {
+        case 1: return "st"
+        case 2: return "nd"
+        case 3: return "rd"
+        default: return "th"
+        }
     }
 
     // MARK: - Formatting Helpers

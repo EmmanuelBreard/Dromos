@@ -29,12 +29,6 @@ struct TodayCompletedCard: View {
     let css: Int?
     let maxHr: Int?
     let sequenceContext: (index: Int, total: Int)?
-    /// Optional override for the single-session header label (e.g. `"MON 28 APR"`).
-    /// When non-nil, the header renders the date caption alongside a shortened
-    /// `CompletedTag(label: "COMPLETED")` (the temporal "TODAY" word would be wrong
-    /// when previewing a past day). `nil` keeps the original `CompletedTag()` so
-    /// existing call sites are unchanged. Only consulted when `sequenceContext == nil`.
-    var headerLabel: String? = nil
 
     @State private var showPlannedWorkout = false
 
@@ -122,13 +116,6 @@ struct TodayCompletedCard: View {
                 Text("\(session.sport.capitalized) · \(session.type.lowercased())")
                     .font(.caption)
                     .foregroundColor(.secondary)
-            } else if let headerLabel {
-                Text(headerLabel)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .tracking(1)
-                    .foregroundColor(.secondary)
-                CompletedTag(label: "COMPLETED")
             } else {
                 CompletedTag()
             }
