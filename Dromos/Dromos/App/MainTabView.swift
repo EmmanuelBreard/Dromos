@@ -37,16 +37,21 @@ struct MainTabView: View {
     /// Toggled when the Calendar tab is re-selected. Triggers cache purge for the current week + snap to current week + Strava completion refetch in CalendarView.
     @State private var calendarReset: Bool = false
 
+    /// Toggled when the Home tab is re-selected. Triggers Strava sync + completion refetch + scroll-to-top in HomeView.
+    /// Mirrors the `calendarReset` pattern so re-tapping the active tab is a "refresh" gesture.
+    @State private var homeReset: Bool = false
+
     /// Observed scene phase to trigger foreground-resume syncs.
     @Environment(\.scenePhase) private var scenePhase
 
     /// Custom binding that triggers view resets on tab navigation.
-    /// Fires for both tab switches (Profile→Calendar) and same-tab re-taps (Calendar→Calendar).
+    /// Fires for both tab switches (Profile→Calendar) and same-tab re-taps (Calendar→Calendar / Home→Home).
     private var tabSelection: Binding<AppTab> {
         Binding(
             get: { selectedTab },
             set: { newValue in
                 if newValue == .calendar { calendarReset.toggle() }
+                if newValue == .home { homeReset.toggle() }
                 selectedTab = newValue
             }
         )
@@ -55,7 +60,13 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: tabSelection) {
             Tab("Home", systemImage: "house", value: .home) {
-                HomeView()
+                HomeView(
+                    authService: authService,
+                    planService: planService,
+                    profileService: profileService,
+                    stravaService: stravaService,
+                    homeReset: $homeReset
+                )
             }
 
             Tab("Calendar", systemImage: "calendar", value: .calendar) {
