@@ -20,12 +20,6 @@ import SwiftUI
 struct TodayMissedCard: View {
     let session: PlanSession
     let sequenceContext: (index: Int, total: Int)?
-    /// Optional override for the single-session header label (e.g. `"MON 28 APR"`).
-    /// When non-nil, replaces the `MissedTag` with a plain date caption — the "missed"
-    /// state is still conveyed by the muted card body (small padding, secondary text).
-    /// `nil` keeps the original `MissedTag` so existing call sites are unchanged.
-    /// Only consulted when `sequenceContext == nil`.
-    var headerLabel: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -49,12 +43,6 @@ struct TodayMissedCard: View {
                 SessionSequenceBadge(index: ctx.index)
                 Text("\(session.sport.capitalized) · \(session.type.lowercased())")
                     .font(.caption)
-                    .foregroundColor(.secondary)
-            } else if let headerLabel {
-                Text(headerLabel)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .tracking(1)
                     .foregroundColor(.secondary)
             } else {
                 MissedTag()
