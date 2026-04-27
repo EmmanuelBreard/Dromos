@@ -57,7 +57,7 @@ struct SessionCardView: View {
                     .font(.title2)
                     .frame(width: 40, height: 40)
                     .background(session.sportColor.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 2) {
                     // Workout name
@@ -246,28 +246,47 @@ struct SessionCardView: View {
 
 // MARK: - Rest Day Card
 
-/// Simple card for rest days.
-/// Shows bed icon with "Rest Day" label.
+/// Restyled rest-day card for the Today/Home tab.
+/// Header row: TODAY label + "Rest day" pill, then bold "Rest day" title,
+/// optional rationale text (rendered only when non-nil/non-empty — no fallback copy).
+/// Notes default to nil so legacy Calendar callers still compile.
 struct RestDayCardView: View {
+    var notes: String? = nil
+
     var body: some View {
-        HStack(spacing: 12) {
-            // Bed icon
-            Image(systemName: "bed.double.fill")
+        VStack(alignment: .leading, spacing: 12) {
+            // Header row: TODAY tag + spacer + "Rest day" subtitle
+            HStack {
+                Text("TODAY")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(1.2)
+
+                Spacer()
+
+                Text("Rest day")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Session name
+            Text("Rest day")
                 .font(.title2)
-                .foregroundColor(.secondary)
-                .frame(width: 40, height: 40)
-                .background(Color.secondary.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            
-            Text("Rest Day")
-                .font(.headline)
-                .foregroundColor(.secondary)
-            
-            Spacer()
+                .fontWeight(.bold)
+                .kerning(-0.4)
+
+            // Optional rationale — hidden when nil/empty.
+            if let notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 24))
     }
 }
 
@@ -291,14 +310,17 @@ struct RaceDayCardView: View {
             HStack(spacing: 12) {
                 Image(systemName: "trophy.fill")
                     .font(.title2)
+                    // TODO(DRO-239): Replace .orange with design-token color (DESIGN.md §1).
                     .foregroundColor(.orange)
                     .frame(width: 40, height: 40)
+                    // TODO(DRO-239): Replace Color.orange with design-token color (DESIGN.md §1).
                     .background(Color.orange.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Race Day")
                         .font(.headline)
+                        // TODO(DRO-239): Replace .orange with design-token color (DESIGN.md §1).
                         .foregroundColor(.orange)
 
                     if let objective = raceObjective {
@@ -324,9 +346,10 @@ struct RaceDayCardView: View {
                     .foregroundColor(.secondary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 24))
     }
 
     // MARK: - Race Legs List
