@@ -67,8 +67,11 @@ struct ActualVsPlannedTable: View {
     // MARK: - Row construction
 
     /// A single rendered row in the table.
+    /// `id` derives from `metric` (unique within each sport branch's row set) so SwiftUI's `ForEach`
+    /// sees stable identities across re-renders — `rows` is a computed property invoked per body eval,
+    /// so a `UUID()` here would regenerate every render and break diffing.
     private struct Row: Identifiable {
-        let id = UUID()
+        var id: String { metric }
         let metric: String
         let actual: String
         let planned: String
