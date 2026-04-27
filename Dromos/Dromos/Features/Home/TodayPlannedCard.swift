@@ -23,6 +23,10 @@ struct TodayPlannedCard: View {
     /// Multi-session context: 1-based `index` within the day, plus `total` count.
     /// `nil` means single-session day → render the `TODAY` label instead of a numbered badge.
     let sequenceContext: (index: Int, total: Int)?
+    /// Optional override for the single-session header label (e.g. `"MON 28 APR"`).
+    /// `nil` keeps the original `"TODAY"` label so existing callers behave unchanged.
+    /// Only consulted when `sequenceContext == nil` — the badge owns the multi-session header.
+    var headerLabel: String? = nil
 
     /// Cached library reference. Singleton — safe to capture as a stored property.
     private let workoutLibrary = WorkoutLibraryService.shared
@@ -95,7 +99,7 @@ struct TodayPlannedCard: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
-                Text("TODAY")
+                Text(headerLabel ?? "TODAY")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .tracking(1)

@@ -51,6 +51,14 @@ struct HomeView: View {
     /// branch naturally retreats.
     @State private var showPlanGeneration = false
 
+    /// Day currently previewed in the today-hero slot via the WeekDayStrip pills.
+    /// `nil` is the default and means "today is selected" — the hero behaves as before.
+    /// Set non-nil when the user taps a non-today pill; the hero swaps to that day's
+    /// session(s) using the existing card components driven off `effectiveSelectedDay`.
+    /// Preserved across pull-to-refresh and Strava-sync events; reset to nil only by
+    /// tab re-tap (`homeReset`) or by tapping today / re-tapping the selected pill.
+    @State private var selectedDay: Weekday? = nil
+
     private let workoutLibrary = WorkoutLibraryService.shared
     private let calendar = Calendar.current
 
@@ -66,6 +74,13 @@ struct HomeView: View {
         return plan.planWeeks[idx]
     }
 
+    /// The weekday whose session(s) the today-hero should render. Falls back to
+    /// the live "today" when no pill is explicitly selected — keeps the default
+    /// behavior identical to pre-DRO-231-week-strip-tap.
+    private var effectiveSelectedDay: Weekday {
+        selectedDay ?? todayWeekday()
+    }
+
     var body: some View {
         NavigationStack {
             ScrollViewReader { scrollProxy in
@@ -74,7 +89,10 @@ struct HomeView: View {
                         if let _ = planService.trainingPlan {
                             SportProgressStrip(totals: sportTotalsForStrip())
                             todayHero
-                            WeekDayStrip(days: weekPills)
+                            WeekDayStrip(
+                                days: weekPills(selected: selectedDay),
+                                onPillTap: handlePillTap
+                            )
                         } else if planService.isLoadingPlan {
                             // Cold-launch guard: while the plan fetch is in flight, show a
                             // centered spinner instead of flashing EmptyHomeHero. Without this
@@ -114,8 +132,12 @@ struct HomeView: View {
                     }
                 }
                 .onChange(of: homeReset) { _, _ in
-                    // Tab re-tap: sync Strava, refetch, then scroll to top. Sync is awaited
-                    // before the refetch so the new activities land in the same render pass.
+                    // Tab re-tap: clear any previewed day (back to "today"), sync Strava,
+                    // refetch, then scroll to top. Sync is awaited before the refetch so
+                    // the new activities land in the same render pass. selectedDay reset
+                    // happens synchronously so the visual snaps back before the network
+                    // round-trip completes — feels like a true "back to today" gesture.
+                    selectedDay = nil
                     Task {
                         await stravaService.syncActivities()
                         await loadCompletionAndTotals()
@@ -133,38 +155,41 @@ struct HomeView: View {
 
     // MARK: - Today Hero State Router
 
-    /// Routes the central "today" slot to the right card variant based on:
+    /// Routes the central hero slot to the right card variant based on the
+    /// `effectiveSelectedDay` (today by default; any other weekday when the user
+    /// has tapped a pill in the WeekDayStrip):
     /// - empty day → rest
     /// - race-day flag → race card
     /// - exactly 1 session → single planned/completed/missed card
     /// - 2+ sessions → multi-session stack with header + sorted cards
     @ViewBuilder
     private var todayHero: some View {
-        let todayWeekday = todayWeekday()
-        let todaysSessions = (currentWeek?.sessionsByDay[todayWeekday] ?? [])
+        let day = effectiveSelectedDay
+        let daysSessions = (currentWeek?.sessionsByDay[day] ?? [])
             .sorted { $0.orderInDay < $1.orderInDay }
 
-        if todaysSessions.isEmpty {
-            // RestDayCardView already renders its own "TODAY · Rest day" header.
-            // Notes intentionally nil — current schema has no per-day rest-day notes.
+        if daysSessions.isEmpty {
+            // RestDayCardView renders its own header — works for any day, since the
+            // copy is "Rest day" rather than "TODAY · Rest day". Out of scope to
+            // re-style for previewed days (see DRO-231-week-strip-tap spec).
             RestDayCardView(notes: nil)
-        } else if let race = todaysSessions.first(where: { $0.sport.lowercased() == "race" }) {
+        } else if let race = daysSessions.first(where: { $0.sport.lowercased() == "race" }) {
             // Race day card. Coexists with the strip + week-strip — does NOT take over
             // the canvas. raceObjective falls back to the session.type when no plan-level
             // objective is captured (matches CalendarView behavior).
             //
-            // Race-day takeover: when today contains a race session, render the race card alone.
-            // Any co-occurring sessions (e.g., shake-out runs) are intentionally hidden.
-            // Revisit if athletes report missing race-day shake-outs (TBD product call).
+            // Race-day takeover: when the day contains a race session, render the race
+            // card alone. Any co-occurring sessions (e.g., shake-out runs) are
+            // intentionally hidden. Revisit if athletes report missing race-day shake-outs.
             RaceDayCardView(
                 raceObjective: race.type,
                 template: workoutLibrary.template(for: race.templateId),
                 notes: race.notes
             )
-        } else if todaysSessions.count == 1 {
-            cardForSession(todaysSessions[0], sequenceContext: nil)
+        } else if daysSessions.count == 1 {
+            cardForSession(daysSessions[0], sequenceContext: nil)
         } else {
-            multiSessionStack(sessions: todaysSessions)
+            multiSessionStack(sessions: daysSessions)
         }
     }
 
@@ -173,7 +198,9 @@ struct HomeView: View {
     private func multiSessionStack(sessions: [PlanSession]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("TODAY · \(sessions.count) SESSIONS")
+                // Header swaps "TODAY" for the previewed weekday's short label
+                // (e.g. "THU") when the user is previewing a non-today day.
+                Text("\(multiSessionHeaderPrefix()) · \(sessions.count) SESSIONS")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.secondary)
@@ -209,6 +236,12 @@ struct HomeView: View {
     /// `@ViewBuilder` lets SwiftUI see all three concrete view types in the result builder
     /// (wrapped in an internal `_ConditionalContent`), preserving view diffing across
     /// status transitions without the type-erasure cost of `AnyView`.
+    ///
+    /// `headerLabel` is computed from `effectiveSelectedDay` and only consumed by the
+    /// single-session branch of each card (multi-session uses the `SessionSequenceBadge`).
+    /// Passing `nil` keeps the legacy "TODAY" / "COMPLETED TODAY" / "NOT COMPLETED"
+    /// captions; passing e.g. `"MON 28 APR"` swaps in the date caption used when
+    /// previewing a non-today day.
     @ViewBuilder
     private func cardForSession(
         _ session: PlanSession,
@@ -219,6 +252,8 @@ struct HomeView: View {
         let vma = profileService.user?.vma
         let css = profileService.user?.cssSecondsPer100m
         let maxHr = profileService.user?.maxHr
+        // Only meaningful for the single-session branch; ignored when sequenceContext != nil.
+        let label = singleSessionHeaderLabel()
 
         switch completionStatuses[session.id] ?? .planned {
         case .planned:
@@ -226,7 +261,8 @@ struct HomeView: View {
                 session: session,
                 template: template,
                 ftp: ftp, vma: vma, css: css, maxHr: maxHr,
-                sequenceContext: sequenceContext
+                sequenceContext: sequenceContext,
+                headerLabel: label
             )
         case .completed(let activity):
             TodayCompletedCard(
@@ -234,10 +270,15 @@ struct HomeView: View {
                 activity: activity,
                 template: template,
                 ftp: ftp, vma: vma, css: css, maxHr: maxHr,
-                sequenceContext: sequenceContext
+                sequenceContext: sequenceContext,
+                headerLabel: label
             )
         case .missed:
-            TodayMissedCard(session: session, sequenceContext: sequenceContext)
+            TodayMissedCard(
+                session: session,
+                sequenceContext: sequenceContext,
+                headerLabel: label
+            )
         }
     }
 
@@ -286,7 +327,12 @@ struct HomeView: View {
 
     /// 7 day-pills for the current week, in Mon→Sun order. Always returns exactly 7
     /// (WeekDayStrip asserts on count).
-    private var weekPills: [DayPill] {
+    ///
+    /// `selected` is the user's currently-previewed day (nil = today selected by
+    /// default — no `isSelected` outline anywhere). When non-nil, the matching pill
+    /// is marked `isSelected = true`. Today's pill keeps its solid background even
+    /// when selected; the outline only renders for non-today selections.
+    private func weekPills(selected: Weekday?) -> [DayPill] {
         let week = currentWeek
         let weekday = todayWeekday()
         let sessionsByDay = week?.sessionsByDay ?? [:]
@@ -297,7 +343,8 @@ struct HomeView: View {
                 weekday: day,
                 glyph: glyph(for: day, sessions: sessions),
                 durationLabel: durationLabel(for: sessions),
-                state: pillState(for: day, today: weekday, sessions: sessions)
+                state: pillState(for: day, today: weekday, sessions: sessions),
+                isSelected: selected == day
             )
         }
     }
@@ -380,6 +427,61 @@ struct HomeView: View {
         sportTotals.mapValues {
             SportProgressStrip.SportTotals(doneMinutes: $0.done, totalMinutes: $0.total)
         }
+    }
+
+    // MARK: - Pill Tap Handling
+
+    /// Handles a tap on a WeekDayStrip pill. The behavior matches the QA-confirmed
+    /// spec for DRO-231-week-strip-tap:
+    /// - Tap **today** (regardless of `selectedDay`) → clear selection, return to today.
+    /// - Tap the **already-selected** non-today pill → clear selection, return to today.
+    /// - Tap any **other** pill → mark it selected so the hero previews that day.
+    private func handlePillTap(_ tappedWeekday: Weekday) {
+        let today = todayWeekday()
+        if tappedWeekday == today {
+            selectedDay = nil
+        } else if selectedDay == tappedWeekday {
+            selectedDay = nil
+        } else {
+            selectedDay = tappedWeekday
+        }
+    }
+
+    // MARK: - Header Label Helpers
+
+    /// Single-session card header label. Returns `nil` when the previewed day is
+    /// today — preserves the original "TODAY" / "COMPLETED TODAY" / "NOT COMPLETED"
+    /// captions inside the cards. Otherwise returns the date caption (e.g. "MON 28 APR")
+    /// the cards render via their `headerLabel` override.
+    private func singleSessionHeaderLabel() -> String? {
+        let day = effectiveSelectedDay
+        if day == todayWeekday() { return nil }
+        return headerLabel(for: day)
+    }
+
+    /// Multi-session header prefix — `"TODAY"` when the previewed day is today,
+    /// otherwise the 3-letter weekday abbreviation (`"THU"`). Kept short so the
+    /// header reads `THU · 2 SESSIONS` (vs. the much longer `MON 28 APR · 2 SESSIONS`).
+    private func multiSessionHeaderPrefix() -> String {
+        let day = effectiveSelectedDay
+        if day == todayWeekday() { return "TODAY" }
+        return day.abbreviation.uppercased()
+    }
+
+    /// Renders a weekday as the date caption used by single-session card headers
+    /// (`"MON 28 APR"`). Falls back to the bare 3-letter abbreviation if the
+    /// current week's start date isn't available — defensive only; in practice
+    /// `currentWeek` is non-nil whenever the WeekDayStrip is on screen.
+    private func headerLabel(for weekday: Weekday) -> String {
+        if weekday == todayWeekday() { return "TODAY" }
+        guard let week = currentWeek,
+              let weekStart = week.startDateAsDate else {
+            return weekday.abbreviation.uppercased()
+        }
+        let date = weekday.date(relativeTo: weekStart)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE d MMM"
+        return formatter.string(from: date).uppercased()
     }
 
     // MARK: - Formatting Helpers

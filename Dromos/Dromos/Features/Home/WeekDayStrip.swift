@@ -4,7 +4,12 @@
 //
 //  DRO-236 — Phase 4 of DRO-231.
 //  Compact 7-pill strip showing each day of the current week with a state-driven
-//  background, a sport glyph, and an optional duration label. Pills are NOT tappable.
+//  background, a sport glyph, and an optional duration label.
+//
+//  DRO-231 follow-up (week-strip tap): pills are now tappable when the parent
+//  supplies an `onPillTap` callback, and a non-today pill can be marked
+//  `isSelected` to show an accent-color outline (today retains its solid
+//  background regardless of `isSelected`).
 //
 
 import SwiftUI
@@ -12,7 +17,8 @@ import SwiftUI
 // MARK: - DayPill
 
 /// One pill in the WeekDayStrip. Carries weekday label, an SF Symbol glyph,
-/// optional duration label, and the visual state (today / completed / planned / missed / rest).
+/// optional duration label, the visual state (today / completed / planned / missed / rest),
+/// and a `isSelected` flag for the "selected but not today" outline state.
 struct DayPill: Identifiable {
     /// Stable identity derived from `weekday` (each weekday is unique within a 7-pill strip).
     /// Avoids regenerating IDs on parent re-renders, which would defeat SwiftUI diffing.
@@ -21,6 +27,10 @@ struct DayPill: Identifiable {
     let glyph: String
     let durationLabel: String?
     let state: PillState
+    /// True iff the parent has marked this pill as the "previewed" day. Renders an
+    /// accent-color outline on top of the state's normal background. Ignored when
+    /// `state == .today` (today already has its own distinctive solid background).
+    var isSelected: Bool = false
 }
 
 /// Visual state of a `DayPill`. Drives background and text color.
@@ -36,11 +46,17 @@ enum PillState {
 
 /// Horizontal strip of 7 day-pills representing the current week.
 ///
-/// Pills are non-tappable (display only). Layout uses equal-width flex pills
-/// in an HStack so the strip fills the available width without scrolling.
+/// Pills become tappable when `onPillTap` is non-nil. Callers that don't wire
+/// the callback get the original display-only behavior (default = nil → no-op).
+/// Layout uses equal-width flex pills in an HStack so the strip fills the
+/// available width without scrolling.
 struct WeekDayStrip: View {
     /// The 7 day pills to render. Caller must provide exactly 7.
     let days: [DayPill]
+    /// Optional tap handler. When nil, pills render but do not respond to taps
+    /// (preserves the original Phase-4 contract for callers that haven't been
+    /// updated). When set, the entire pill rect is tappable via `.contentShape`.
+    var onPillTap: ((Weekday) -> Void)? = nil
 
     var body: some View {
         // Debug-only invariant: callers must provide exactly 7 pills (one per weekday).
@@ -84,6 +100,23 @@ struct WeekDayStrip: View {
         .padding(.vertical, 8)
         .background(background(for: pill.state))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        // Selected-but-not-today: 2pt accent outline overlays the state background.
+        // Skipped for `.today` because today's solid background is already a strong
+        // visual identifier — overlaying an outline would muddy the distinction
+        // between "today" and "previewed".
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    Color.accentColor,
+                    lineWidth: (pill.isSelected && pill.state != .today) ? 2 : 0
+                )
+        )
+        // Whole-rect tap target — without `.contentShape`, taps would only register
+        // on the rendered text/glyph pixels, not the surrounding pill area.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onPillTap?(pill.weekday)
+        }
     }
 
     // MARK: - Style helpers
@@ -173,6 +206,25 @@ private struct DurationTextStyle: ViewModifier {
     ]
 
     return WeekDayStrip(days: days)
+        .padding()
+        .background(Color.pageSurface)
+}
+
+#Preview("WeekDayStrip — selected non-today pill") {
+    // Demonstrates the "previewed day" state: Saturday is selected (accent outline)
+    // while Thursday remains today (solid background). Tap callback is wired but
+    // no-ops in the preview.
+    let days: [DayPill] = [
+        DayPill(weekday: .monday,    glyph: "figure.pool.swim", durationLabel: "45m", state: .completed),
+        DayPill(weekday: .tuesday,   glyph: "bicycle",          durationLabel: "1h",  state: .completed),
+        DayPill(weekday: .wednesday, glyph: "figure.run",       durationLabel: "40m", state: .missed),
+        DayPill(weekday: .thursday,  glyph: "bicycle",          durationLabel: "1h",  state: .today),
+        DayPill(weekday: .friday,    glyph: "bed.double.fill",  durationLabel: nil,   state: .rest),
+        DayPill(weekday: .saturday,  glyph: "figure.run",       durationLabel: "1h30", state: .planned, isSelected: true),
+        DayPill(weekday: .sunday,    glyph: "bicycle",          durationLabel: "2h",  state: .planned)
+    ]
+
+    return WeekDayStrip(days: days, onPillTap: { _ in })
         .padding()
         .background(Color.pageSurface)
 }
