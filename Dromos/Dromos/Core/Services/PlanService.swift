@@ -255,6 +255,57 @@ final class PlanService: ObservableObject {
         }
     }
 
+    /// Returns per-sport (done, total) totals in minutes for a single week.
+    ///
+    /// - `total` = sum of `session.durationMinutes` grouped by `lower(session.sport)`.
+    /// - `done`  = sum of `Int(activity.movingTime / 60)` for sessions matched to a Strava
+    ///   activity via `SessionMatcher.match()`.
+    ///
+    /// Brick sessions count toward their single `sport` field (no double-counting).
+    /// Sports outside swim/bike/run (e.g. strength, race) are intentionally ignored — the
+    /// strip only renders SWIM / BIKE / RUN columns. Result keys are always present (zeros
+    /// when no planned sessions of that sport exist).
+    ///
+    /// Pure function: no published-state mutation, no I/O.
+    // TODO(follow-up): Promote (done, total) to a shared `SportTotals` struct returned directly,
+    // once a 2nd caller appears. The view currently re-wraps in SportProgressStrip.SportTotals.
+    nonisolated func weeklySportTotals(
+        for week: PlanWeek,
+        with activities: [StravaActivity]
+    ) -> [String: (done: Int, total: Int)] {
+
+        var result: [String: (done: Int, total: Int)] = [
+            "swim": (0, 0), "bike": (0, 0), "run": (0, 0)
+        ]
+
+        // SessionMatcher needs each session paired with its resolved calendar date so it can
+        // group by (sport, day). Resolve via Weekday(fullName:).date(relativeTo: weekStart).
+        // Sessions whose `day` doesn't parse or whose week has no startDate are skipped from
+        // matching but still counted in `total` — matching only affects the `done` numerator.
+        let weekStart = week.startDateAsDate
+        var sessionsForMatcher: [(session: PlanSession, date: Date)] = []
+        sessionsForMatcher.reserveCapacity(week.planSessions.count)
+        if let weekStart {
+            for session in week.planSessions {
+                guard let weekday = Weekday(fullName: session.day) else { continue }
+                sessionsForMatcher.append((session, weekday.date(relativeTo: weekStart)))
+            }
+        }
+
+        let matched = SessionMatcher.match(sessions: sessionsForMatcher, activities: activities)
+
+        for session in week.planSessions {
+            let key = session.sport.lowercased()
+            // Explicit allowlist: strip only renders SWIM / BIKE / RUN. Skips strength, race, etc.
+            guard ["swim", "bike", "run"].contains(key) else { continue }
+            result[key, default: (0, 0)].total += session.durationMinutes
+            if case .completed(let activity) = matched[session.id] ?? .planned {
+                result[key, default: (0, 0)].done += Int((Double(activity.movingTime) / 60.0).rounded())
+            }
+        }
+        return result
+    }
+
     /// Silently refreshes the training plan without showing a loading spinner.
     /// Used for background updates (e.g. feedback generation) that should not disrupt the UI.
     func refreshPlan(userId: UUID) async {
