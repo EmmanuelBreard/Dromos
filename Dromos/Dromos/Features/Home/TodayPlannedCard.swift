@@ -61,7 +61,7 @@ struct TodayPlannedCard: View {
             header
             HStack(spacing: 8) {
                 Image(systemName: session.sportIcon)
-                Text("\(session.displayName) - \(Self.formatTitleDuration(minutes: session.durationMinutes))")
+                Text("\(session.displayName) - \(PlanSession.formatCompactDuration(minutes: session.durationMinutes))")
             }
             .font(.title2)
             .fontWeight(.bold)
@@ -100,25 +100,8 @@ struct TodayPlannedCard: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            // Spacer kept so the badge / sport·type stays left-aligned with no
-            // right-side caption (Phase 2 dropped the duration·sport caption — the
-            // duration now lives in the title row inline next to the icon).
             Spacer(minLength: 8)
         }
-    }
-
-    /// Compact title-row duration. `60→"1h"`, `90→"1h30"`, `45→"45'"`, `120→"2h"`.
-    /// Mirrors `HomeView.formatPillDuration` (DRO-242 Phase 1) so the inline duration
-    /// next to the session icon matches the week-strip pills. Intentionally omits the
-    /// apostrophe on the minutes part of an hour-and-minute combo (`1h30`, not
-    /// `1h 30'`).
-    private static func formatTitleDuration(minutes: Int) -> String {
-        if minutes >= 60 {
-            let h = minutes / 60
-            let m = minutes % 60
-            return m == 0 ? "\(h)h" : "\(h)h\(m)"
-        }
-        return "\(minutes)'"
     }
 }
 

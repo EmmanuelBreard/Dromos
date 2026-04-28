@@ -26,7 +26,7 @@ struct TodayMissedCard: View {
             header
             HStack(spacing: 8) {
                 Image(systemName: session.sportIcon)
-                Text("\(session.displayName) - \(Self.formatTitleDuration(minutes: session.durationMinutes))")
+                Text("\(session.displayName) - \(PlanSession.formatCompactDuration(minutes: session.durationMinutes))")
             }
             .font(.headline)
             .foregroundColor(.secondary)
@@ -50,23 +50,8 @@ struct TodayMissedCard: View {
             } else {
                 MissedTag()
             }
-            // Spacer kept so the badge / sport·type stays left-aligned with no
-            // right-side caption (Phase 2 dropped the duration·sport caption — the
-            // duration now lives in the title row inline next to the icon).
             Spacer(minLength: 8)
         }
-    }
-
-    /// Compact title-row duration. `60→"1h"`, `90→"1h30"`, `45→"45'"`, `120→"2h"`.
-    /// Mirrors `HomeView.formatPillDuration` (DRO-242 Phase 1) so the inline duration
-    /// next to the session icon matches the week-strip pills.
-    private static func formatTitleDuration(minutes: Int) -> String {
-        if minutes >= 60 {
-            let h = minutes / 60
-            let m = minutes % 60
-            return m == 0 ? "\(h)h" : "\(h)h\(m)"
-        }
-        return "\(minutes)'"
     }
 }
 
