@@ -4,32 +4,41 @@
 //
 //  DRO-236 — Phase 4 of DRO-231.
 //  Compact 7-pill strip showing each day of the current week with a state-driven
-//  background, a sport glyph, and an optional duration label.
+//  background, one or more sport glyphs, and an optional duration label.
 //
 //  DRO-231 follow-up (week-strip tap): pills are now tappable when the parent
 //  supplies an `onPillTap` callback, and a non-today pill can be marked
-//  `isSelected` to show an accent-color outline (today retains its solid
-//  background regardless of `isSelected`).
+//  `isSelected` to show an accent-color outline.
+//
+//  DRO-244 (Phase 1 of DRO-242): pills now carry `glyphs: [String]` so multi-
+//  session days render one SF Symbol per session, and the accent outline
+//  renders on `.today` too — today is the default selected pill, so the green
+//  border lives on today by default and follows the user's tap to other days.
 //
 
 import SwiftUI
 
 // MARK: - DayPill
 
-/// One pill in the WeekDayStrip. Carries weekday label, an SF Symbol glyph,
-/// optional duration label, the visual state (today / completed / planned / missed / rest),
-/// and a `isSelected` flag for the "selected but not today" outline state.
+/// One pill in the WeekDayStrip. Carries weekday label, one or more SF Symbol
+/// glyphs (one per session for multi-session days), optional duration label,
+/// the visual state (today / completed / planned / missed / rest), and a
+/// `isSelected` flag for the accent-outline state.
 struct DayPill: Identifiable {
     /// Stable identity derived from `weekday` (each weekday is unique within a 7-pill strip).
     /// Avoids regenerating IDs on parent re-renders, which would defeat SwiftUI diffing.
     var id: Weekday { weekday }
     let weekday: Weekday
-    let glyph: String
+    /// SF Symbol names for the icon row. Single-session / rest / race days pass
+    /// a single-element array; multi-session days pass one glyph per session in
+    /// `orderInDay` order. Rendered side-by-side in an HStack.
+    let glyphs: [String]
     let durationLabel: String?
     let state: PillState
     /// True iff the parent has marked this pill as the "previewed" day. Renders an
-    /// accent-color outline on top of the state's normal background. Ignored when
-    /// `state == .today` (today already has its own distinctive solid background).
+    /// accent-color outline on top of the state's normal background. Applies to
+    /// every state including `.today` — today is the default selected pill, so
+    /// the green border shows on today until the user taps a different day.
     var isSelected: Bool = false
 }
 
@@ -84,10 +93,17 @@ struct WeekDayStrip: View {
                 .textCase(.uppercase)
                 .tracking(0.8)
 
-            // Sport / state glyph
-            Image(systemName: pill.glyph)
-                .font(.caption.weight(.semibold))
-                .modifier(GlyphTextStyle(state: pill.state))
+            // Sport / state glyph row. One Image per glyph so multi-session
+            // days (e.g., swim + run) render two icons side-by-side. Single-
+            // session / rest / race days pass a one-element array and look
+            // identical to the pre-DRO-244 single-glyph layout.
+            HStack(spacing: 4) {
+                ForEach(Array(pill.glyphs.enumerated()), id: \.offset) { _, glyph in
+                    Image(systemName: glyph)
+                        .font(.caption.weight(.semibold))
+                        .modifier(GlyphTextStyle(state: pill.state))
+                }
+            }
 
             if let durationLabel = pill.durationLabel {
                 Text(durationLabel)
@@ -100,15 +116,16 @@ struct WeekDayStrip: View {
         .padding(.vertical, 8)
         .background(background(for: pill.state))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        // Selected-but-not-today: 2pt accent outline overlays the state background.
-        // Skipped for `.today` because today's solid background is already a strong
-        // visual identifier — overlaying an outline would muddy the distinction
-        // between "today" and "previewed".
+        // Selected pill: 2pt accent outline overlays the state background.
+        // DRO-244: applies to every state — including `.today`, since today is
+        // the default selected pill. The outline + the today solid background
+        // together signal "this is today AND it's the previewed day"; tapping
+        // a different pill moves the outline off today onto that day.
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(
                     Color.accentColor,
-                    lineWidth: (pill.isSelected && pill.state != .today) ? 2 : 0
+                    lineWidth: pill.isSelected ? 2 : 0
                 )
         )
         // Whole-rect tap target — without `.contentShape`, taps would only register
@@ -196,13 +213,13 @@ private struct DurationTextStyle: ViewModifier {
 
 #Preview("WeekDayStrip — mixed week") {
     let days: [DayPill] = [
-        DayPill(weekday: .monday,    glyph: "figure.pool.swim", durationLabel: "45m", state: .completed),
-        DayPill(weekday: .tuesday,   glyph: "bicycle",          durationLabel: "1h",  state: .completed),
-        DayPill(weekday: .wednesday, glyph: "figure.run",       durationLabel: "40m", state: .missed),
-        DayPill(weekday: .thursday,  glyph: "bicycle",          durationLabel: "1h",  state: .today),
-        DayPill(weekday: .friday,    glyph: "bed.double.fill",  durationLabel: nil,   state: .rest),
-        DayPill(weekday: .saturday,  glyph: "figure.run",       durationLabel: "1h30", state: .planned),
-        DayPill(weekday: .sunday,    glyph: "bicycle",          durationLabel: "2h",  state: .planned)
+        DayPill(weekday: .monday,    glyphs: ["figure.pool.swim"], durationLabel: "45m", state: .completed),
+        DayPill(weekday: .tuesday,   glyphs: ["bicycle"],          durationLabel: "1h",  state: .completed),
+        DayPill(weekday: .wednesday, glyphs: ["figure.run"],       durationLabel: "40m", state: .missed),
+        DayPill(weekday: .thursday,  glyphs: ["bicycle"],          durationLabel: "1h",  state: .today),
+        DayPill(weekday: .friday,    glyphs: ["bed.double.fill"],  durationLabel: nil,   state: .rest),
+        DayPill(weekday: .saturday,  glyphs: ["figure.run"],       durationLabel: "1h30", state: .planned),
+        DayPill(weekday: .sunday,    glyphs: ["bicycle"],          durationLabel: "2h",  state: .planned)
     ]
 
     return WeekDayStrip(days: days)
@@ -215,13 +232,33 @@ private struct DurationTextStyle: ViewModifier {
     // while Thursday remains today (solid background). Tap callback is wired but
     // no-ops in the preview.
     let days: [DayPill] = [
-        DayPill(weekday: .monday,    glyph: "figure.pool.swim", durationLabel: "45m", state: .completed),
-        DayPill(weekday: .tuesday,   glyph: "bicycle",          durationLabel: "1h",  state: .completed),
-        DayPill(weekday: .wednesday, glyph: "figure.run",       durationLabel: "40m", state: .missed),
-        DayPill(weekday: .thursday,  glyph: "bicycle",          durationLabel: "1h",  state: .today),
-        DayPill(weekday: .friday,    glyph: "bed.double.fill",  durationLabel: nil,   state: .rest),
-        DayPill(weekday: .saturday,  glyph: "figure.run",       durationLabel: "1h30", state: .planned, isSelected: true),
-        DayPill(weekday: .sunday,    glyph: "bicycle",          durationLabel: "2h",  state: .planned)
+        DayPill(weekday: .monday,    glyphs: ["figure.pool.swim"], durationLabel: "45m", state: .completed),
+        DayPill(weekday: .tuesday,   glyphs: ["bicycle"],          durationLabel: "1h",  state: .completed),
+        DayPill(weekday: .wednesday, glyphs: ["figure.run"],       durationLabel: "40m", state: .missed),
+        DayPill(weekday: .thursday,  glyphs: ["bicycle"],          durationLabel: "1h",  state: .today),
+        DayPill(weekday: .friday,    glyphs: ["bed.double.fill"],  durationLabel: nil,   state: .rest),
+        DayPill(weekday: .saturday,  glyphs: ["figure.run"],       durationLabel: "1h30", state: .planned, isSelected: true),
+        DayPill(weekday: .sunday,    glyphs: ["bicycle"],          durationLabel: "2h",  state: .planned)
+    ]
+
+    return WeekDayStrip(days: days, onPillTap: { _ in })
+        .padding()
+        .background(Color.pageSurface)
+}
+
+#Preview("WeekDayStrip — today selected + multi-glyph day") {
+    // DRO-244: today (Thursday) carries the accent outline by default while
+    // also keeping its solid `.today` background. Thursday in this fixture is
+    // a brick-style two-session day rendered with two glyphs side-by-side
+    // (swim + run) to validate the multi-glyph icon row.
+    let days: [DayPill] = [
+        DayPill(weekday: .monday,    glyphs: ["figure.pool.swim"],                 durationLabel: "45m",  state: .completed),
+        DayPill(weekday: .tuesday,   glyphs: ["bicycle"],                          durationLabel: "1h",   state: .completed),
+        DayPill(weekday: .wednesday, glyphs: ["figure.run"],                       durationLabel: "40m",  state: .missed),
+        DayPill(weekday: .thursday,  glyphs: ["figure.pool.swim", "figure.run"],   durationLabel: "1h30", state: .today, isSelected: true),
+        DayPill(weekday: .friday,    glyphs: ["bed.double.fill"],                  durationLabel: nil,    state: .rest),
+        DayPill(weekday: .saturday,  glyphs: ["figure.run"],                       durationLabel: "1h30", state: .planned),
+        DayPill(weekday: .sunday,    glyphs: ["bicycle"],                          durationLabel: "2h",   state: .planned)
     ]
 
     return WeekDayStrip(days: days, onPillTap: { _ in })
