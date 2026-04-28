@@ -214,8 +214,13 @@ struct HomeView: View {
                     // Plan swapped (e.g., regeneration) — invalidate completion cache and refetch.
                     Task { await loadCompletionAndTotals() }
                 }
+                // Without this, an invisible NavigationStack bar still negotiates safe-area
+                // insets — and a `Map` view anywhere in the scroll content (e.g.
+                // `StravaRouteMapView` inside `TodayCompletedCard`) causes the bar to inflate
+                // its top inset by ~54pt, pushing the SportProgressStrip down on days that
+                // render a polyline. Hiding the bar removes the negotiation entirely.
+                .toolbar(.hidden, for: .navigationBar)
             }
-            // No .toolbar — no edit mode on Home (deliberate; spec §10b).
         }
     }
 
