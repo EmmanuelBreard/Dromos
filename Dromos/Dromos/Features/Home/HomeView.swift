@@ -345,44 +345,58 @@ struct HomeView: View {
     /// 7 day-pills for the current week, in Mon→Sun order. Always returns exactly 7
     /// (WeekDayStrip asserts on count).
     ///
-    /// `selected` is the user's currently-previewed day (nil = today selected by
-    /// default — no `isSelected` outline anywhere). When non-nil, the matching pill
-    /// is marked `isSelected = true`. Today's pill keeps its solid background even
-    /// when selected; the outline only renders for non-today selections.
+    /// `selected` is the user's currently-previewed day. DRO-244: today is the
+    /// default selected pill — when `selected == nil` the today-pill carries
+    /// `isSelected = true` so the green accent border renders on today by
+    /// default. When `selected` is non-nil, the matching pill is marked
+    /// `isSelected = true` instead and the border moves there. The today pill
+    /// keeps its solid background regardless; the outline overlays it.
     private func weekPills(selected: Weekday?) -> [DayPill] {
         let week = currentWeek
-        let weekday = todayWeekday()
+        let today = todayWeekday()
         let sessionsByDay = week?.sessionsByDay ?? [:]
 
         return Weekday.allCases.map { day in
             let sessions = (sessionsByDay[day] ?? []).sorted { $0.orderInDay < $1.orderInDay }
+            // DRO-244: nil selection means "today is the previewed day" — today
+            // pill gets the accent outline by default. Any non-nil selection
+            // moves the outline onto that day.
+            let isSelected = (selected == nil) ? (day == today) : (selected == day)
             return DayPill(
                 weekday: day,
-                glyph: glyph(for: day, sessions: sessions),
+                glyphs: glyphs(for: day, sessions: sessions),
                 durationLabel: durationLabel(for: sessions),
-                state: pillState(for: day, today: weekday, sessions: sessions),
-                isSelected: selected == day
+                state: pillState(for: day, today: today, sessions: sessions),
+                isSelected: isSelected
             )
         }
     }
 
-    /// SF Symbol glyph for a day-pill. Rules per DRO-236 spec:
-    /// - 0 sessions → bed icon ("Rest").
-    /// - 1 race session → flag.
-    /// - 1 brick session → link icon.
-    /// - 1 session → sport icon.
-    /// - 2+ sessions → "X+Y" abbreviation glyph picker (we just render the first
-    ///   session's icon since SF Symbols can't render arbitrary combo glyphs).
-    ///   The duration label below carries the multi-session signal.
-    private func glyph(for day: Weekday, sessions: [PlanSession]) -> String {
-        guard let first = sessions.first else { return "bed.double.fill" }
-        if sessions.count == 1 {
-            if first.sport.lowercased() == "race" { return "flag.checkered" }
-            if first.isBrick { return "link" }
-            return first.sportIcon
+    /// SF Symbol glyphs for a day-pill icon row. Returns one element for single-
+    /// session / rest / race / brick days and one element per session for any
+    /// other multi-session day. WeekDayStrip renders these side-by-side in an
+    /// HStack so two-session days (e.g., swim + run) show two icons inline.
+    ///
+    /// Rules:
+    /// - 0 sessions → `["bed.double.fill"]` (rest).
+    /// - any race session → `["flag.checkered"]` (race takeover; matches the
+    ///   race-day card behaviour in `todayHero`).
+    /// - 1 session, brick flag set → `[first.sportIcon]` (single icon — the
+    ///   `link` glyph used to be the brick visual but is no longer required
+    ///   now that pills can carry multi-glyphs; brick-on-its-own still renders
+    ///   the sport icon for clarity).
+    /// - otherwise → `sessions.map(\.sportIcon)` (one glyph per session in
+    ///   `orderInDay` order).
+    private func glyphs(for day: Weekday, sessions: [PlanSession]) -> [String] {
+        guard let first = sessions.first else { return ["bed.double.fill"] }
+        if sessions.contains(where: { $0.sport.lowercased() == "race" }) {
+            return ["flag.checkered"]
         }
-        // Multi-session day — first session's icon is the visual anchor.
-        return first.sportIcon
+        if sessions.count == 1 {
+            if first.isBrick { return [first.sportIcon] }
+            return [first.sportIcon]
+        }
+        return sessions.map(\.sportIcon)
     }
 
     /// Total minutes for the day, formatted compactly. nil for rest days (no sessions)

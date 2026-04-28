@@ -1,6 +1,6 @@
 # DRO-242 — Today Tab UI Polish
 
-**Overall Progress:** `0%`
+**Overall Progress:** `33%`
 
 ## TLDR
 
@@ -40,17 +40,17 @@ Scope: Today tab only (`TodayPlannedCard` / `TodayCompletedCard` / `TodayMissedC
 
 ## Tasks
 
-### - [ ] 🟥 **Phase 1: WeekDayStrip — multi-glyph + always-on today border**
+### - [x] 🟩 **Phase 1: WeekDayStrip — multi-glyph + always-on today border**
 
 Goal: green border can be applied to today; multi-session pills show one SF Symbol per session inline.
 
-  - [ ] 🟥 In `WeekDayStrip.swift`, change `DayPill.glyph: String` to `glyphs: [String]`. Update the doc-comment.
-  - [ ] 🟥 Replace the single `Image(systemName: pill.glyph)` in `pillView(for:)` with an HStack rendering one `Image(systemName:)` per glyph in `pill.glyphs`. Spacing 4pt. Same `.font(.caption.weight(.semibold))` and `GlyphTextStyle(state:)` modifier as today.
-  - [ ] 🟥 Remove the `pill.state != .today` clause from the `strokeBorder` `lineWidth` ternary so the accent outline renders whenever `pill.isSelected` is true, including for the today pill.
-  - [ ] 🟥 Update both `#Preview` blocks (`mixed week` + `selected non-today pill`) to pass `glyphs:` arrays. Add a third preview demonstrating today + multi-session day with two glyphs (e.g., swim + run on Thursday).
-  - [ ] 🟥 In `HomeView.weekPills(selected:)`, when computing each pill set `isSelected = (selected == nil ? day == todayWeekday() : selected == day)`. Net: today is the default selected pill; tapping a non-today pill moves selection (and the green border) to that pill.
-  - [ ] 🟥 In `HomeView`, add `glyphs(for day: Weekday, sessions: [PlanSession]) -> [String]`. Rules: empty → `["bed.double.fill"]`; race → `["flag.checkered"]`; brick (single brick session) → `[first.sportIcon]`; otherwise → `sessions.map(\.sportIcon)`. Replace the call to `glyph(...)` in `weekPills(...)` with a call to `glyphs(...)`. Delete the now-unused `glyph(...)`.
-  - [ ] 🟥 Build + run: confirm today pill shows green border by default; tapping another day moves the border; multi-session days show 2 icons side-by-side. Visual sanity check across light + dark mode.
+  - [x] 🟩 In `WeekDayStrip.swift`, change `DayPill.glyph: String` to `glyphs: [String]`. Update the doc-comment.
+  - [x] 🟩 Replace the single `Image(systemName: pill.glyph)` in `pillView(for:)` with an HStack rendering one `Image(systemName:)` per glyph in `pill.glyphs`. Spacing 4pt. Same `.font(.caption.weight(.semibold))` and `GlyphTextStyle(state:)` modifier as today.
+  - [x] 🟩 Remove the `pill.state != .today` clause from the `strokeBorder` `lineWidth` ternary so the accent outline renders whenever `pill.isSelected` is true, including for the today pill.
+  - [x] 🟩 Update both `#Preview` blocks (`mixed week` + `selected non-today pill`) to pass `glyphs:` arrays. Add a third preview demonstrating today + multi-session day with two glyphs (e.g., swim + run on Thursday).
+  - [x] 🟩 In `HomeView.weekPills(selected:)`, when computing each pill set `isSelected = (selected == nil ? day == todayWeekday() : selected == day)`. Net: today is the default selected pill; tapping a non-today pill moves selection (and the green border) to that pill.
+  - [x] 🟩 In `HomeView`, add `glyphs(for day: Weekday, sessions: [PlanSession]) -> [String]`. Rules: empty → `["bed.double.fill"]`; race → `["flag.checkered"]`; brick (single brick session) → `[first.sportIcon]`; otherwise → `sessions.map(\.sportIcon)`. Replace the call to `glyph(...)` in `weekPills(...)` with a call to `glyphs(...)`. Delete the now-unused `glyph(...)`.
+  - [x] 🟩 Build + run: confirm today pill shows green border by default; tapping another day moves the border; multi-session days show 2 icons side-by-side. Visual sanity check across light + dark mode.
 
 ### - [ ] 🟥 **Phase 2: Today hero session cards — single-line title with icon + duration**
 
