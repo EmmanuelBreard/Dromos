@@ -61,6 +61,14 @@ struct HomeView: View {
     /// tab re-tap (`homeReset`) or by tapping today / re-tapping the selected pill.
     @State private var selectedDay: Weekday? = nil
 
+    /// Direction of the most recent day-change action (swipe or pill tap). Drives
+    /// `heroTransition` so the today-hero asymmetric move+opacity reflects user intent:
+    /// going forward in the week → outgoing slides leading, incoming inserts from
+    /// trailing; going backward → outgoing slides trailing, incoming inserts from
+    /// leading. Updated in `goToDay(_:)` and `handlePillTap(_:)` BEFORE the state
+    /// mutation so SwiftUI captures the right transition on the same render pass.
+    @State private var swipeDirection: SwipeDirection = .next
+
     private let workoutLibrary = WorkoutLibraryService.shared
     private let calendar = Calendar.current
 
@@ -121,18 +129,24 @@ struct HomeView: View {
                             // Horizontal swipe between days. `.id(effectiveSelectedDay)`
                             // forces SwiftUI to treat each day's hero as a distinct view
                             // identity so the asymmetric move+opacity transition fires on
-                            // swap. The container is intentionally content-sized — no
-                            // `.frame(...)` height constraint — to avoid the prior
-                            // fixed-height TabView regression where short cards (e.g.
-                            // rest day) sat in a tall empty frame.
+                            // swap. The transition direction is driven by `swipeDirection`
+                            // so backward navigation (previous day) inserts from the
+                            // leading edge instead of the trailing edge — see
+                            // `heroTransition`. The container is intentionally
+                            // content-sized — no `.frame(...)` height constraint — to
+                            // avoid the prior fixed-height TabView regression where short
+                            // cards (e.g. rest day) sat in a tall empty frame.
+                            //
+                            // `.animation(_, value:)` is scoped to `effectiveSelectedDay`
+                            // so the transition fires only on day changes, not on
+                            // unrelated state updates (Strava sync, plan reload). This
+                            // also keeps animation transactions out of the WeekDayStrip
+                            // and external day label, so neighbouring layout doesn't
+                            // animate together with the hero swap.
                             todayHero
                                 .id(effectiveSelectedDay)
-                                .transition(
-                                    .asymmetric(
-                                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    )
-                                )
+                                .transition(heroTransition)
+                                .animation(.easeInOut(duration: 0.25), value: effectiveSelectedDay)
                                 .gesture(
                                     DragGesture(minimumDistance: 20)
                                         .onEnded { value in
@@ -486,26 +500,52 @@ struct HomeView: View {
     /// - Tap the **already-selected** non-today pill → clear selection, return to today.
     /// - Tap any **other** pill → mark it selected so the hero previews that day.
     ///
-    /// The mutation is wrapped in `withAnimation(.easeInOut(duration: 0.25))` so the
-    /// hero swap animates with the same transition as the swipe gesture — pill taps
-    /// and swipes are visually indistinguishable.
+    /// The hero swap is animated by the `.animation(_, value: effectiveSelectedDay)`
+    /// modifier on `todayHero` — pill taps and swipes are visually indistinguishable.
+    /// We also stamp `swipeDirection` BEFORE mutating `selectedDay` so the asymmetric
+    /// transition picks the right direction (forward = trailing-in, backward =
+    /// leading-in). Direction is inferred from weekday-index comparison — tapping a
+    /// day past today's index is forward; anything else (today / earlier / re-tap)
+    /// is backward, which matches the "go back to today" feel of the canonicalisation.
     private func handlePillTap(_ tappedWeekday: Weekday) {
         let today = todayWeekday()
-        withAnimation(.easeInOut(duration: 0.25)) {
-            if tappedWeekday == today {
-                selectedDay = nil
-            } else if selectedDay == tappedWeekday {
-                selectedDay = nil
-            } else {
-                selectedDay = tappedWeekday
-            }
+        let currentIdx = Weekday.allCases.firstIndex(of: effectiveSelectedDay) ?? 0
+        let targetIdx = Weekday.allCases.firstIndex(of: tappedWeekday) ?? 0
+        swipeDirection = targetIdx > currentIdx ? .next : .previous
+        if tappedWeekday == today {
+            selectedDay = nil
+        } else if selectedDay == tappedWeekday {
+            selectedDay = nil
+        } else {
+            selectedDay = tappedWeekday
         }
     }
 
     // MARK: - Day Swipe
 
-    /// Direction of a horizontal swipe on the today hero.
+    /// Direction of a day-change action (horizontal swipe or pill tap). Drives the
+    /// asymmetric `heroTransition` so insertion/removal edges match user intent.
     private enum SwipeDirection { case next, previous }
+
+    /// Direction-aware transition for the today hero. Forward (`.next`) inserts the
+    /// new day from the trailing edge while the outgoing day slides off the leading
+    /// edge. Backward (`.previous`) inverts both edges so a swipe to yesterday looks
+    /// like the previous day is coming in from the LEFT, matching the user's
+    /// physical gesture direction.
+    private var heroTransition: AnyTransition {
+        switch swipeDirection {
+        case .next:
+            return .asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            )
+        case .previous:
+            return .asymmetric(
+                insertion: .move(edge: .leading).combined(with: .opacity),
+                removal: .move(edge: .trailing).combined(with: .opacity)
+            )
+        }
+    }
 
     /// Advances `selectedDay` by ±1 within `Weekday.allCases`, hard-stopping at the
     /// Mon/Sun bounds so the user cannot swipe outside the current week. When the
@@ -513,17 +553,18 @@ struct HomeView: View {
     /// "today is selected" state — matching `handlePillTap` semantics so swipe-back
     /// to today is indistinguishable from tapping the today pill.
     ///
-    /// Wrapped in `withAnimation(.easeInOut(duration: 0.25))` so the asymmetric
-    /// move+opacity transition on the hero container fires on each swap.
+    /// `swipeDirection` is updated BEFORE the state mutation so SwiftUI sees the new
+    /// transition value on the same render pass that triggers the `.id` swap. The
+    /// animation is driven by the `.animation(_, value:)` on `todayHero`, scoped to
+    /// the hero alone so neighbouring views don't animate alongside.
     private func goToDay(_ direction: SwipeDirection) {
         let current = effectiveSelectedDay
         guard let idx = Weekday.allCases.firstIndex(of: current) else { return }
         let target = direction == .next ? idx + 1 : idx - 1
         guard Weekday.allCases.indices.contains(target) else { return }
         let newDay = Weekday.allCases[target]
-        withAnimation(.easeInOut(duration: 0.25)) {
-            selectedDay = (newDay == todayWeekday()) ? nil : newDay
-        }
+        swipeDirection = direction
+        selectedDay = (newDay == todayWeekday()) ? nil : newDay
     }
 
     // MARK: - Day Label Helpers
