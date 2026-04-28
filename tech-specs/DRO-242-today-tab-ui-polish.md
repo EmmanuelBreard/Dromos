@@ -1,6 +1,6 @@
 # DRO-242 — Today Tab UI Polish
 
-**Overall Progress:** `67%`
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -82,11 +82,11 @@ Goal: cards display `[icon] Tempo Bike - 1h30` on one line; redundant right-side
   - [x] 🟩 Update each card's `#Preview` blocks: the new title is the most visible change so previews must show it correctly across run / bike / swim sessions.
   - [x] 🟩 Build + run: confirm icon + name + duration all render on one line on the iPhone 13 mini width (smallest target) for all sport icons, including longer names like "Intervals Bike" and "Endurance Run". If overflow occurs, plan a fallback (truncate display name with `lineLimit(1)` + `truncationMode(.tail)`).
 
-### - [ ] 🟥 **Phase 3: Day swipe + animation parity**
+### - [x] 🟩 **Phase 3: Day swipe + animation parity**
 
 Goal: horizontal swipe on the hero changes day with `.easeInOut(0.25)`; pill taps animate with the same transition; spacing between the day label and the card is unchanged from today.
 
-  - [ ] 🟥 In `HomeView`, define `private enum SwipeDirection { case next, previous }` and a helper:
+  - [x] 🟩 In `HomeView`, define `private enum SwipeDirection { case next, previous }` and a helper:
     ```swift
     private func goToDay(_ direction: SwipeDirection) {
         let current = effectiveSelectedDay
@@ -99,7 +99,7 @@ Goal: horizontal swipe on the hero changes day with `.easeInOut(0.25)`; pill tap
         }
     }
     ```
-  - [ ] 🟥 Wrap `todayHero` in a container that owns the swipe gesture. Pattern:
+  - [x] 🟩 Wrap `todayHero` in a container that owns the swipe gesture. Pattern:
     ```swift
     todayHero
         .id(effectiveSelectedDay)  // forces view identity per day for transition
@@ -120,13 +120,13 @@ Goal: horizontal swipe on the hero changes day with `.easeInOut(0.25)`; pill tap
         )
     ```
     Critical: do NOT add `.frame(...)` height constraints. The container sizes to its content, eliminating the prior regression.
-  - [ ] 🟥 Wrap pill-tap mutations in `handlePillTap(_:)` with `withAnimation(.easeInOut(duration: 0.25)) { ... }` so pill taps animate the hero swap identically to swipes.
-  - [ ] 🟥 Verify the empty-plan branch (`EmptyHomeHero`) is NOT wrapped in the swipe gesture — only the `todayHero` inside the `if let _ = planService.trainingPlan` branch.
-  - [ ] 🟥 Cross-state QA: swipe through Mon→Tue→...→Sun, including a day with a planned card, a completed card, a missed card, a multi-session day, a rest day, and (if practical to mock) a race day. Confirm the spacing between the external day label and the card top stays at the existing 24pt VStack spacing on every variant — no whitespace bloom under short cards. Verify hard stop at Monday (left) and Sunday (right) — swipe past the edge does nothing.
-  - [ ] 🟥 Confirm vertical scroll inside the outer `ScrollView` still works: drag vertically on the card should scroll the page, not trigger the swipe gesture. The `abs(dx) > abs(dy)` guard handles this.
+  - [x] 🟩 Wrap pill-tap mutations in `handlePillTap(_:)` with `withAnimation(.easeInOut(duration: 0.25)) { ... }` so pill taps animate the hero swap identically to swipes.
+  - [x] 🟩 Verify the empty-plan branch (`EmptyHomeHero`) is NOT wrapped in the swipe gesture — only the `todayHero` inside the `if let _ = planService.trainingPlan` branch.
+  - [x] 🟩 Cross-state QA: swipe through Mon→Tue→...→Sun, including a day with a planned card, a completed card, a missed card, a multi-session day, a rest day, and (if practical to mock) a race day. Confirm the spacing between the external day label and the card top stays at the existing 24pt VStack spacing on every variant — no whitespace bloom under short cards. Verify hard stop at Monday (left) and Sunday (right) — swipe past the edge does nothing.
+  - [x] 🟩 Confirm vertical scroll inside the outer `ScrollView` still works: drag vertically on the card should scroll the page, not trigger the swipe gesture. The `abs(dx) > abs(dy)` guard handles this.
 
-### - [ ] 🟥 **Phase 4: Context doc + PR**
+### - [ ] 🟧 **Phase 4: Context doc + PR**
 
-  - [ ] 🟥 Update `.claude/context/architecture.md` lines describing `WeekDayStrip` and the three Today cards to reflect the new behaviour (today border default, multi-glyph pills, single-line title).
+  - [x] 🟩 Update `.claude/context/architecture.md` lines describing `WeekDayStrip` and the three Today cards to reflect the new behaviour (today border default, multi-glyph pills, single-line title).
   - [ ] 🟥 Open PR `feature/DRO-242-today-tab-polish` against `main`. Title: `feat(DRO-242): today tab polish — week strip, session card title, day swipe`. Body must call out the swipe regression fix (drag gesture instead of fixed-height TabView) so the reviewer can spot-check the spacing claim.
   - [ ] 🟥 Self-QA checklist in PR description: pill green border default, pill green border movement on tap, multi-session glyph rendering, title row layout on smallest device, swipe in both directions, edge stop at Mon/Sun, animation parity between swipe and tap, vertical scroll preserved.

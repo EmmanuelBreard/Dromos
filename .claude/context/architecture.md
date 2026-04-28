@@ -35,11 +35,11 @@ Dromos/Dromos/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 6-screen onboarding flow
 │   ├── Home/                         # Today screen — sport-progress strip + today hero card(s) + week strip (DRO-231)
-│   │   ├── HomeView.swift            # Composes the Today screen: SportProgressStrip + state-routed today hero (planned/completed/missed/multi/rest/race/empty) + WeekDayStrip; lifecycle: .task / Strava-sync listener / homeReset re-tap (sync + scroll-to-top) / pull-to-refresh
+│   │   ├── HomeView.swift            # Composes the Today screen: SportProgressStrip + state-routed today hero (planned/completed/missed/multi/rest/race/empty) + WeekDayStrip; supports horizontal swipe between days on the today hero (DragGesture + .easeInOut(0.25) transition, animation parity with pill taps — DRO-242); lifecycle: .task / Strava-sync listener / homeReset re-tap (sync + scroll-to-top) / pull-to-refresh
 │   │   ├── SportProgressStrip.swift  # 3-column SWIM/BIKE/RUN done-vs-planned per week, accent fill bar capped at 100% (DRO-234)
-│   │   ├── TodayPlannedCard.swift    # Planned-state today card: header + name + rationale + WorkoutShape + WorkoutStepList (DRO-235)
-│   │   ├── TodayCompletedCard.swift  # Completed-state today card: CompletedTag + name + CoachFeedbackBlock + ActualVsPlannedTable + optional GPS map + planned-workout disclosure (DRO-235)
-│   │   ├── TodayMissedCard.swift     # Missed-state today card: MissedTag + dimmed name (no rationale/shape/steps/CTA) (DRO-235)
+│   │   ├── TodayPlannedCard.swift    # Planned-state today card: inline `[icon] name - duration` title row + header + rationale + WorkoutShape + WorkoutStepList (DRO-235, title row updated DRO-242)
+│   │   ├── TodayCompletedCard.swift  # Completed-state today card: CompletedTag + inline `[icon] name - duration` title row + CoachFeedbackBlock + ActualVsPlannedTable + optional GPS map + planned-workout disclosure (DRO-235, title row updated DRO-242)
+│   │   ├── TodayMissedCard.swift     # Missed-state today card: MissedTag + inline `[icon] name - duration` title row dimmed (no rationale/shape/steps/CTA) (DRO-235, title row updated DRO-242)
 │   │   ├── ActualVsPlannedTable.swift # Sport-aware 3-col grid (Metric/Actual/Planned) — run / bike (skip power if nil) / swim (DRO-235)
 │   │   ├── WorkoutShape.swift        # 56pt-tall horizontal intensity bar wrapper around segment data (DRO-233)
 │   │   ├── WorkoutStepList.swift     # Step list with nested RepeatBlock accent left-border + multiplier prefix (DRO-233)
@@ -48,7 +48,7 @@ Dromos/Dromos/
 │   │   ├── MissedTag.swift           # Red ✗ "NOT COMPLETED" pill using Color.errorStrong (DRO-233)
 │   │   ├── SessionSequenceBadge.swift # Numbered circle (1/2) for multi-session days (DRO-233)
 │   │   ├── EmptyHomeHero.swift       # No-plan empty state: Dromos mark + "Generate your first plan" + CTA (DRO-236)
-│   │   ├── WeekDayStrip.swift        # 7-pill week row with PillState (today/completed/planned/missed/rest); pills not tappable in v1 (DRO-236)
+│   │   ├── WeekDayStrip.swift        # 7-pill week row with PillState (today/completed/planned/missed/rest); pills tappable, today shows green border by default, multi-session pills render multiple SF Symbols side-by-side (DRO-236, extended DRO-242)
 │   │   ├── SessionCardView.swift     # Legacy rich session card used by Calendar tab; also hosts restyled RestDayCardView + RaceDayCardView (DRO-236 restyles)
 │   │   ├── ActualMetricsView.swift   # Sport-specific metric grid for Calendar's completed cards (legacy; ActualVsPlannedTable is the new equivalent on Home — see DRO-240 for consolidation)
 │   │   ├── StravaRouteMapView.swift  # Non-interactive MapKit view rendering GPS route from encoded polyline; stroke now Color.accentColor (was .blue, changed in DRO-235 — affects Calendar too)
