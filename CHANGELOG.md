@@ -6,6 +6,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Today tab polish** — The today pill on the week strip now keeps the green border by default and the border follows you as you preview other days (instead of disappearing on today). Multi-session days show one sport icon per session inline in the small pill instead of just the first session's icon. Session cards on the today hero collapse the title onto one line — `[icon] Tempo Bike - 1h30` — and the redundant duration caption on the right side of the card header is removed. Horizontal swipe between days is back: drag left/right on the hero card to navigate the week, with a hard stop at Monday/Sunday. Pill taps and swipes share the same `.easeInOut(0.25)` slide+fade transition.
+
+### Fixed
+- **SportProgressStrip layout drift on Home** — On days where the completed-session card rendered a GPS route map, the SportProgressStrip would sit ~54pt lower than on days without a map. Caused by `MKMapView` propagating safe-area insets up to the NavigationStack. Fixed by hiding the (already empty) Home navigation bar (DRO-242).
+
 ### Added
 - **New Home (Today) tab** — Replaces the placeholder with a focused Today screen: sport-progress strip on top (Swim/Bike/Run weekly hours done vs planned), week-day pill strip below, an external day label (`Today` / `Tomorrow` / `Yesterday` / `April 29th`), and the session card(s) for the selected day as the hero. Tap any pill to preview that day's session — pill stays outlined while previewed, the same components render planned / completed (with optional GPS map) / missed / rest / race / empty states. Coach feedback shows a silent shimmer while the AI generates it; actual-vs-planned comparison surfaces per-sport metrics (run/bike/swim) including segment-summed planned distance for swims. Pull-to-refresh syncs Strava; tab re-tap snaps back to today and refreshes (DRO-231).
 
