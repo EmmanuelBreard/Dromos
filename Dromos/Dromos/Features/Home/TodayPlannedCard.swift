@@ -59,11 +59,14 @@ struct TodayPlannedCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            Text(session.displayName)
-                .font(.title2)
-                .fontWeight(.bold)
-                .kerning(-0.4)
-                .foregroundColor(.primary)
+            HStack(spacing: 8) {
+                Image(systemName: session.sportIcon)
+                Text("\(session.displayName) - \(Self.formatTitleDuration(minutes: session.durationMinutes))")
+            }
+            .font(.title2)
+            .fontWeight(.bold)
+            .kerning(-0.4)
+            .foregroundColor(.primary)
             if let notes = session.notes, !notes.isEmpty {
                 Text(notes)
                     .font(.body)
@@ -97,23 +100,23 @@ struct TodayPlannedCard: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            // Spacer kept so the badge / sport·type stays left-aligned with no
+            // right-side caption (Phase 2 dropped the duration·sport caption — the
+            // duration now lives in the title row inline next to the icon).
             Spacer(minLength: 8)
-            Text("\(Self.formatDurationApostrophe(minutes: session.durationMinutes)) · \(session.sport.lowercased())")
-                .font(.caption)
-                .monospacedDigit()
-                .foregroundColor(.secondary)
         }
     }
 
-    /// Mirrors the apostrophe glyph format used by `TodayCompletedCard` (and the Phase 1
-    /// step list) so the right-side caption reads identically across the three card
-    /// variants. Intentionally local — `session.formattedDuration` is still consumed
-    /// elsewhere with the verbose `"60 min"` style.
-    private static func formatDurationApostrophe(minutes: Int) -> String {
+    /// Compact title-row duration. `60→"1h"`, `90→"1h30"`, `45→"45'"`, `120→"2h"`.
+    /// Mirrors `HomeView.formatPillDuration` (DRO-242 Phase 1) so the inline duration
+    /// next to the session icon matches the week-strip pills. Intentionally omits the
+    /// apostrophe on the minutes part of an hour-and-minute combo (`1h30`, not
+    /// `1h 30'`).
+    private static func formatTitleDuration(minutes: Int) -> String {
         if minutes >= 60 {
             let h = minutes / 60
             let m = minutes % 60
-            return m == 0 ? "\(h)h" : "\(h)h \(m)'"
+            return m == 0 ? "\(h)h" : "\(h)h\(m)"
         }
         return "\(minutes)'"
     }
@@ -214,6 +217,38 @@ private let _previewEveningRun = PlanSession(
                 sequenceContext: (index: 2, total: 2)
             )
         }
+        .padding(16)
+    }
+    .background(Color.pageSurface)
+}
+
+#Preview("Bike tempo — 1h30 title duration") {
+    // Demonstrates the hour-and-minute formatter (`90 → "1h30"`) and the bike sport icon
+    // in the Phase 2 inline title row.
+    let bikeSession = PlanSession(
+        id: UUID(),
+        weekId: UUID(),
+        day: "Wednesday",
+        sport: "bike",
+        type: "Tempo",
+        templateId: "BIKE_TEMPO_3x12",
+        durationMinutes: 90,
+        isBrick: false,
+        notes: "Tempo blocks at 88-92% FTP — steady cadence in the work intervals.",
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
+    )
+    return ScrollView {
+        TodayPlannedCard(
+            session: bikeSession,
+            template: nil,
+            ftp: 250,
+            vma: nil,
+            css: nil,
+            maxHr: 188,
+            sequenceContext: nil
+        )
         .padding(16)
     }
     .background(Color.pageSurface)

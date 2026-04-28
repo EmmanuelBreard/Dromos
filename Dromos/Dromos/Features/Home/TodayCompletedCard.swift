@@ -76,11 +76,14 @@ struct TodayCompletedCard: View {
         VStack(alignment: .leading, spacing: 16) {
             header
 
-            Text(session.displayName)
-                .font(.title2)
-                .fontWeight(.bold)
-                .kerning(-0.4)
-                .foregroundColor(.primary)
+            HStack(spacing: 8) {
+                Image(systemName: session.sportIcon)
+                Text("\(session.displayName) - \(Self.formatTitleDuration(minutes: session.durationMinutes))")
+            }
+            .font(.title2)
+            .fontWeight(.bold)
+            .kerning(-0.4)
+            .foregroundColor(.primary)
 
             CoachFeedbackBlock(
                 feedback: session.feedback,
@@ -132,12 +135,26 @@ struct TodayCompletedCard: View {
             } else {
                 CompletedTag()
             }
+            // Spacer kept so the badge / sport·type stays left-aligned with no
+            // right-side caption (Phase 2 dropped the actual-duration·sport caption —
+            // the planned duration now lives in the title row inline next to the icon;
+            // actual duration stays in `ActualVsPlannedTable`).
             Spacer(minLength: 8)
-            Text("\(formattedActualDuration) · \(session.sport.lowercased())")
-                .font(.caption)
-                .monospacedDigit()
-                .foregroundColor(.secondary)
         }
+    }
+
+    /// Compact title-row duration. `60→"1h"`, `90→"1h30"`, `45→"45'"`, `120→"2h"`.
+    /// Mirrors `HomeView.formatPillDuration` (DRO-242 Phase 1) so the inline duration
+    /// next to the session icon matches the week-strip pills. Uses **planned**
+    /// `session.durationMinutes` — the actual Strava duration stays in
+    /// `ActualVsPlannedTable`.
+    private static func formatTitleDuration(minutes: Int) -> String {
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            return m == 0 ? "\(h)h" : "\(h)h\(m)"
+        }
+        return "\(minutes)'"
     }
 
     // MARK: - Map block
@@ -329,6 +346,42 @@ private func makeActivity(
             activity: makeActivity(matchedTo: unmatched, polyline: nil),
             template: nil,
             ftp: nil, vma: 17.0, css: nil, maxHr: 188,
+            sequenceContext: nil
+        )
+        .padding(16)
+    }
+    .background(Color.pageSurface)
+}
+
+#Preview("Completed — swim (45' title duration)") {
+    // Demonstrates the sub-60-minute formatter (`45 → "45'"`) and the swim sport icon
+    // in the Phase 2 inline title row.
+    let swimSession = PlanSession(
+        id: UUID(),
+        weekId: UUID(),
+        day: "Tuesday",
+        sport: "swim",
+        type: "Easy",
+        templateId: "SWIM_Easy_01",
+        durationMinutes: 45,
+        isBrick: false,
+        notes: "Aerobic recovery swim — smooth catch.",
+        orderInDay: 0,
+        feedback: "Stroke rate held steady. Sighting drills paid off — heading was clean across the bay.",
+        matchedActivityId: UUID()
+    )
+    return ScrollView {
+        TodayCompletedCard(
+            session: swimSession,
+            activity: makeActivity(
+                matchedTo: swimSession,
+                polyline: nil,
+                averageWatts: nil,
+                distance: 2000,
+                elevationGain: 0
+            ),
+            template: nil,
+            ftp: nil, vma: nil, css: 95, maxHr: 188,
             sequenceContext: nil
         )
         .padding(16)
