@@ -118,7 +118,33 @@ struct HomeView: View {
                                 .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .accessibilityAddTraits(.isHeader)
+                            // Horizontal swipe between days. `.id(effectiveSelectedDay)`
+                            // forces SwiftUI to treat each day's hero as a distinct view
+                            // identity so the asymmetric move+opacity transition fires on
+                            // swap. The container is intentionally content-sized — no
+                            // `.frame(...)` height constraint — to avoid the prior
+                            // fixed-height TabView regression where short cards (e.g.
+                            // rest day) sat in a tall empty frame.
                             todayHero
+                                .id(effectiveSelectedDay)
+                                .transition(
+                                    .asymmetric(
+                                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    )
+                                )
+                                .gesture(
+                                    DragGesture(minimumDistance: 20)
+                                        .onEnded { value in
+                                            let dx = value.translation.width
+                                            let dy = value.translation.height
+                                            // 50pt horizontal threshold + mostly-horizontal
+                                            // motion guard. The latter preserves vertical
+                                            // scroll inside the outer ScrollView.
+                                            guard abs(dx) > 50, abs(dx) > abs(dy) else { return }
+                                            goToDay(dx < 0 ? .next : .previous)
+                                        }
+                                )
                         } else if planService.isLoadingPlan {
                             // Cold-launch guard: while the plan fetch is in flight, show a
                             // centered spinner instead of flashing EmptyHomeHero. Without this
@@ -459,14 +485,44 @@ struct HomeView: View {
     /// - Tap **today** (regardless of `selectedDay`) → clear selection, return to today.
     /// - Tap the **already-selected** non-today pill → clear selection, return to today.
     /// - Tap any **other** pill → mark it selected so the hero previews that day.
+    ///
+    /// The mutation is wrapped in `withAnimation(.easeInOut(duration: 0.25))` so the
+    /// hero swap animates with the same transition as the swipe gesture — pill taps
+    /// and swipes are visually indistinguishable.
     private func handlePillTap(_ tappedWeekday: Weekday) {
         let today = todayWeekday()
-        if tappedWeekday == today {
-            selectedDay = nil
-        } else if selectedDay == tappedWeekday {
-            selectedDay = nil
-        } else {
-            selectedDay = tappedWeekday
+        withAnimation(.easeInOut(duration: 0.25)) {
+            if tappedWeekday == today {
+                selectedDay = nil
+            } else if selectedDay == tappedWeekday {
+                selectedDay = nil
+            } else {
+                selectedDay = tappedWeekday
+            }
+        }
+    }
+
+    // MARK: - Day Swipe
+
+    /// Direction of a horizontal swipe on the today hero.
+    private enum SwipeDirection { case next, previous }
+
+    /// Advances `selectedDay` by ±1 within `Weekday.allCases`, hard-stopping at the
+    /// Mon/Sun bounds so the user cannot swipe outside the current week. When the
+    /// new day equals today, `selectedDay` is reset to `nil` to canonicalise the
+    /// "today is selected" state — matching `handlePillTap` semantics so swipe-back
+    /// to today is indistinguishable from tapping the today pill.
+    ///
+    /// Wrapped in `withAnimation(.easeInOut(duration: 0.25))` so the asymmetric
+    /// move+opacity transition on the hero container fires on each swap.
+    private func goToDay(_ direction: SwipeDirection) {
+        let current = effectiveSelectedDay
+        guard let idx = Weekday.allCases.firstIndex(of: current) else { return }
+        let target = direction == .next ? idx + 1 : idx - 1
+        guard Weekday.allCases.indices.contains(target) else { return }
+        let newDay = Weekday.allCases[target]
+        withAnimation(.easeInOut(duration: 0.25)) {
+            selectedDay = (newDay == todayWeekday()) ? nil : newDay
         }
     }
 
