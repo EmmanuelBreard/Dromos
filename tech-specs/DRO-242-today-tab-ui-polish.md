@@ -1,6 +1,6 @@
 # DRO-242 — Today Tab UI Polish
 
-**Overall Progress:** `33%`
+**Overall Progress:** `67%`
 
 ## TLDR
 
@@ -52,12 +52,12 @@ Goal: green border can be applied to today; multi-session pills show one SF Symb
   - [x] 🟩 In `HomeView`, add `glyphs(for day: Weekday, sessions: [PlanSession]) -> [String]`. Rules: empty → `["bed.double.fill"]`; race → `["flag.checkered"]`; brick (single brick session) → `[first.sportIcon]`; otherwise → `sessions.map(\.sportIcon)`. Replace the call to `glyph(...)` in `weekPills(...)` with a call to `glyphs(...)`. Delete the now-unused `glyph(...)`.
   - [x] 🟩 Build + run: confirm today pill shows green border by default; tapping another day moves the border; multi-session days show 2 icons side-by-side. Visual sanity check across light + dark mode.
 
-### - [ ] 🟥 **Phase 2: Today hero session cards — single-line title with icon + duration**
+### - [x] 🟩 **Phase 2: Today hero session cards — single-line title with icon + duration**
 
 Goal: cards display `[icon] Tempo Bike - 1h30` on one line; redundant right-side caption removed.
 
-  - [ ] 🟥 Add a shared duration formatter. Decision: keep it private-static on each card (matches existing `formatDurationApostrophe` pattern) but with the pill-formatter logic — `60→"1h"`, `90→"1h30"`, `45→"45'"`. Naming: `formatTitleDuration(minutes:)`. (If `HomeView.formatPillDuration` is needed in 2+ files, promote to a `Weekday`/`PlanSession` extension; otherwise keep duplicated.)
-  - [ ] 🟥 In `TodayPlannedCard.body`, replace:
+  - [x] 🟩 Add a shared duration formatter. Decision: keep it private-static on each card (matches existing `formatDurationApostrophe` pattern) but with the pill-formatter logic — `60→"1h"`, `90→"1h30"`, `45→"45'"`. Naming: `formatTitleDuration(minutes:)`. (If `HomeView.formatPillDuration` is needed in 2+ files, promote to a `Weekday`/`PlanSession` extension; otherwise keep duplicated.)
+  - [x] 🟩 In `TodayPlannedCard.body`, replace:
     ```swift
     Text(session.displayName)
         .font(.title2)
@@ -76,11 +76,11 @@ Goal: cards display `[icon] Tempo Bike - 1h30` on one line; redundant right-side
     .kerning(-0.4)
     .foregroundColor(.primary)
     ```
-  - [ ] 🟥 In `TodayPlannedCard.header`, drop the trailing `Text("\(formatDurationApostrophe(...)) · \(session.sport.lowercased())")` element. Keep the badge + sport·type left side. The `Spacer(minLength: 8)` can stay or be removed (no right-side element to push against).
-  - [ ] 🟥 Repeat in `TodayCompletedCard.body` (title row) and `header` (drop `formattedActualDuration · sport`). Title duration = `session.durationMinutes` (planned), not the Strava actual — the actual stays in `ActualVsPlannedTable`.
-  - [ ] 🟥 Repeat in `TodayMissedCard.body`. Title row HStack uses `.headline` (not `.title2`) + `.secondary` foreground (preserve missed-card visual hierarchy). Drop the right-side caption from `header`.
-  - [ ] 🟥 Update each card's `#Preview` blocks: the new title is the most visible change so previews must show it correctly across run / bike / swim sessions.
-  - [ ] 🟥 Build + run: confirm icon + name + duration all render on one line on the iPhone 13 mini width (smallest target) for all sport icons, including longer names like "Intervals Bike" and "Endurance Run". If overflow occurs, plan a fallback (truncate display name with `lineLimit(1)` + `truncationMode(.tail)`).
+  - [x] 🟩 In `TodayPlannedCard.header`, drop the trailing `Text("\(formatDurationApostrophe(...)) · \(session.sport.lowercased())")` element. Keep the badge + sport·type left side. The `Spacer(minLength: 8)` can stay or be removed (no right-side element to push against).
+  - [x] 🟩 Repeat in `TodayCompletedCard.body` (title row) and `header` (drop `formattedActualDuration · sport`). Title duration = `session.durationMinutes` (planned), not the Strava actual — the actual stays in `ActualVsPlannedTable`.
+  - [x] 🟩 Repeat in `TodayMissedCard.body`. Title row HStack uses `.headline` (not `.title2`) + `.secondary` foreground (preserve missed-card visual hierarchy). Drop the right-side caption from `header`.
+  - [x] 🟩 Update each card's `#Preview` blocks: the new title is the most visible change so previews must show it correctly across run / bike / swim sessions.
+  - [x] 🟩 Build + run: confirm icon + name + duration all render on one line on the iPhone 13 mini width (smallest target) for all sport icons, including longer names like "Intervals Bike" and "Endurance Run". If overflow occurs, plan a fallback (truncate display name with `lineLimit(1)` + `truncationMode(.tail)`).
 
 ### - [ ] 🟥 **Phase 3: Day swipe + animation parity**
 

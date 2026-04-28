@@ -396,7 +396,7 @@ struct HomeView: View {
     private func durationLabel(for sessions: [PlanSession]) -> String? {
         guard !sessions.isEmpty else { return nil }
         let total = sessions.reduce(0) { $0 + $1.durationMinutes }
-        return formatPillDuration(minutes: total)
+        return PlanSession.formatCompactDuration(minutes: total)
     }
 
     /// Pill state derived from past/today/future + completion status.
@@ -527,15 +527,6 @@ struct HomeView: View {
         if hours > 0 && minutes > 0 { return "\(hours)h \(minutes) min" }
         if hours > 0 { return "\(hours)h" }
         return "\(minutes) min"
-    }
-
-    /// Compact pill duration: "2h", "1h30", "45'" — fits the narrow pill column.
-    private func formatPillDuration(minutes: Int) -> String {
-        let h = minutes / 60
-        let m = minutes % 60
-        if h > 0 && m > 0 { return "\(h)h\(m)" }
-        if h > 0 { return "\(h)h" }
-        return "\(m)'"
     }
 
     /// Today's weekday derived from `Calendar.current`. `Weekday.from(date:)` does not
