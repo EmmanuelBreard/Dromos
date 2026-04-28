@@ -181,6 +181,17 @@ struct PlanSession: Codable, Identifiable {
         }
     }
 
+    /// Compact duration: `60→"1h"`, `90→"1h30"`, `45→"45'"`, `120→"2h"`. Used by
+    /// the Today-tab session card title rows and the WeekDayStrip pill duration.
+    static func formatCompactDuration(minutes: Int) -> String {
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            return m == 0 ? "\(h)h" : "\(h)h\(m)"
+        }
+        return "\(minutes)'"
+    }
+
     /// Memberwise initializer with a default of `nil` for `structure`.
     /// Keeps existing callsites (e.g. Xcode previews) source-compatible after the
     /// addition of the `structure` field.
