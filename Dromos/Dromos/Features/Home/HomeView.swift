@@ -381,20 +381,12 @@ struct HomeView: View {
     /// - 0 sessions → `["bed.double.fill"]` (rest).
     /// - any race session → `["flag.checkered"]` (race takeover; matches the
     ///   race-day card behaviour in `todayHero`).
-    /// - 1 session, brick flag set → `[first.sportIcon]` (single icon — the
-    ///   `link` glyph used to be the brick visual but is no longer required
-    ///   now that pills can carry multi-glyphs; brick-on-its-own still renders
-    ///   the sport icon for clarity).
     /// - otherwise → `sessions.map(\.sportIcon)` (one glyph per session in
     ///   `orderInDay` order).
     private func glyphs(for day: Weekday, sessions: [PlanSession]) -> [String] {
-        guard let first = sessions.first else { return ["bed.double.fill"] }
+        if sessions.isEmpty { return ["bed.double.fill"] }
         if sessions.contains(where: { $0.sport.lowercased() == "race" }) {
             return ["flag.checkered"]
-        }
-        if sessions.count == 1 {
-            if first.isBrick { return [first.sportIcon] }
-            return [first.sportIcon]
         }
         return sessions.map(\.sportIcon)
     }
