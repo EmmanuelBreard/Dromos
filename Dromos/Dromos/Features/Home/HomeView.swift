@@ -214,8 +214,18 @@ struct HomeView: View {
                     // Plan swapped (e.g., regeneration) — invalidate completion cache and refetch.
                     Task { await loadCompletionAndTotals() }
                 }
+                // Hide the navigation bar entirely. Today has no title, no toolbar items, and
+                // no push navigation (spec §10b — "look at it, go do it" surface). Without this,
+                // the bar is invisible but still negotiates safe-area insets — and a `Map` view
+                // anywhere in the scroll content (e.g., `StravaRouteMapView` inside
+                // `TodayCompletedCard` for activities with a polyline) causes the
+                // NavigationStack to inflate the top safe-area inset by ~54pt, pushing the
+                // SportProgressStrip down. The inflation only fires when a Map is rendered,
+                // so the gap appears bigger on days where the completed-card has a polyline
+                // (often "today") than on planned/missed/rest days. Hiding the bar removes
+                // the negotiation entirely. (DRO-242 v2 fix.)
+                .toolbar(.hidden, for: .navigationBar)
             }
-            // No .toolbar — no edit mode on Home (deliberate; spec §10b).
         }
     }
 
