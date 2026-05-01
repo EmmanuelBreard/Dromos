@@ -138,7 +138,7 @@ struct HomeView: View {
                             // remains a sibling OUTSIDE this wrapper and stays pinned.
                             // The date label IS now expected to animate with the hero —
                             // both slide as one unit.
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 24) {
                                 Text(dayLabel(for: effectiveSelectedDay))
                                     .font(.title3)
                                     .fontWeight(.bold)

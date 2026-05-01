@@ -79,7 +79,7 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
 
 - [x] 🟩 **Phase 2: Today tab — pure horizontal slide + correct direction on all triggers**
   - [x] 🟩 In `HomeView.swift`: delete local `SwipeDirection` enum + `heroTransition` computed property (lines ~540-553). Rename `swipeDirection` state to use shared `SlideDirection`.
-  - [x] 🟩 Wrap `Text(dayLabel(for: effectiveSelectedDay))` + `todayHero` into a single `VStack(alignment: .leading, spacing: 8)`. Apply to the wrapper:
+  - [x] 🟩 Wrap `Text(dayLabel(for: effectiveSelectedDay))` + `todayHero` into a single `VStack(alignment: .leading, spacing: 24)`. Apply to the wrapper:
     - `.id(effectiveSelectedDay)`
     - `.transition(.horizontalSlide(direction: swipeDirection))`
     - `.animation(.easeInOut(duration: 0.25), value: effectiveSelectedDay)`
