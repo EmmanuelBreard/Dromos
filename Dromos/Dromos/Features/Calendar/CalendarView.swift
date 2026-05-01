@@ -41,9 +41,6 @@ struct CalendarView: View {
     /// Index of the currently displayed week in plan.planWeeks.
     @State private var currentWeekIndex: Int = 0
 
-    /// Direction for the next horizontal slide transition — set before mutating currentWeekIndex.
-    @State private var slideDirection: SlideDirection = .next
-
     /// Whether edit mode is active (shows move arrows on session cards).
     @State private var isEditMode: Bool = false
 
@@ -133,26 +130,21 @@ struct CalendarView: View {
                     canGoNext: currentWeekIndex < plan.planWeeks.count - 1
                 )
 
-                // MARK: Week slide — pure .id() + .transition() + DragGesture pattern.
-                // TabView(.page)'s .animation(value:) doesn't reliably animate programmatic
-                // page changes (chevron taps, calendarReset). This pattern matches Today's hero
-                // swap so both tabs share the same direction-aware push-slide feel.
-                weekContent(weekIndex: currentWeekIndex, plan: plan)
-                    .id(currentWeekIndex)
-                    .transition(.horizontalSlide(direction: slideDirection))
-                    .animation(.easeInOut(duration: 0.25), value: currentWeekIndex)
-                    .gesture(
-                        DragGesture(minimumDistance: 20)
-                            .onEnded { value in
-                                let dx = value.translation.width
-                                let dy = value.translation.height
-                                // 50pt horizontal threshold + mostly-horizontal motion guard
-                                // (preserves vertical scroll inside the week's day list).
-                                guard abs(dx) > 50, abs(dx) > abs(dy) else { return }
-                                let target = currentWeekIndex + (dx < 0 ? 1 : -1)
-                                goToWeek(target, plan: plan)
-                            }
-                    )
+                // MARK: Week slide — native TabView(.page) for continuous-track-during-drag.
+                // QA (Option A): reverted from .id() + .transition() + DragGesture because that
+                // pattern only commits on finger lift — no progressive tracking during drag.
+                // TabView(.page) provides native UIKit continuous-track behavior.
+                //
+                // .animation(value:) is intentionally omitted — it's known-unreliable for .page
+                // style. Chevron taps animate via withAnimation in goToWeek(_:plan:). Tab-reset
+                // snap-back stays instant via withTransaction(disablesAnimations: true) below.
+                TabView(selection: $currentWeekIndex) {
+                    ForEach(plan.planWeeks.indices, id: \.self) { idx in
+                        weekContent(weekIndex: idx, plan: plan)
+                            .tag(idx)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             } else {
                 ProgressView()
                     .scaleEffect(1.5)
@@ -401,13 +393,14 @@ struct CalendarView: View {
         }
     }
 
-    /// Navigates to a week by index (bounds-checked).
-    /// Sets slideDirection before mutating currentWeekIndex so the transition fires
-    /// in the correct direction for all callers (chevron taps, DragGesture).
+    /// Navigates to a week by index (bounds-checked). Wraps the mutation in
+    /// `withAnimation` so chevron taps drive a smooth page transition. Native
+    /// horizontal swipe doesn't go through here — TabView handles that itself.
     private func goToWeek(_ idx: Int, plan: TrainingPlan) {
         guard idx >= 0, idx < plan.planWeeks.count else { return }
-        slideDirection = idx > currentWeekIndex ? .next : .previous
-        currentWeekIndex = idx
+        withAnimation(.easeInOut(duration: 0.25)) {
+            currentWeekIndex = idx
+        }
     }
 
     // MARK: - Helper Methods

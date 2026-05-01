@@ -180,8 +180,11 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
 ## QA Fix Iteration 1
 
 - **Issue 3: Option A — Restored `TabView(.page)` on Calendar for native continuous-track-during-drag swipe.** Chevron taps animate via `withAnimation`. Tab-reset stays instant via `withTransaction(disablesAnimations: true)`. `slideDirection` state dropped from CalendarView. Today retains the `.id() + .transition()` pattern.
+<<<<<<< HEAD
 
 ### Today tab — QA fixes (HomeView.swift only)
 
 - **Issue 1 — wrong-direction outgoing card on first direction reversal:** SwiftUI batches `swipeDirection` + `selectedDay` mutations on the same render pass, so the outgoing view's `.transition(...)` is captured with the OLD direction. Fix: set `swipeDirection` synchronously, then defer `selectedDay` into `Task { @MainActor in ... }` so the outgoing view re-captures with the new direction BEFORE the `.id()` swap fires. Applied in `goToDay(_:)`, `handlePillTap(_:)`, and `.onChange(of: homeReset)`.
 - **Issue 2 — swipe gesture dead zone below session card:** `DragGesture` was attached to the inner day-unit wrapper `VStack`, which is content-sized — empty space below the card was unresponsive. Fix: moved the `.gesture(...)` modifier to the outer `VStack(spacing: 24)` so the entire content area is swipeable. `.id`, `.transition`, and `.animation` remain on the inner wrapper.
+=======
+>>>>>>> origin/feature/DRO-247-smooth-slide-transitions
