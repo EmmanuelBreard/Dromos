@@ -190,12 +190,12 @@ struct CalendarView: View {
                 }
             } else {
                 // Different week — snap instantly (no slide across many weeks).
+                // `.onChange(of: currentWeekIndex)` handles the refetch + feedback generation.
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
                     currentWeekIndex = target
                 }
-                Task { await loadIfNeeded(weekIndex: target, plan: plan) }
             }
         }
         .onChange(of: stravaService.isSyncing) { oldValue, newValue in
