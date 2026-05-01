@@ -176,3 +176,7 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
     - CalendarView description: replaced `TabView(.page)` with `.id()` + `DragGesture` pattern; tab re-tap snap is instant
     - Core tree: add `SlideTransition.swift` reference
   - [ ] 🟥 Add `CHANGELOG.md` entry under `[Unreleased]` (or appropriate version): "DRO-247: smooth horizontal push-slide transition on Today day navigation and Calendar week navigation".
+
+## QA Fix Iteration 1
+
+- **Issue 3: Option A — Restored `TabView(.page)` on Calendar for native continuous-track-during-drag swipe.** Chevron taps animate via `withAnimation`. Tab-reset stays instant via `withTransaction(disablesAnimations: true)`. `slideDirection` state dropped from CalendarView. Today retains the `.id() + .transition()` pattern.
