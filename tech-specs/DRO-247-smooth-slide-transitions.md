@@ -1,6 +1,6 @@
 # DRO-247 — Smooth Slide Transitions on Today and Calendar
 
-**Overall Progress:** `0%`
+**Overall Progress:** `25%`
 
 ## TLDR
 
@@ -47,8 +47,8 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
 
 ## Tasks
 
-- [ ] 🟥 **Phase 1: Shared slide transition helper**
-  - [ ] 🟥 Create `Dromos/Dromos/Core/SlideTransition.swift`:
+- [x] 🟩 **Phase 1: Shared slide transition helper**
+  - [x] 🟩 Create `Dromos/Dromos/Core/SlideTransition.swift`:
     ```swift
     import SwiftUI
 
@@ -74,8 +74,8 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
         }
     }
     ```
-  - [ ] 🟥 Add file to Xcode target (Dromos → Sources).
-  - [ ] 🟥 Build verifies file compiles (no usages yet).
+  - [x] 🟩 Add file to Xcode target (Dromos → Sources).
+  - [x] 🟩 Build verifies file compiles (no usages yet).
 
 - [ ] 🟥 **Phase 2: Today tab — pure horizontal slide + correct direction on all triggers**
   - [ ] 🟥 In `HomeView.swift`: delete local `SwipeDirection` enum + `heroTransition` computed property (lines ~540-553). Rename `swipeDirection` state to use shared `SlideDirection`.
