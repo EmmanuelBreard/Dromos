@@ -41,6 +41,9 @@ struct CalendarView: View {
     /// Index of the currently displayed week in plan.planWeeks.
     @State private var currentWeekIndex: Int = 0
 
+    /// Direction for the next horizontal slide transition — set before mutating currentWeekIndex.
+    @State private var slideDirection: SlideDirection = .next
+
     /// Whether edit mode is active (shows move arrows on session cards).
     @State private var isEditMode: Bool = false
 
@@ -114,9 +117,9 @@ struct CalendarView: View {
     @ViewBuilder
     private func contentBody(plan: TrainingPlan, currentWeek: PlanWeek, weekStart: Date) -> some View {
         VStack(spacing: 0) {
-            // Gate the header + paged TabView on first-paint initialisation. Without this gate
-            // the TabView renders at index 0, then `.task` snaps it to the current week, and
-            // the `.animation` modifier scrubs visibly through every intervening week.
+            // Gate the header + week content on first-paint initialisation. Without this gate
+            // the view renders at index 0, then `.task` snaps it to the current week, and
+            // the animation scrubs visibly through every intervening week.
             if didInitializeWeekIndex {
                 CalendarWeekHeader(
                     weekNumber: currentWeek.weekNumber,
@@ -130,14 +133,26 @@ struct CalendarView: View {
                     canGoNext: currentWeekIndex < plan.planWeeks.count - 1
                 )
 
-                TabView(selection: $currentWeekIndex) {
-                    ForEach(plan.planWeeks.indices, id: \.self) { idx in
-                        weekContent(weekIndex: idx, plan: plan)
-                            .tag(idx)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.25), value: currentWeekIndex)
+                // MARK: Week slide — pure .id() + .transition() + DragGesture pattern.
+                // TabView(.page)'s .animation(value:) doesn't reliably animate programmatic
+                // page changes (chevron taps, calendarReset). This pattern matches Today's hero
+                // swap so both tabs share the same direction-aware push-slide feel.
+                weekContent(weekIndex: currentWeekIndex, plan: plan)
+                    .id(currentWeekIndex)
+                    .transition(.horizontalSlide(direction: slideDirection))
+                    .animation(.easeInOut(duration: 0.25), value: currentWeekIndex)
+                    .gesture(
+                        DragGesture(minimumDistance: 20)
+                            .onEnded { value in
+                                let dx = value.translation.width
+                                let dy = value.translation.height
+                                // 50pt horizontal threshold + mostly-horizontal motion guard
+                                // (preserves vertical scroll inside the week's day list).
+                                guard abs(dx) > 50, abs(dx) > abs(dy) else { return }
+                                let target = currentWeekIndex + (dx < 0 ? 1 : -1)
+                                goToWeek(target, plan: plan)
+                            }
+                    )
             } else {
                 ProgressView()
                     .scaleEffect(1.5)
@@ -158,6 +173,9 @@ struct CalendarView: View {
                 await generatePendingFeedback(plan: plan, weekIndex: newIdx)
             }
         }
+        // Snap-back on Calendar tab re-tap: intentionally instant (no animation).
+        // Animating a slide across many weeks would be jarring — suppress it via
+        // a disabled-animation transaction. The refetch is kicked off after the snap.
         .onChange(of: calendarReset) { _, _ in
             let target = plan.currentWeekIndex()
             // Re-tap is the iOS "refresh" gesture — purge the cached entry so the
@@ -171,8 +189,13 @@ struct CalendarView: View {
                     await generatePendingFeedback(plan: plan, weekIndex: target)
                 }
             } else {
-                // Different week — onChange(of: currentWeekIndex) handles the refetch.
-                currentWeekIndex = target
+                // Different week — snap instantly (no slide across many weeks).
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    currentWeekIndex = target
+                }
+                Task { await loadIfNeeded(weekIndex: target, plan: plan) }
             }
         }
         .onChange(of: stravaService.isSyncing) { oldValue, newValue in
@@ -379,9 +402,11 @@ struct CalendarView: View {
     }
 
     /// Navigates to a week by index (bounds-checked).
-    /// Animation is driven by `.animation(.easeInOut(duration: 0.25), value: currentWeekIndex)` on TabView.
+    /// Sets slideDirection before mutating currentWeekIndex so the transition fires
+    /// in the correct direction for all callers (chevron taps, DragGesture).
     private func goToWeek(_ idx: Int, plan: TrainingPlan) {
         guard idx >= 0, idx < plan.planWeeks.count else { return }
+        slideDirection = idx > currentWeekIndex ? .next : .previous
         currentWeekIndex = idx
     }
 
