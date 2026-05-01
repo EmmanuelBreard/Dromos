@@ -1,6 +1,6 @@
 # DRO-247 — Smooth Slide Transitions on Today and Calendar
 
-**Overall Progress:** `50%`
+**Overall Progress:** `75%`
 
 ## TLDR
 
@@ -111,8 +111,8 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
     - [ ] Multi-session day, rest day, race day: all slide identically
     - [ ] SportProgressStrip + WeekDayStrip stay pinned (do not slide)
 
-- [ ] 🟥 **Phase 3: Calendar tab — replace TabView(.page) with shared slide pattern**
-  - [ ] 🟥 In `CalendarView.swift`: remove `TabView(selection:) { ForEach { weekContent(...).tag(idx) } } .tabViewStyle(.page(indexDisplayMode: .never)) .animation(...)` block (lines 133-140). Replace with:
+- [x] 🟩 **Phase 3: Calendar tab — replace TabView(.page) with shared slide pattern**
+  - [x] 🟩 In `CalendarView.swift`: remove `TabView(selection:) { ForEach { weekContent(...).tag(idx) } } .tabViewStyle(.page(indexDisplayMode: .never)) .animation(...)` block (lines 133-140). Replace with:
     ```swift
     weekContent(weekIndex: currentWeekIndex, plan: plan)
         .id(currentWeekIndex)
@@ -129,8 +129,8 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
                 }
         )
     ```
-  - [ ] 🟥 Add `@State private var slideDirection: SlideDirection = .next` to `CalendarView`.
-  - [ ] 🟥 Update `goToWeek(_:plan:)` ([CalendarView.swift:383-386](Dromos/Dromos/Features/Calendar/CalendarView.swift#L383)) to set direction before mutating index:
+  - [x] 🟩 Add `@State private var slideDirection: SlideDirection = .next` to `CalendarView`.
+  - [x] 🟩 Update `goToWeek(_:plan:)` ([CalendarView.swift:383-386](Dromos/Dromos/Features/Calendar/CalendarView.swift#L383)) to set direction before mutating index:
     ```swift
     private func goToWeek(_ idx: Int, plan: TrainingPlan) {
         guard idx >= 0, idx < plan.planWeeks.count else { return }
@@ -138,8 +138,8 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
         currentWeekIndex = idx
     }
     ```
-  - [ ] 🟥 Verify chevron handlers (`onPrevious`, `onNext` passed to `CalendarWeekHeader`) funnel through `goToWeek` so direction is computed correctly.
-  - [ ] 🟥 Wrap the `calendarReset` mutation at [CalendarView.swift:161-177](Dromos/Dromos/Features/Calendar/CalendarView.swift#L161) so the snap is instant:
+  - [x] 🟩 Verify chevron handlers (`onPrevious`, `onNext` passed to `CalendarWeekHeader`) funnel through `goToWeek` so direction is computed correctly. (Already routed through `goToWeek` — no change needed.)
+  - [x] 🟩 Wrap the `calendarReset` mutation at [CalendarView.swift:161-177](Dromos/Dromos/Features/Calendar/CalendarView.swift#L161) so the snap is instant:
     ```swift
     .onChange(of: calendarReset) { _, _ in
         let target = plan.currentWeekIndex()
