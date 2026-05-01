@@ -1,6 +1,6 @@
 # DRO-247 — Smooth Slide Transitions on Today and Calendar
 
-**Overall Progress:** `25%`
+**Overall Progress:** `50%`
 
 ## TLDR
 
@@ -77,15 +77,15 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
   - [x] 🟩 Add file to Xcode target (Dromos → Sources).
   - [x] 🟩 Build verifies file compiles (no usages yet).
 
-- [ ] 🟥 **Phase 2: Today tab — pure horizontal slide + correct direction on all triggers**
-  - [ ] 🟥 In `HomeView.swift`: delete local `SwipeDirection` enum + `heroTransition` computed property (lines ~540-553). Rename `swipeDirection` state to use shared `SlideDirection`.
-  - [ ] 🟥 Wrap `Text(dayLabel(for: effectiveSelectedDay))` + `todayHero` into a single `VStack(alignment: .leading, spacing: 24)` (or appropriate spacing). Apply to the wrapper:
+- [x] 🟩 **Phase 2: Today tab — pure horizontal slide + correct direction on all triggers**
+  - [x] 🟩 In `HomeView.swift`: delete local `SwipeDirection` enum + `heroTransition` computed property (lines ~540-553). Rename `swipeDirection` state to use shared `SlideDirection`.
+  - [x] 🟩 Wrap `Text(dayLabel(for: effectiveSelectedDay))` + `todayHero` into a single `VStack(alignment: .leading, spacing: 24)`. Apply to the wrapper:
     - `.id(effectiveSelectedDay)`
     - `.transition(.horizontalSlide(direction: swipeDirection))`
     - `.animation(.easeInOut(duration: 0.25), value: effectiveSelectedDay)`
     - The existing `DragGesture(minimumDistance: 20)` (move from `todayHero` to wrapper)
-  - [ ] 🟥 Confirm SportProgressStrip + WeekDayStrip remain OUTSIDE this wrapper (they stay pinned).
-  - [ ] 🟥 Refactor `handlePillTap(_:)` ([HomeView.swift:515-527](Dromos/Dromos/Features/Home/HomeView.swift#L515)) to compute direction from before→after destination:
+  - [x] 🟩 Confirmed SportProgressStrip + WeekDayStrip remain OUTSIDE this wrapper (they stay pinned).
+  - [x] 🟩 Refactor `handlePillTap(_:)` to compute direction from before→after destination:
     ```swift
     private func handlePillTap(_ tappedWeekday: Weekday) {
         let today = todayWeekday()
@@ -98,18 +98,7 @@ Replace the "hard-replace" feeling on day-to-day (Today) and week-to-week (Calen
         selectedDay = newSelection
     }
     ```
-  - [ ] 🟥 In `.onChange(of: homeReset)` ([HomeView.swift:200-212](Dromos/Dromos/Features/Home/HomeView.swift#L200)), compute direction from `effectiveSelectedDay → today` BEFORE setting `selectedDay = nil`:
-    ```swift
-    .onChange(of: homeReset) { _, _ in
-        let from = effectiveSelectedDay
-        let to = todayWeekday()
-        let fromIdx = Weekday.allCases.firstIndex(of: from) ?? 0
-        let toIdx = Weekday.allCases.firstIndex(of: to) ?? 0
-        swipeDirection = toIdx > fromIdx ? .next : .previous
-        selectedDay = nil
-        Task { ... }
-    }
-    ```
+  - [x] 🟩 In `.onChange(of: homeReset)`, compute direction from `effectiveSelectedDay → today` BEFORE setting `selectedDay = nil`.
   - [ ] 🟥 Manual QA checklist:
     - [ ] Swipe forward (e.g., today → tomorrow): card + date label slide as one unit, exit-left / enter-right, no fade
     - [ ] Swipe backward: mirror direction
