@@ -138,6 +138,12 @@ struct HomeView: View {
                             // remains a sibling OUTSIDE this wrapper and stays pinned.
                             // The date label IS now expected to animate with the hero —
                             // both slide as one unit.
+                            //
+                            // NOTE: `.id`, `.transition`, and `.animation` stay on this
+                            // inner wrapper so only the day-unit animates. The
+                            // `DragGesture` lives on the OUTER VStack (see below) so the
+                            // swipe surface extends below the card all the way to the
+                            // floating tab bar (DRO-247 QA fix).
                             VStack(alignment: .leading, spacing: 24) {
                                 Text(dayLabel(for: effectiveSelectedDay))
                                     .font(.title3)
@@ -150,18 +156,6 @@ struct HomeView: View {
                             .id(effectiveSelectedDay)
                             .transition(.horizontalSlide(direction: swipeDirection))
                             .animation(.easeInOut(duration: 0.25), value: effectiveSelectedDay)
-                            .gesture(
-                                DragGesture(minimumDistance: 20)
-                                    .onEnded { value in
-                                        let dx = value.translation.width
-                                        let dy = value.translation.height
-                                        // 50pt horizontal threshold + mostly-horizontal
-                                        // motion guard. The latter preserves vertical
-                                        // scroll inside the outer ScrollView.
-                                        guard abs(dx) > 50, abs(dx) > abs(dy) else { return }
-                                        goToDay(dx < 0 ? .next : .previous)
-                                    }
-                            )
                         } else if planService.isLoadingPlan {
                             // Cold-launch guard: while the plan fetch is in flight, show a
                             // centered spinner instead of flashing EmptyHomeHero. Without this
@@ -177,6 +171,24 @@ struct HomeView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
                     .id("top")
+                    // DragGesture is on the OUTER VStack (not the inner day-unit wrapper)
+                    // so the swipe surface covers the full content area including any
+                    // empty space below the session card, down to the floating tab bar.
+                    // Pill taps still win because they fire on tap (< 20pt movement).
+                    // `.id`, `.transition`, and `.animation` intentionally remain on the
+                    // inner wrapper so only the day-unit slides (DRO-247 QA fix).
+                    .gesture(
+                        DragGesture(minimumDistance: 20)
+                            .onEnded { value in
+                                let dx = value.translation.width
+                                let dy = value.translation.height
+                                // 50pt horizontal threshold + mostly-horizontal
+                                // motion guard. The latter preserves vertical
+                                // scroll inside the outer ScrollView.
+                                guard abs(dx) > 50, abs(dx) > abs(dy) else { return }
+                                goToDay(dx < 0 ? .next : .previous)
+                            }
+                    )
                 }
                 .background(Color.pageSurface)
                 .refreshable {
@@ -202,22 +214,26 @@ struct HomeView: View {
                 }
                 .onChange(of: homeReset) { _, _ in
                     // Tab re-tap: compute slide direction from current effective day →
-                    // today BEFORE clearing `selectedDay`, so SwiftUI captures the right
-                    // transition value on the same render pass. Then clear any previewed
-                    // day (back to "today"), sync Strava, refetch, and scroll to top.
-                    // Sync is awaited before the refetch so new activities land in the
-                    // same render pass. selectedDay reset happens synchronously so the
-                    // visual snaps back before the network round-trip completes.
+                    // today, set swipeDirection synchronously, then defer selectedDay = nil
+                    // into a Task so SwiftUI re-renders with the new direction BEFORE the
+                    // .id() swap fires. Without the deferral, the outgoing view's
+                    // .transition(...) was captured with the old direction — both views end
+                    // up sliding the same way on the first reversal (DRO-247 QA fix).
                     let from = effectiveSelectedDay
                     let to = todayWeekday()
                     let fromIdx = Weekday.allCases.firstIndex(of: from) ?? 0
                     let toIdx = Weekday.allCases.firstIndex(of: to) ?? 0
                     swipeDirection = toIdx > fromIdx ? .next : .previous
-                    selectedDay = nil
                     Task {
+                        // selectedDay is set inside the Task so it runs in a subsequent
+                        // render pass — outgoing view's transition re-captures with the
+                        // new swipeDirection BEFORE the .id() swap (DRO-247 QA fix).
+                        await MainActor.run { selectedDay = nil }
                         await stravaService.syncActivities()
                         await loadCompletionAndTotals()
-                        withAnimation { scrollProxy.scrollTo("top", anchor: .top) }
+                        await MainActor.run {
+                            withAnimation { scrollProxy.scrollTo("top", anchor: .top) }
+                        }
                     }
                 }
                 .onChange(of: planService.trainingPlan?.id) { _, _ in
@@ -529,7 +545,15 @@ struct HomeView: View {
         let fromIdx = Weekday.allCases.firstIndex(of: from) ?? 0
         let toIdx = Weekday.allCases.firstIndex(of: to) ?? 0
         swipeDirection = toIdx > fromIdx ? .next : .previous
-        selectedDay = newSelection
+        // Defer selectedDay mutation by one render pass so the outgoing view's
+        // .transition(...) modifier re-captures with the new swipeDirection BEFORE
+        // the .id() swap fires. Without this, the outgoing view uses the previous
+        // direction's removal edge while the incoming view uses the new direction's
+        // insertion edge — both end up sliding in the same visual direction on the
+        // first reversal of swipe direction (DRO-247 QA fix).
+        Task { @MainActor in
+            selectedDay = newSelection
+        }
     }
 
     // MARK: - Day Swipe
@@ -540,18 +564,29 @@ struct HomeView: View {
     /// "today is selected" state — matching `handlePillTap` semantics so swipe-back
     /// to today is indistinguishable from tapping the today pill.
     ///
-    /// `swipeDirection` is updated BEFORE the state mutation so SwiftUI sees the new
-    /// transition value on the same render pass that triggers the `.id` swap. The
-    /// animation is driven by the `.animation(_, value:)` on `todayHero`, scoped to
-    /// the hero alone so neighbouring views don't animate alongside.
+    /// `swipeDirection` is set synchronously and `selectedDay` is deferred into a
+    /// Task so SwiftUI re-renders with the new direction BEFORE the `.id()` swap
+    /// fires. Without the deferral, both mutations batch into the same render pass —
+    /// the outgoing view's `.transition(...)` was last captured with the OLD direction,
+    /// while the incoming view uses the NEW direction, causing both to slide the same
+    /// way on the first reversal (DRO-247 QA fix).
     private func goToDay(_ direction: SlideDirection) {
         let current = effectiveSelectedDay
         guard let idx = Weekday.allCases.firstIndex(of: current) else { return }
         let target = direction == .next ? idx + 1 : idx - 1
         guard Weekday.allCases.indices.contains(target) else { return }
-        let newDay = Weekday.allCases[target]
+        let targetWeekday = Weekday.allCases[target]
+        let newSelection: Weekday? = targetWeekday == todayWeekday() ? nil : targetWeekday
         swipeDirection = direction
-        selectedDay = (newDay == todayWeekday()) ? nil : newDay
+        // Defer selectedDay mutation by one render pass so the outgoing view's
+        // .transition(...) modifier re-captures with the new swipeDirection BEFORE
+        // the .id() swap fires. Without this, the outgoing view uses the previous
+        // direction's removal edge while the incoming view uses the new direction's
+        // insertion edge — both end up sliding in the same visual direction on the
+        // first reversal of swipe direction (DRO-247 QA fix).
+        Task { @MainActor in
+            selectedDay = newSelection
+        }
     }
 
     // MARK: - Day Label Helpers
