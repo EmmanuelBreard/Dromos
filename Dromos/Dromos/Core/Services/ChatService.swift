@@ -184,11 +184,19 @@ final class ChatService: ObservableObject {
             }
 
             // --- Stream complete: promote to a permanent message ---
+            // Guard against zero-chunk completions (model returned nothing, stream closed
+            // immediately after [DONE]). Without this, we'd append an empty grey bubble.
+            guard let final = streamingMessage, !final.isEmpty else {
+                streamingMessage = nil
+                messages.removeAll { $0.id == optimisticMessage.id }
+                errorMessage = "The coach didn't respond. Please try again."
+                return
+            }
             let assistantMessage = ChatMessage(
                 id: UUID(),
                 userId: userId,
                 role: "assistant",
-                content: streamingMessage ?? "",
+                content: final,
                 createdAt: Date()
             )
             messages.append(assistantMessage)
