@@ -874,8 +874,12 @@ Deno.serve(async (req) => {
     //   b) In parallel, accumulates delta.content server-side by parsing each SSE line.
     //   c) On the [DONE] sentinel: persists the full assistant message to chat_messages
     //      and emits the token-usage log line.
-    //   d) On a mid-stream parse error: emits an SSE error event to the client and does
-    //      NOT persist any partial text (spec requirement: no half-rows in DB).
+    //   d) On a per-chunk parse error: tolerated — the bytes were already forwarded to the
+    //      client (which only consumes the bytes from upstream, not our parser), so the
+    //      user-visible response is unaffected. We log and skip accumulation for that chunk.
+    //   e) On an upstream connection abort mid-stream: pipeThrough rejects naturally, the
+    //      stream closes for the client, flush() does NOT run, and no partial assistant
+    //      message is persisted (spec requirement: no half-rows in DB).
     //
     // Implementation note: we split on "\n" (not "\n\n") because the decoder may batch
     // multiple lines per chunk. We track a lineBuffer for incomplete lines across chunks.
@@ -883,7 +887,6 @@ Deno.serve(async (req) => {
     let lineBuffer = "";
     let accumulated = "";
     let lastUsage: ParsedUsage | null = null;
-    let hadMidStreamError = false;
 
     const transform = new TransformStream<Uint8Array, Uint8Array>({
       transform(chunk, controller) {
@@ -925,14 +928,10 @@ Deno.serve(async (req) => {
         }
       },
 
-      async flush(controller) {
-        // flush() runs after the upstream body closes (after the [DONE] event).
-        // At this point accumulated holds the full assistant reply.
-
-        if (hadMidStreamError) {
-          // An error event was already emitted to the client inside transform(); skip persist.
-          return;
-        }
+      async flush(_controller) {
+        // flush() runs after upstream closes cleanly (after [DONE]). On a mid-stream
+        // upstream abort the stream rejects and flush() does NOT run — that's the
+        // intended path for "no half-rows in DB."
 
         if (accumulated.length > 0) {
           // Persist the complete assistant message — V0: no status classification.
@@ -944,10 +943,10 @@ Deno.serve(async (req) => {
             constraint_summary: null,
           });
           if (assistantInsertError) {
+            // The client has already received [DONE] and closed its read loop, so emitting
+            // an SSE error event here is futile — log only. The message is shown to the
+            // user via streaming but won't appear on next history fetch. Acceptable for V0.
             console.error("chat_messages assistant insert error:", assistantInsertError.message);
-            // Emit an SSE error event so the client knows persistence failed.
-            const errEvent = `event: error\ndata: ${JSON.stringify({ message: "Failed to save assistant message" })}\n\n`;
-            controller.enqueue(new TextEncoder().encode(errEvent));
           }
         }
 
@@ -972,7 +971,7 @@ Deno.serve(async (req) => {
     // 18. Return the SSE response — headers match the SSE spec and iOS URLSession expectations.
     return new Response(transformedStream, {
       headers: {
-        "Content-Type": "text/event-stream",
+        "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
         ...corsHeaders,
