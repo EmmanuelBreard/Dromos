@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Tabs available in the main navigation.
 enum AppTab: Hashable {
-    case home, calendar, profile
+    case home, calendar, coach, profile
 }
 
 /// Main tab navigation for authenticated users.
@@ -30,6 +30,9 @@ struct MainTabView: View {
     /// Owned here so it persists across tab switches and can auto-sync on launch.
     @StateObject private var stravaService = StravaService()
 
+    /// Shared chat service for the Coach tab.
+    /// Gated behind an email allowlist in the UI; server enforces the same gate.
+    @StateObject private var chatService = ChatService()
 
     /// Tracks the currently selected tab.
     @State private var selectedTab: AppTab = .home
@@ -77,6 +80,14 @@ struct MainTabView: View {
                     stravaService: stravaService,
                     calendarReset: $calendarReset
                 )
+            }
+
+            // Coach tab — gated by email allowlist (client-side; server enforces the same).
+            // Only visible to the product owner account during V0 rollout.
+            if authService.currentUserEmail == "ebreard4@gmail.com" {
+                Tab("Coach", systemImage: "bubble.left.fill", value: .coach) {
+                    ChatView(chatService: chatService)
+                }
             }
 
             Tab("Profile", systemImage: "person", value: .profile) {
