@@ -3,7 +3,27 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import OpenAI from "npm:openai@4";
 
 // Auto-generated prompt template — run scripts/sync-prompts.sh to regenerate
-import promptTemplate from "./prompts/adjust-step1-v0-prompt.ts";
+import promptTemplate from "./prompts/coach-chat-v0-prompt.ts";
+
+// ── Prompt split — fail loud at boot time if the delimiter is missing ─────────
+// The prompt has two sections: everything before "--- DYNAMIC ---" is the stable
+// STATIC system message (persona, rules, length caps). Everything after is the
+// DYNAMIC user-message block with {{placeholder}} tokens for per-request context.
+// This split is validated once here; bad prompt files will crash on cold start,
+// not silently mid-request.
+const promptParts = promptTemplate.split(/^--- DYNAMIC ---$/m);
+if (promptParts.length !== 2) {
+  throw new Error(
+    `coach-chat-v0 prompt must contain exactly one '--- DYNAMIC ---' delimiter, got ${promptParts.length - 1}`
+  );
+}
+const STATIC_SYSTEM = promptParts[0].trim();
+const DYNAMIC_TEMPLATE = promptParts[1]; // preserve leading newline for template placeholders
+
+// ── Allowlist — V0 is gated to a single user ────────────────────────────────
+// Server-side enforcement. The iOS client also hides the tab, but this guard
+// is the authoritative gate (defense in depth per Critical Decisions).
+const ALLOWED_EMAIL = "ebreard4@gmail.com";
 
 // ── CORS headers ──────────────────────────────────────────────────────────────
 // Allow all origins; the mobile app uses JWT auth, not cookies.
@@ -30,146 +50,350 @@ interface ChatMessage {
 
 interface UserProfile {
   race_objective?: string | null;
+  race_date?: string | null;
   experience_years?: number | null;
   vma?: number | null;
   css_seconds_per100m?: number | null;
   ftp?: number | null;
+  max_hr?: number | null;
   current_weekly_hours?: number | null;
   swim_days?: string[] | null;
   bike_days?: string[] | null;
   run_days?: string[] | null;
 }
 
+interface TrainingPlan {
+  id: string;
+  total_weeks: number;
+  start_date: string;
+  race_date?: string | null;
+}
+
 interface PlanWeek {
+  id: string;
   week_number: number;
   phase: string;
   is_recovery: boolean;
+  start_date: string;
 }
 
-interface ParsedAIResponse {
-  response_text: string;
-  status: "ready" | "need_info" | "no_action" | "escalate";
-  constraint_summary?: Record<string, unknown>;
+interface PlanSession {
+  id: string;
+  day: string;
+  sport: string;
+  type: string;
+  template_id: string;
+  duration_minutes: number;
+  notes?: string | null;
+  feedback?: string | null;
+  matched_activity_id?: string | null;
+  order_in_day: number;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+interface StravaActivityLap {
+  lap_index: number;
+  average_heartrate?: number | null;
+  max_heartrate?: number | null;
+  average_speed?: number | null; // m/s
+  average_watts?: number | null;
+}
+
+// ── Context formatters ────────────────────────────────────────────────────────
 
 /**
- * Format the user profile into a readable string for the prompt template.
- * Omits any null/undefined fields to keep the prompt clean.
+ * Athlete profile: race objective, race date, experience, VMA, FTP, CSS, max HR.
+ * The fixture shape from scripts/test-coach-chat.mjs is:
+ *   "Race objective: Ironman 70.3 on 2026-05-31 (29 days away)
+ *    Experience: 2 years
+ *    VMA: 18 km/h | FTP: 275W | CSS: 1:55/100m | Max HR: 192 bpm"
  */
 function formatAthleteProfile(profile: UserProfile | null): string {
   if (!profile) return "No profile available.";
 
   const lines: string[] = [];
 
-  if (profile.race_objective) lines.push(`Race objective: ${profile.race_objective}`);
+  // Race objective + date
+  if (profile.race_objective) {
+    if (profile.race_date) {
+      const raceDate = new Date(profile.race_date);
+      const today = new Date();
+      const daysAway = Math.ceil(
+        (raceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const dateStr = raceDate.toISOString().slice(0, 10);
+      lines.push(`Race objective: ${profile.race_objective} on ${dateStr} (${daysAway} days away)`);
+    } else {
+      lines.push(`Race objective: ${profile.race_objective}`);
+    }
+  }
+
   if (profile.experience_years != null) lines.push(`Experience: ${profile.experience_years} years`);
-  if (profile.vma != null) lines.push(`VMA: ${profile.vma} km/h`);
+
+  // Metrics line — combine onto one line like the validated fixture
+  const metrics: string[] = [];
+  if (profile.vma != null) metrics.push(`VMA: ${profile.vma} km/h`);
+  if (profile.ftp != null) metrics.push(`FTP: ${profile.ftp}W`);
   if (profile.css_seconds_per100m != null) {
     const minutes = Math.floor(profile.css_seconds_per100m / 60);
     const seconds = profile.css_seconds_per100m % 60;
-    lines.push(`CSS: ${minutes}:${String(seconds).padStart(2, "0")}/100m`);
+    metrics.push(`CSS: ${minutes}:${String(seconds).padStart(2, "0")}/100m`);
   }
-  if (profile.ftp != null) lines.push(`FTP: ${profile.ftp} W`);
-  if (profile.current_weekly_hours != null) lines.push(`Weekly training hours: ${profile.current_weekly_hours}h`);
-  if (profile.swim_days?.length) lines.push(`Swim days: ${profile.swim_days.join(", ")}`);
-  if (profile.bike_days?.length) lines.push(`Bike days: ${profile.bike_days.join(", ")}`);
-  if (profile.run_days?.length) lines.push(`Run days: ${profile.run_days.join(", ")}`);
+  if (profile.max_hr != null) metrics.push(`Max HR: ${profile.max_hr} bpm`);
+  if (metrics.length > 0) lines.push(metrics.join(" | "));
 
   return lines.length > 0 ? lines.join("\n") : "No profile details available.";
 }
 
 /**
- * Format the plan weeks into a readable string for the prompt template.
- * Returns "No active training plan." when no weeks are provided.
+ * Plan summary: current phase, week N of M, weeks remaining, recovery weeks ahead.
+ * The fixture shape:
+ *   "Currently in Week 6 of 10 — Build phase.
+ *    Phase map: W1-3 Base, W4-5 Recovery, W6-7 Build, W8 Peak, W9-10 Taper.
+ *    4 weeks remaining: Build (W7), Peak (W8), Taper (W9-10)."
  */
-function formatPhaseMap(weeks: PlanWeek[]): string {
-  if (!weeks || weeks.length === 0) return "No active training plan.";
+function formatPlanSummary(
+  plan: TrainingPlan | null,
+  weeks: PlanWeek[],
+  currentWeek: PlanWeek | null
+): string {
+  if (!plan || weeks.length === 0) return "No active training plan.";
 
-  return weeks
-    .map((w) => {
-      const phase = w.phase ?? "Unknown";
-      const recovery = w.is_recovery ? " (Recovery)" : "";
-      return `Week ${w.week_number}: ${phase}${recovery}`;
+  const totalWeeks = plan.total_weeks;
+  const currentWeekNum = currentWeek?.week_number ?? 1;
+  const currentPhase = currentWeek?.phase ?? "Unknown";
+
+  // Line 1: current position
+  const lines: string[] = [];
+  lines.push(`Currently in Week ${currentWeekNum} of ${totalWeeks} — ${currentPhase} phase.`);
+
+  // Line 2: compact phase map (e.g. "W1-3 Base, W4-5 Recovery, W6-7 Build")
+  // Group consecutive weeks with the same phase
+  const phaseGroups: { phase: string; start: number; end: number }[] = [];
+  for (const w of weeks) {
+    const last = phaseGroups[phaseGroups.length - 1];
+    if (last && last.phase === w.phase && last.end === w.week_number - 1) {
+      last.end = w.week_number;
+    } else {
+      phaseGroups.push({ phase: w.phase, start: w.week_number, end: w.week_number });
+    }
+  }
+  const phaseMapStr = phaseGroups
+    .map((g) => (g.start === g.end ? `W${g.start} ${g.phase}` : `W${g.start}-${g.end} ${g.phase}`))
+    .join(", ");
+  lines.push(`Phase map: ${phaseMapStr}.`);
+
+  // Line 3: weeks remaining
+  const remainingWeeks = weeks.filter((w) => w.week_number > currentWeekNum);
+  if (remainingWeeks.length > 0) {
+    const remainingStr = remainingWeeks
+      .map((w) => `${w.phase} (W${w.week_number})${w.is_recovery ? " [recovery]" : ""}`)
+      .join(", ");
+    lines.push(`${remainingWeeks.length} week${remainingWeeks.length !== 1 ? "s" : ""} remaining: ${remainingStr}.`);
+  } else {
+    lines.push("This is the final week of the plan.");
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Today's session(s) from the current week.
+ * Format: "Saturday: BIKE Tempo (BIKE_Tempo_19), 180min — "notes". Already completed today."
+ */
+function formatTodaySession(
+  sessions: PlanSession[],
+  todayName: string
+): string {
+  const todaySessions = sessions
+    .filter((s) => s.day === todayName)
+    .sort((a, b) => a.order_in_day - b.order_in_day);
+
+  if (todaySessions.length === 0) {
+    return `${todayName} is a REST DAY (no scheduled training).`;
+  }
+
+  return todaySessions
+    .map((s) => {
+      const completed = s.matched_activity_id ? " Already completed today." : "";
+      const notesStr = s.notes ? ` — "${s.notes}"` : "";
+      return `${todayName}: ${s.sport.toUpperCase()} ${s.type} (${s.template_id}), ${s.duration_minutes}min${notesStr}.${completed}`;
     })
     .join("\n");
 }
 
 /**
- * Safely extract the outermost JSON block from an LLM response string.
- * Strategy: find the first '{', then try progressively extending the substring
- * until JSON.parse succeeds. This avoids brittle regex matching.
+ * Week map: day-by-day with completed/upcoming markers.
+ * Format matches fixture: "Mon: SWIM Tempo 55min (done) — felt fast but cut short"
  */
-function extractJsonBlock(text: string): Record<string, unknown> | null {
-  const firstBrace = text.indexOf("{");
-  if (firstBrace === -1) return null;
+function formatWeekMap(sessions: PlanSession[], todayName: string): string {
+  if (sessions.length === 0) return "No sessions scheduled this week.";
 
-  // Walk backwards from the end to find the last '}'
-  const lastBrace = text.lastIndexOf("}");
-  if (lastBrace === -1 || lastBrace <= firstBrace) return null;
+  const DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const DAY_ABBR: Record<string, string> = {
+    Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu",
+    Friday: "Fri", Saturday: "Sat", Sunday: "Sun",
+  };
 
-  // Try the full span first (most common case — model outputs one clean JSON block)
-  const candidate = text.slice(firstBrace, lastBrace + 1);
-  try {
-    const parsed = JSON.parse(candidate);
-    if (typeof parsed === "object" && parsed !== null) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    // Fall through to progressive scan
+  // Group sessions by day
+  const byDay = new Map<string, PlanSession[]>();
+  for (const s of sessions) {
+    if (!byDay.has(s.day)) byDay.set(s.day, []);
+    byDay.get(s.day)!.push(s);
   }
 
-  // Progressive scan: extend substring one '}' at a time
-  let searchFrom = firstBrace;
-  while (true) {
-    const nextBrace = text.indexOf("}", searchFrom + 1);
-    if (nextBrace === -1) break;
-    try {
-      const parsed = JSON.parse(text.slice(firstBrace, nextBrace + 1));
-      if (typeof parsed === "object" && parsed !== null) {
-        return parsed as Record<string, unknown>;
-      }
-    } catch {
-      // Keep scanning
-    }
-    searchFrom = nextBrace;
+  // Sort each day's sessions by order
+  for (const daySessions of byDay.values()) {
+    daySessions.sort((a, b) => a.order_in_day - b.order_in_day);
   }
 
-  return null;
+  const todayIdx = DAYS_ORDER.indexOf(todayName);
+
+  const lines: string[] = [];
+  for (const day of DAYS_ORDER) {
+    if (!byDay.has(day)) continue; // skip rest days (only emit days that have sessions)
+    const daySessions = byDay.get(day)!;
+    const dayIdx = DAYS_ORDER.indexOf(day);
+    const isToday = day === todayName;
+    const isPast = dayIdx < todayIdx;
+
+    const label = isToday ? `${DAY_ABBR[day]} (today)` : DAY_ABBR[day];
+    const sessionStr = daySessions
+      .map((s) => {
+        const status = s.matched_activity_id
+          ? "(done)"
+          : isPast ? "(missed?)" : "(upcoming)";
+        const feedbackNote = s.feedback ? ` — ${s.feedback}` : "";
+        return `${s.sport.toUpperCase()} ${s.type} ${s.duration_minutes}min ${status}${feedbackNote}`;
+      })
+      .join(" + ");
+
+    lines.push(`${label}: ${sessionStr}`);
+  }
+
+  return lines.length > 0 ? lines.join("\n") : "No sessions scheduled this week.";
 }
 
 /**
- * Parse the raw AI response string into a structured ParsedAIResponse.
- * If no valid JSON block is found, treat the entire response as conversational
- * (status: "need_info") — the model is still gathering information.
+ * Last 3 completed sessions with lap data.
+ *
+ * Format mirrors the validated fixture in scripts/test-coach-chat.mjs ~line 55:
+ *   "1) Sat (today): BIKE Tempo 180min — actual: 80km in 2h52, avg HR 132 (no power meter — watts unavailable).
+ *       Lap-by-lap (5km laps, avg HR / max HR / km/h):
+ *       L0  124/142 23   L1  130/136 25   ...
+ *       Plan said "...notes...". Coach feedback noted: ..."
+ *
+ * The lap table uses "avg HR / max HR / km/h" columns with watts appended when available.
+ * This exact shape was validated during Phase 1; deviating risks regression.
  */
-function parseAIResponse(rawResponse: string): ParsedAIResponse {
-  const jsonBlock = extractJsonBlock(rawResponse);
+function formatRecentCompleted(
+  sessions: PlanSession[],
+  lapsMap: Map<string, StravaActivityLap[]>
+): string {
+  // Filter to completed (matched) sessions, sort by most recent first
+  // Sessions come from the current week — we emit up to 3
+  const completed = sessions
+    .filter((s) => s.matched_activity_id != null)
+    .sort((a, b) => {
+      // Sort by day descending (Sunday=6...Monday=0)
+      const DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      return DAYS_ORDER.indexOf(b.day) - DAYS_ORDER.indexOf(a.day);
+    })
+    .slice(0, 3);
 
-  if (jsonBlock && typeof jsonBlock["status"] === "string") {
-    const validStatuses = new Set(["ready", "need_info", "no_action", "escalate"]);
-    const status: ParsedAIResponse["status"] = validStatuses.has(jsonBlock["status"] as string)
-      ? (jsonBlock["status"] as ParsedAIResponse["status"])
-      : "need_info";
-    const response_text =
-      typeof jsonBlock["response_text"] === "string"
-        ? jsonBlock["response_text"]
-        : rawResponse.trim();
-    const constraint_summary =
-      typeof jsonBlock["constraint_summary"] === "object" &&
-      jsonBlock["constraint_summary"] !== null
-        ? (jsonBlock["constraint_summary"] as Record<string, unknown>)
-        : undefined;
+  if (completed.length === 0) return "No recent completed sessions.";
 
-    return { response_text, status, constraint_summary };
+  const DAY_ABBR: Record<string, string> = {
+    Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu",
+    Friday: "Fri", Saturday: "Sat", Sunday: "Sun",
+  };
+
+  return completed
+    .map((s, i) => {
+      const dayLabel = DAY_ABBR[s.day] ?? s.day;
+      const header = `${i + 1}) ${dayLabel}: ${s.sport.toUpperCase()} ${s.type} ${s.duration_minutes}min`;
+
+      const laps = s.matched_activity_id ? (lapsMap.get(s.matched_activity_id) ?? []) : [];
+      laps.sort((a, b) => a.lap_index - b.lap_index);
+
+      let lapSection = "";
+      if (laps.length > 0) {
+        // Detect if any lap has watts
+        const hasWatts = laps.some((l) => l.average_watts != null && l.average_watts > 0);
+        const colHeader = hasWatts
+          ? "Lap-by-lap (avg HR / max HR / km/h / W):"
+          : "Lap-by-lap (avg HR / max HR / km/h):";
+
+        // Build compact lap rows — 4 per line, matching fixture layout
+        const lapTokens = laps.map((l) => {
+          const avgHr = l.average_heartrate != null ? Math.round(l.average_heartrate) : "?";
+          const maxHr = l.max_heartrate != null ? Math.round(l.max_heartrate) : "?";
+          const kmh = l.average_speed != null
+            ? Math.round(l.average_speed * 3.6) // m/s → km/h
+            : "?";
+          const wStr = hasWatts
+            ? ` ${l.average_watts != null ? Math.round(l.average_watts) : "?"}`
+            : "";
+          return `L${l.lap_index}  ${avgHr}/${maxHr} ${kmh}${wStr}`;
+        });
+
+        // Join into rows of 4
+        const rows: string[] = [];
+        for (let r = 0; r < lapTokens.length; r += 4) {
+          rows.push("   " + lapTokens.slice(r, r + 4).join("   "));
+        }
+        lapSection = `\n   ${colHeader}\n${rows.join("\n")}`;
+      } else {
+        lapSection = "\n   No lap data available.";
+      }
+
+      // Power note — if no laps have watts, note absence explicitly (per fixture)
+      const hasPowerData = laps.some((l) => l.average_watts != null && l.average_watts > 0);
+      const powerNote = laps.length > 0 && !hasPowerData
+        ? " (no power meter — watts unavailable)"
+        : "";
+
+      // Feedback from plan_sessions (AI-generated coaching commentary from session-feedback fn)
+      const feedbackLine = s.feedback
+        ? `\n   Coach feedback noted: ${s.feedback}`
+        : "";
+
+      const notesLine = s.notes
+        ? `\n   Plan said: "${s.notes}".`
+        : "";
+
+      return `${header}${powerNote}.${lapSection}${notesLine}${feedbackLine}`;
+    })
+    .join("\n\n");
+}
+
+/**
+ * Tomorrow's session(s).
+ * Format: "Sunday: 1) RUN Tempo brick 90min — "notes". 2) SWIM Easy 45min."
+ */
+function formatTomorrowSession(
+  sessions: PlanSession[],
+  tomorrowName: string
+): string {
+  const tomorrowSessions = sessions
+    .filter((s) => s.day === tomorrowName)
+    .sort((a, b) => a.order_in_day - b.order_in_day);
+
+  if (tomorrowSessions.length === 0) {
+    return `${tomorrowName} is a REST DAY (no scheduled training).`;
   }
 
-  // No structured JSON found — model is still in conversation mode
-  return {
-    response_text: rawResponse.trim(),
-    status: "need_info",
-  };
+  if (tomorrowSessions.length === 1) {
+    const s = tomorrowSessions[0];
+    const notesStr = s.notes ? ` — "${s.notes}"` : "";
+    return `${tomorrowName}: ${s.sport.toUpperCase()} ${s.type} ${s.duration_minutes}min${notesStr}.`;
+  }
+
+  // Multiple sessions
+  const sessionLines = tomorrowSessions.map((s, i) => {
+    const notesStr = s.notes ? ` — "${s.notes}"` : "";
+    return `${i + 1}) ${s.sport.toUpperCase()} ${s.type} ${s.duration_minutes}min${notesStr}`;
+  });
+  return `${tomorrowName}: ${sessionLines.join(". ")}.`;
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -197,9 +421,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Missing OpenAI environment variable" }, 500);
   }
 
-  // V0: No per-user rate limiting. Acceptable for small user base.
-  // TODO(V1): Add rate limit check before OpenAI call.
-
   // 4. Validate JWT — exact same pattern as strava-auth
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
@@ -214,16 +435,19 @@ Deno.serve(async (req) => {
   if (authError || !user) {
     return jsonResponse({ error: "Invalid token" }, 401);
   }
+
+  // 5. Allowlist gate — V0 is restricted to a single user (defense in depth)
+  if (user.email !== ALLOWED_EMAIL) {
+    return jsonResponse({ error: "Not authorized" }, 403);
+  }
+
   const userId = user.id;
 
   // Service-role client for all DB operations (bypasses RLS)
   const db = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   try {
-    // V0: No server-side concurrency guard. Client disables send button during requests.
-    // If two requests race, both will get valid responses but may duplicate context.
-
-    // 5. Parse and validate request body
+    // 6. Parse and validate request body
     let body: { message?: string };
     try {
       body = await req.json();
@@ -239,9 +463,25 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Message exceeds 1000 character limit" }, 400);
     }
 
-    // 6. Fetch context in parallel — history, user profile, phase map
-    const [historyResult, profileResult, phaseMapResult] = await Promise.all([
-      // a) Last 50 messages, DESC so we get newest, then reverse for chronological order
+    // 7. Determine today and tomorrow day names (UTC date → English full day name)
+    // plan_weeks.start_date is stored as DATE; we find the active week by matching
+    // today's date against [start_date, start_date + 7 days). Day names match
+    // plan_sessions.day column values (e.g. "Saturday").
+    const todayDate = new Date();
+    const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const todayName = DAY_NAMES[todayDate.getUTCDay()];
+    const tomorrowDate = new Date(todayDate);
+    tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+    const tomorrowName = DAY_NAMES[tomorrowDate.getUTCDay()];
+    const todayStr = todayDate.toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+    // 8. Parallel fetch all context data
+    const [
+      historyResult,
+      profileResult,
+      planResult,
+    ] = await Promise.all([
+      // a) Last 50 messages DESC (newest first), reversed to chronological below
       db
         .from("chat_messages")
         .select("role, content")
@@ -249,26 +489,38 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(50),
 
-      // b) User profile
+      // b) User profile (all fields used by formatAthleteProfile)
       db
         .from("users")
         .select(
-          "race_objective, experience_years, vma, css_seconds_per100m, ftp, current_weekly_hours, swim_days, bike_days, run_days"
+          "race_objective, race_date, experience_years, vma, css_seconds_per100m, ftp, max_hr, current_weekly_hours, swim_days, bike_days, run_days"
         )
         .eq("id", userId)
         .single(),
 
-      // c) Active training plan weeks
+      // c) Active training plan with all weeks (ordered ascending for phase map)
       db
         .from("training_plans")
-        .select("plan_weeks(week_number, phase, is_recovery)")
+        .select(`
+          id,
+          total_weeks,
+          start_date,
+          race_date,
+          plan_weeks (
+            id,
+            week_number,
+            phase,
+            is_recovery,
+            start_date
+          )
+        `)
         .eq("user_id", userId)
         .eq("status", "active")
         .order("week_number", { referencedTable: "plan_weeks", ascending: true })
         .single(),
     ]);
 
-    // Check for critical errors — losing history context is unacceptable
+    // History is critical; bail on DB error
     if (historyResult.error) {
       console.error("chat_messages history fetch error:", historyResult.error.message);
       return jsonResponse({ error: "Failed to load chat history" }, 500);
@@ -278,25 +530,96 @@ Deno.serve(async (req) => {
     if (profileResult.error) {
       console.error("user profile fetch warning:", profileResult.error.message);
     }
-    if (phaseMapResult.error) {
-      console.error("phase map fetch warning:", phaseMapResult.error.message);
+    if (planResult.error) {
+      console.error("plan fetch warning:", planResult.error.message);
     }
 
-    // Reverse history to get chronological order (oldest first for context window)
+    // 9. Resolve current week and fetch plan sessions for it
+    const plan = planResult.data as (TrainingPlan & { plan_weeks: PlanWeek[] }) | null;
+    const allWeeks: PlanWeek[] = plan?.plan_weeks ?? [];
+
+    // Find the week whose date range contains today
+    // plan_weeks.start_date is DATE stored as string "YYYY-MM-DD"
+    const currentWeek = allWeeks.find((w) => {
+      const weekStart = new Date(w.start_date + "T00:00:00Z");
+      const weekEnd = new Date(weekStart);
+      weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+      const today = new Date(todayStr + "T00:00:00Z");
+      return today >= weekStart && today < weekEnd;
+    }) ?? null;
+
+    // Fetch plan sessions for current week (if we found one)
+    let weekSessions: PlanSession[] = [];
+    if (currentWeek) {
+      const sessionsResult = await db
+        .from("plan_sessions")
+        .select("id, day, sport, type, template_id, duration_minutes, notes, feedback, matched_activity_id, order_in_day")
+        .eq("week_id", currentWeek.id)
+        .order("order_in_day", { ascending: true });
+
+      if (sessionsResult.error) {
+        console.error("plan_sessions fetch warning:", sessionsResult.error.message);
+      } else {
+        weekSessions = (sessionsResult.data ?? []) as PlanSession[];
+      }
+    }
+
+    // 10. Fetch strava_activity_laps for all matched activities in this week.
+    // This join is non-negotiable (Critical Decisions): without lap-level HR/speed data
+    // the model gives generic or fabricated post-session feedback.
+    const matchedActivityIds = weekSessions
+      .map((s) => s.matched_activity_id)
+      .filter((id): id is string => id != null);
+
+    const lapsMap = new Map<string, StravaActivityLap[]>();
+    if (matchedActivityIds.length > 0) {
+      const lapsResult = await db
+        .from("strava_activity_laps")
+        .select("activity_id, lap_index, average_heartrate, max_heartrate, average_speed, average_watts")
+        .in("activity_id", matchedActivityIds)
+        .order("lap_index", { ascending: true });
+
+      if (lapsResult.error) {
+        console.error("strava_activity_laps fetch warning:", lapsResult.error.message);
+      } else {
+        for (const lap of (lapsResult.data ?? [])) {
+          const actId: string = lap.activity_id;
+          if (!lapsMap.has(actId)) lapsMap.set(actId, []);
+          lapsMap.get(actId)!.push(lap as StravaActivityLap);
+        }
+      }
+    }
+
+    // 11. Build context strings
+    const userProfile = profileResult.data as UserProfile | null;
+
+    const athleteProfileStr = formatAthleteProfile(userProfile);
+    const planSummaryStr = formatPlanSummary(
+      plan as TrainingPlan | null,
+      allWeeks,
+      currentWeek
+    );
+    const todaySessionStr = formatTodaySession(weekSessions, todayName);
+    const weekMapStr = formatWeekMap(weekSessions, todayName);
+    const recentCompletedStr = formatRecentCompleted(weekSessions, lapsMap);
+    const tomorrowSessionStr = formatTomorrowSession(weekSessions, tomorrowName);
+
+    // 12. Render the DYNAMIC user message by substituting all placeholders
+    const dynamicContent = DYNAMIC_TEMPLATE
+      .replace("{{athlete_profile}}", athleteProfileStr)
+      .replace("{{plan_summary}}", planSummaryStr)
+      .replace("{{today_session}}", todaySessionStr)
+      .replace("{{week_map}}", weekMapStr)
+      .replace("{{recent_completed}}", recentCompletedStr)
+      .replace("{{tomorrow_session}}", tomorrowSessionStr)
+      .trim();
+
+    // 13. Reverse history to chronological order (oldest first for context window)
     const historyMessages: ChatMessage[] = (
       (historyResult.data as ChatMessage[] | null) ?? []
     ).reverse();
 
-    const userProfile = profileResult.data as UserProfile | null;
-
-    // Flatten plan_weeks from the join result
-    const planWeeksRaw = phaseMapResult.data?.plan_weeks;
-    const planWeeks: PlanWeek[] = Array.isArray(planWeeksRaw)
-      ? (planWeeksRaw as PlanWeek[])
-      : [];
-
-    // 7. Insert user message BEFORE OpenAI call — ensures message is persisted
-    // and in history for any subsequent requests, even if AI call fails.
+    // 14. Insert user message BEFORE OpenAI call — ensures persistence even on AI failure
     const { error: userInsertError } = await db.from("chat_messages").insert({
       user_id: userId,
       role: "user",
@@ -307,14 +630,15 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Failed to save user message" }, 500);
     }
 
-    // 8. Build rendered prompt — replace template placeholders
-    const renderedPrompt = promptTemplate
-      .replace("{{athlete_profile}}", formatAthleteProfile(userProfile))
-      .replace("{{phase_map}}", formatPhaseMap(planWeeks));
-
-    // 9. Build OpenAI messages array
+    // 15. Build OpenAI messages array.
+    // Message ordering: [system(STATIC), user(DYNAMIC), ...history, user(message)]
+    // - STATIC system message is stable across turns → OpenAI prefix-caches it
+    // - DYNAMIC user block carries the full per-request context
+    // - History turns follow (cached on subsequent turns with same context)
+    // - New user message last
     const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: renderedPrompt },
+      { role: "system", content: STATIC_SYSTEM },
+      { role: "user", content: dynamicContent },
       ...historyMessages.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
@@ -322,44 +646,47 @@ Deno.serve(async (req) => {
       { role: "user", content: message },
     ];
 
-    // 10. Call OpenAI — gpt-4o, temperature 0 for deterministic classification
+    // 16. Call OpenAI — model + temperature + max_tokens validated in Phase 1, do not change
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1",
-      temperature: 0,
-      max_tokens: 1024,
+      temperature: 0.3,
+      max_tokens: 400,
       messages: openAiMessages,
     });
 
-    const rawResponse = completion.choices[0]?.message?.content ?? "";
+    const responseText = completion.choices[0]?.message?.content?.trim() ?? "";
 
-    if (!rawResponse) {
+    if (!responseText) {
       console.error("OpenAI returned empty response for user:", userId);
       return jsonResponse({ error: "AI returned an empty response. Please try again." }, 502);
     }
 
-    // 11. Parse structured response (JSON block) or treat as conversational
-    const { response_text, status, constraint_summary } = parseAIResponse(rawResponse);
+    // Log token usage for observability (Step 8 verification)
+    const usage = completion.usage;
+    if (usage) {
+      const cached = (usage as unknown as { prompt_tokens_details?: { cached_tokens?: number } })
+        .prompt_tokens_details?.cached_tokens ?? 0;
+      console.log(
+        `tokens: prompt=${usage.prompt_tokens} (cached=${cached}) completion=${usage.completion_tokens}`
+      );
+    }
 
-    // 12. Insert assistant message with parsed metadata
+    // 17. Insert assistant message — V0: pure text, no status classification
     const { error: assistantInsertError } = await db.from("chat_messages").insert({
       user_id: userId,
       role: "assistant",
-      content: response_text,
-      status,
-      ...(constraint_summary ? { constraint_summary } : {}),
+      content: responseText,
+      status: null,
+      constraint_summary: null,
     });
     if (assistantInsertError) {
       console.error("chat_messages assistant insert error:", assistantInsertError.message);
       return jsonResponse({ error: "Failed to save assistant message" }, 500);
     }
 
-    // 13. Return structured response to iOS client
-    return jsonResponse({
-      response_text,
-      status,
-      ...(constraint_summary ? { constraint_summary } : {}),
-    });
+    // 18. Return conversational text to iOS client
+    return jsonResponse({ response_text: responseText });
   } catch (err) {
     console.error(
       "Unhandled error in chat-adjust:",
