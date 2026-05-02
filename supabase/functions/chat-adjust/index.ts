@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import OpenAI from "npm:openai@4";
 
 // Auto-generated prompt template — run scripts/sync-prompts.sh to regenerate
 import promptTemplate from "./prompts/coach-chat-v0-prompt.ts";
@@ -154,10 +153,24 @@ interface CompletedSessionWithWeek {
   activity?: StravaActivity | null;
 }
 
-// UsageWithCache — prompt_tokens_details is supported by recent gpt-4.1 responses
-// but may not be in the OpenAI SDK's TypeScript types yet.
-interface UsageWithCache extends OpenAI.CompletionUsage {
-  prompt_tokens_details?: { cached_tokens?: number };
+// Local OpenAI message type — avoids dragging in the full SDK just for a type annotation.
+type OpenAiMessage = { role: "system" | "user" | "assistant"; content: string };
+
+// ParsedUsage — extracted from the final OpenAI usage chunk (stream_options.include_usage: true).
+// prompt_tokens_details is supported by gpt-4.1 but is not guaranteed in older SDK type exports.
+interface ParsedUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  cached_tokens: number;
+}
+
+function parseUsage(raw: Record<string, unknown>): ParsedUsage {
+  const details = raw?.prompt_tokens_details as Record<string, unknown> | undefined;
+  return {
+    prompt_tokens: (raw?.prompt_tokens as number) ?? 0,
+    completion_tokens: (raw?.completion_tokens as number) ?? 0,
+    cached_tokens: (details?.cached_tokens as number) ?? 0,
+  };
 }
 
 // ── Module-scope day-order constants ─────────────────────────────────────────
@@ -814,7 +827,7 @@ Deno.serve(async (req) => {
     // - DYNAMIC user block carries the full per-request context
     // - History turns follow (cached on subsequent turns with same context)
     // - New user message last
-    const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    const openAiMessages: OpenAiMessage[] = [
       { role: "system", content: STATIC_SYSTEM },
       { role: "user", content: dynamicContent },
       ...historyMessages.map((m) => ({
@@ -824,50 +837,147 @@ Deno.serve(async (req) => {
       { role: "user", content: message },
     ];
 
-    // 16. Call OpenAI — model + temperature + max_tokens validated in Phase 1, do not change
-    const openai = new OpenAI({ apiKey: openaiApiKey });
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1",
-      temperature: 0.3,
-      max_tokens: 400,
-      messages: openAiMessages,
+    // 16. Open SSE stream to OpenAI — model + temperature + max_tokens validated in Phase 1.
+    // We use raw fetch instead of the OpenAI SDK so we can pipe the response body directly
+    // through a TransformStream to the iOS client without buffering the full response.
+    // stream_options.include_usage: true adds a final chunk with token counts (gpt-4.1+).
+    const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openaiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1",
+        temperature: 0.3,
+        max_tokens: 400,
+        stream: true,
+        stream_options: { include_usage: true },
+        messages: openAiMessages,
+      }),
     });
 
-    const responseText = completion.choices[0]?.message?.content?.trim() ?? "";
-
-    if (!responseText) {
-      console.error("OpenAI returned empty response for user:", userId);
-      return jsonResponse({ error: "AI returned an empty response. Please try again." }, 502);
+    // If OpenAI returned a non-200, bail before entering streaming mode.
+    // The upstream body may contain an error JSON — log it for observability.
+    if (upstream.status !== 200 || !upstream.body) {
+      let upstreamError = "(no body)";
+      try {
+        upstreamError = await upstream.text();
+      } catch (_) { /* ignore read errors */ }
+      console.error("OpenAI upstream error:", upstream.status, upstreamError);
+      return jsonResponse({ error: "OpenAI upstream error. Please try again." }, 502);
     }
 
-    // Log token usage for observability — structured for easy grep / dashboarding
-    const usage = completion.usage as UsageWithCache | undefined;
-    if (usage) {
-      const cached = usage.prompt_tokens_details?.cached_tokens ?? 0;
-      console.log(JSON.stringify({
-        event: "chat-adjust-tokens",
-        user_id: userId,
-        prompt_tokens: usage.prompt_tokens ?? 0,
-        completion_tokens: usage.completion_tokens ?? 0,
-        cached_tokens: cached,
-      }));
-    }
+    // 17. Build a TransformStream that:
+    //   a) Forwards every upstream byte verbatim to the iOS client (the OpenAI SSE wire
+    //      format is exactly what the client parses — no re-encoding needed).
+    //   b) In parallel, accumulates delta.content server-side by parsing each SSE line.
+    //   c) On the [DONE] sentinel: persists the full assistant message to chat_messages
+    //      and emits the token-usage log line.
+    //   d) On a mid-stream parse error: emits an SSE error event to the client and does
+    //      NOT persist any partial text (spec requirement: no half-rows in DB).
+    //
+    // Implementation note: we split on "\n" (not "\n\n") because the decoder may batch
+    // multiple lines per chunk. We track a lineBuffer for incomplete lines across chunks.
+    const decoder = new TextDecoder();
+    let lineBuffer = "";
+    let accumulated = "";
+    let lastUsage: ParsedUsage | null = null;
+    let hadMidStreamError = false;
 
-    // 17. Insert assistant message — V0: pure text, no status classification
-    const { error: assistantInsertError } = await db.from("chat_messages").insert({
-      user_id: userId,
-      role: "assistant",
-      content: responseText,
-      status: null,
-      constraint_summary: null,
+    const transform = new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        // a) Forward bytes verbatim — client receives the raw OpenAI SSE stream.
+        controller.enqueue(chunk);
+
+        // b) Parse for server-side bookkeeping (accumulation + usage extraction).
+        lineBuffer += decoder.decode(chunk, { stream: true });
+        const lines = lineBuffer.split("\n");
+        // Keep the last (potentially incomplete) segment in the buffer.
+        lineBuffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          // The [DONE] sentinel marks the end of the stream; content already forwarded.
+          if (payload === "[DONE]") continue;
+
+          try {
+            const json = JSON.parse(payload) as Record<string, unknown>;
+
+            // Accumulate delta content from each choice chunk.
+            const choices = json?.choices as Array<Record<string, unknown>> | undefined;
+            const delta = choices?.[0]?.delta as Record<string, unknown> | undefined;
+            if (typeof delta?.content === "string") {
+              accumulated += delta.content;
+            }
+
+            // Capture the final usage chunk (present when choices is empty/absent and
+            // stream_options.include_usage: true was set).
+            if (json?.usage) {
+              lastUsage = parseUsage(json.usage as Record<string, unknown>);
+            }
+          } catch (_) {
+            // Tolerate occasional parse failures on malformed chunks — the bytes were
+            // already forwarded, so the client is unaffected. Log for debugging only.
+            console.error("SSE chunk parse error — skipping:", line.slice(0, 120));
+          }
+        }
+      },
+
+      async flush(controller) {
+        // flush() runs after the upstream body closes (after the [DONE] event).
+        // At this point accumulated holds the full assistant reply.
+
+        if (hadMidStreamError) {
+          // An error event was already emitted to the client inside transform(); skip persist.
+          return;
+        }
+
+        if (accumulated.length > 0) {
+          // Persist the complete assistant message — V0: no status classification.
+          const { error: assistantInsertError } = await db.from("chat_messages").insert({
+            user_id: userId,
+            role: "assistant",
+            content: accumulated,
+            status: null,
+            constraint_summary: null,
+          });
+          if (assistantInsertError) {
+            console.error("chat_messages assistant insert error:", assistantInsertError.message);
+            // Emit an SSE error event so the client knows persistence failed.
+            const errEvent = `event: error\ndata: ${JSON.stringify({ message: "Failed to save assistant message" })}\n\n`;
+            controller.enqueue(new TextEncoder().encode(errEvent));
+          }
+        }
+
+        // Log token usage for observability — structured for easy grep / dashboarding.
+        // Same event shape as Phase A's blocking call (no regression on the log format).
+        if (lastUsage) {
+          console.log(JSON.stringify({
+            event: "chat-adjust-tokens",
+            user_id: userId,
+            prompt_tokens: lastUsage.prompt_tokens,
+            completion_tokens: lastUsage.completion_tokens,
+            cached_tokens: lastUsage.cached_tokens,
+          }));
+        }
+      },
     });
-    if (assistantInsertError) {
-      console.error("chat_messages assistant insert error:", assistantInsertError.message);
-      return jsonResponse({ error: "Failed to save assistant message" }, 500);
-    }
 
-    // 18. Return conversational text to iOS client
-    return jsonResponse({ response_text: responseText });
+    // Pipe upstream body through our transform and return the transformed stream to the client.
+    // The iOS client receives raw OpenAI SSE events (data: {...}\n\n) plus our error events.
+    const transformedStream = upstream.body.pipeThrough(transform);
+
+    // 18. Return the SSE response — headers match the SSE spec and iOS URLSession expectations.
+    return new Response(transformedStream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        ...corsHeaders,
+      },
+    });
   } catch (err) {
     console.error(
       "Unhandled error in chat-adjust:",
