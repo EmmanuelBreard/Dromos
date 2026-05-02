@@ -1,6 +1,6 @@
 # DRO-256 — Coach Chat V0 (Plan-Aware Advisory)
 
-**Overall Progress:** `15%`
+**Overall Progress:** `55%`
 
 ## TLDR
 Re-scope the dormant DRO-149 chat into a **plan-aware advisory coach**, gated to `ebreard4@gmail.com`. The athlete asks questions about today's workout, pacing, post-session feedback, and plan rationale — the coach answers using their own profile + plan + recent execution context, streamed token-by-token. **No plan modification in V0.** Re-uses the existing `chat-adjust` edge function, `chat_messages` table, and iOS chat surface; rewrites the prompt, replaces JSON parsing with streaming, swaps the iOS transport from `client.functions.invoke()` to `URLSession + SSE`.
@@ -88,47 +88,27 @@ Add SSE response without changing logic.
 - [ ] 🟥 Return `new Response(transformedStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", ...corsHeaders } })`.
 - [ ] 🟥 Manual end-to-end curl test: confirm chunks stream through, final message is in DB, token usage logged.
 
-### Step 5: iOS — switch ChatService to SSE 🟥
-This is the riskiest iOS step; most of the work lives here.
+### Step 5: iOS — switch ChatService to SSE 🟩 DONE 2026-05-02
 
-- [ ] 🟥 Remove `ChatResponse` struct + decoding from `ChatMessage.swift`.
-- [ ] 🟥 In `ChatService.swift`, add `@Published var streamingMessage: String?` (nil when no stream in flight).
-- [ ] 🟥 Rewrite `sendMessage(_:)`:
-  - Append optimistic user bubble (existing pattern).
-  - Get JWT: `let session = try await client.auth.session; let token = session.accessToken`.
-  - Build URL: `\(SupabaseClientProvider.url)/functions/v1/chat-adjust`.
-  - Build `URLRequest`: POST, JSON body `{"message": text}`, headers `Authorization: Bearer <token>`, `apikey: <anon key>`, `Content-Type: application/json`, `Accept: text/event-stream`.
-  - `let (bytes, response) = try await URLSession.shared.bytes(for: request)`.
-  - Validate `response.statusCode == 200`; otherwise throw + roll back optimistic bubble.
-  - `streamingMessage = ""`. Loop `for try await line in bytes.lines`:
-    - Skip blank lines and lines not starting with `data: `.
-    - Strip `data: ` prefix; if payload is `[DONE]`, break.
-    - Parse JSON: `{ choices: [{ delta: { content?: string } }] }`. Append `delta.content` to `streamingMessage`.
-  - On loop completion: append final `ChatMessage` (role=assistant, content=`streamingMessage`) to `messages`; set `streamingMessage = nil`.
-  - On thrown error: discard `streamingMessage`; remove optimistic user bubble; set `errorMessage`.
-- [ ] 🟥 Confirm `URLSession.shared` config is fine (no special timeout — streaming connection holds open up to 60s default which covers a 400-token completion comfortably).
-- [ ] 🟥 Manual smoke test on simulator: hit the function, see chunks flow into `streamingMessage`, see final bubble appear, see persisted message after `fetchMessages()` reload.
+- [x] 🟩 Removed `ChatResponse` struct from `ChatMessage.swift`.
+- [x] 🟩 Added `@Published var streamingMessage: String?` to `ChatService`.
+- [x] 🟩 Rewrote `sendMessage(_:)` with URLSession SSE consumer: JWT fetch, URLRequest build, `bytes(for:)` loop, `StreamChunk` Decodable, optimistic bubble rollback on error.
+- [x] 🟩 Uses `URLSession.shared` — no custom config.
+- [ ] 🟥 Manual smoke test on simulator (blocked on Phase B edge function deploy).
 
-### Step 6: iOS — UI changes 🟥
+### Step 6: iOS — UI changes 🟩 DONE 2026-05-02
 
-- [ ] 🟥 Update `ChatView.welcomeState`: replace existing copy with the V0 opening greeting rendered as an `assistant` `ChatBubbleView` (not stored in DB; just rendered when `messages.isEmpty`).
-- [ ] 🟥 Replace the `TypingIndicator` block in `messageList` with a partial-message bubble: when `chatService.streamingMessage != nil`, render an assistant bubble with that text + a subtle blinking caret (or just live text). Reuse `ChatBubbleView` with a synthetic `ChatMessage`.
-- [ ] 🟥 Add `.onChange(of: chatService.streamingMessage) { _, _ in scrollProxy.scrollTo("streaming-bubble", anchor: .bottom) }` for live auto-scroll during stream.
-- [ ] 🟥 Verify the existing 1000-char input cap and error-display behavior still work.
+- [x] 🟩 Updated `ChatView.welcomeState`: renders V0 greeting as assistant `ChatBubbleView` (not stored in DB; shown when `messages.isEmpty && streamingMessage == nil && !isLoading`).
+- [x] 🟩 Replaced `TypingIndicator` block with live streaming bubble bound to `chatService.streamingMessage`. `TypingIndicator` struct deleted (no longer referenced).
+- [x] 🟩 Added `.onChange(of: chatService.streamingMessage)` for live auto-scroll to `"streaming-bubble"`.
+- [x] 🟩 1000-char input cap and error display unchanged.
 
-### Step 7: Coach tab wiring 🟥
+### Step 7: Coach tab wiring 🟩 DONE 2026-05-02
 
-- [ ] 🟥 Add `case coach` to `AppTab` enum in `MainTabView.swift`.
-- [ ] 🟥 Add `@StateObject private var chatService = ChatService()` next to the existing service `@StateObject`s.
-- [ ] 🟥 Insert the Coach `Tab` between Calendar and Profile, gated:
-  ```swift
-  if authService.currentUserEmail == "ebreard4@gmail.com" {
-      Tab("Coach", systemImage: "bubble.left.fill", value: .coach) {
-          ChatView(chatService: chatService)
-      }
-  }
-  ```
-- [ ] 🟥 Confirm tab gating: log out, log in as a different test user, verify Coach tab is absent. Log in as `ebreard4@gmail.com`, verify Coach tab appears.
+- [x] 🟩 Added `case coach` to `AppTab` enum.
+- [x] 🟩 Added `@StateObject private var chatService = ChatService()`.
+- [x] 🟩 Inserted gated Coach `Tab` between Calendar and Profile.
+- [ ] 🟥 Confirm tab gating on device (manual QA — blocked on simulator run).
 
 ### Step 8: End-to-end smoke + observability 🟥
 

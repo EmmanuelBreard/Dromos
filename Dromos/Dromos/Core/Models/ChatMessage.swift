@@ -29,23 +29,6 @@ struct ChatMessage: Codable, Identifiable {
     let createdAt: Date
 }
 
-/// Response payload returned by the `chat-adjust` Edge Function.
-///
-/// NOTE: Edge function responses do NOT go through the global Supabase decoder.
-/// Use a local JSONDecoder with `.convertFromSnakeCase` when decoding this type.
-struct ChatResponse: Codable {
-    /// The assistant's reply text to display in the chat UI.
-    let responseText: String
-
-    /// Classification of the conversation state:
-    /// - "ready": constraint identified, advice given
-    /// - "need_info": gathering more info
-    /// - "no_action": no constraint detected
-    /// - "escalate": severity requires human attention / plan regeneration
-    let status: String
-
-    private enum CodingKeys: String, CodingKey {
-        case responseText = "response_text"
-        case status
-    }
-}
+// ChatResponse was removed in DRO-259.
+// The chat-adjust edge function now returns a Server-Sent Events stream;
+// ChatService consumes the stream directly and no longer decodes a JSON envelope.

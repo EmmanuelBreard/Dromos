@@ -31,7 +31,11 @@ struct ChatView: View {
             VStack(spacing: 0) {
 
                 // ── Message area ───────────────────────────────────────────
-                if chatService.messages.isEmpty && !chatService.isLoading {
+                // Show the welcome greeting only when the thread is truly empty
+                // (no messages, no active stream, not loading).
+                if chatService.messages.isEmpty
+                    && chatService.streamingMessage == nil
+                    && !chatService.isLoading {
                     welcomeState
                 } else {
                     messageList
@@ -59,21 +63,28 @@ struct ChatView: View {
 
     // MARK: - Welcome State
 
-    /// Shown when there are no messages yet. Guides the user to start a conversation.
+    /// Shown when the thread is empty and no stream is in flight.
+    /// Renders the V0 opening greeting as an assistant bubble (NOT stored in DB).
     private var welcomeState: some View {
-        VStack {
-            Spacer()
-            Text("Tell me what's going on with your training — injury, illness, fatigue, or schedule changes. I'm here to help.")
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding()
-            Spacer()
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ChatBubbleView(message: ChatMessage(
+                    id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+                    userId: UUID(),
+                    role: "assistant",
+                    content: "Hi — I'm here to help you get the most out of your plan. Ask me about today's session, what your workouts mean, how to pace tomorrow's effort, or why your plan looks the way it does. I can't change your plan yet — that's coming soon — but I can help you get the most out of it.",
+                    createdAt: Date()
+                ))
+            }
+            .padding(.vertical, 8)
         }
     }
 
     // MARK: - Message List
 
-    /// Scrollable list of chat bubbles with auto-scroll to bottom and typing indicator.
+    /// Scrollable list of chat bubbles with auto-scroll to bottom.
+    /// While a stream is in flight, a live partial-message bubble is appended below
+    /// the persisted messages and updated token-by-token via `streamingMessage`.
     private var messageList: some View {
         ScrollViewReader { scrollProxy in
             ScrollView {
@@ -83,41 +94,32 @@ struct ChatView: View {
                             .id(message.id)
                     }
 
-                    // Typing indicator — shown while waiting for assistant response.
-                    if chatService.isLoading {
-                        HStack {
-                            TypingIndicator()
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color(.systemGray6))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .frame(maxWidth: 280, alignment: .leading)
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        .id("typing-indicator")
+                    // Streaming bubble — replaces the old TypingIndicator.
+                    // Shown as soon as the SSE connection opens (streamingMessage == "")
+                    // and fills in word-by-word as tokens arrive.
+                    if let streaming = chatService.streamingMessage {
+                        ChatBubbleView(message: ChatMessage(
+                            id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
+                            userId: UUID(),
+                            role: "assistant",
+                            content: streaming,
+                            createdAt: Date()
+                        ))
+                        .id("streaming-bubble")
                     }
                 }
                 .padding(.vertical, 8)
             }
-            // Auto-scroll to newest message when the list grows.
+            // Auto-scroll to newest persisted message when the list grows.
             .onChange(of: chatService.messages.count) { _, _ in
                 withAnimation {
-                    if chatService.isLoading {
-                        scrollProxy.scrollTo("typing-indicator", anchor: .bottom)
-                    } else {
-                        scrollProxy.scrollTo(chatService.messages.last?.id, anchor: .bottom)
-                    }
+                    scrollProxy.scrollTo(chatService.messages.last?.id, anchor: .bottom)
                 }
             }
-            // Also scroll when loading state changes (typing indicator appears/disappears).
-            .onChange(of: chatService.isLoading) { _, newValue in
+            // Auto-scroll live during streaming so new tokens stay visible.
+            .onChange(of: chatService.streamingMessage) { _, _ in
                 withAnimation {
-                    if newValue {
-                        scrollProxy.scrollTo("typing-indicator", anchor: .bottom)
-                    } else {
-                        scrollProxy.scrollTo(chatService.messages.last?.id, anchor: .bottom)
-                    }
+                    scrollProxy.scrollTo("streaming-bubble", anchor: .bottom)
                 }
             }
             .onTapGesture {
@@ -218,32 +220,6 @@ private struct ChatBubbleView: View {
                 .padding(.horizontal, 4)
         }
         .padding(.horizontal)
-    }
-}
-
-// MARK: - TypingIndicator
-
-/// Animated three-dot indicator displayed while the assistant is generating a reply.
-private struct TypingIndicator: View {
-
-    @State private var animating = false
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .frame(width: 8, height: 8)
-                    .foregroundStyle(.secondary)
-                    .opacity(animating ? 0.3 : 1.0)
-                    .animation(
-                        .easeInOut(duration: 0.6)
-                            .repeatForever()
-                            .delay(Double(index) * 0.2),
-                        value: animating
-                    )
-            }
-        }
-        .onAppear { animating = true }
     }
 }
 
