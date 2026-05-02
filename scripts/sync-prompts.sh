@@ -12,6 +12,7 @@ SOURCES=(
   "ai/prompts/step3-workout-block.txt"
   "ai/prompts/adjust-step1-v0.txt"
   "ai/prompts/session-feedback-v0.txt"
+  "ai/prompts/coach-chat-v0.txt"
 )
 
 TARGETS=(
@@ -20,6 +21,7 @@ TARGETS=(
   "supabase/functions/generate-plan/prompts/step3-workout-block-prompt.ts"
   "supabase/functions/chat-adjust/prompts/adjust-step1-v0-prompt.ts"
   "supabase/functions/session-feedback/prompts/session-feedback-v0-prompt.ts"
+  "supabase/functions/chat-adjust/prompts/coach-chat-v0-prompt.ts"
 )
 
 echo "Syncing prompts from ai/prompts/ to edge function..."
