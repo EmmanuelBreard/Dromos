@@ -114,9 +114,9 @@ struct CalendarView: View {
     @ViewBuilder
     private func contentBody(plan: TrainingPlan, currentWeek: PlanWeek, weekStart: Date) -> some View {
         VStack(spacing: 0) {
-            // Gate the header + paged TabView on first-paint initialisation. Without this gate
-            // the TabView renders at index 0, then `.task` snaps it to the current week, and
-            // the `.animation` modifier scrubs visibly through every intervening week.
+            // Gate the header + week content on first-paint initialisation. Without this gate
+            // the view renders at index 0, then `.task` snaps it to the current week, and
+            // the animation scrubs visibly through every intervening week.
             if didInitializeWeekIndex {
                 CalendarWeekHeader(
                     weekNumber: currentWeek.weekNumber,
@@ -130,6 +130,14 @@ struct CalendarView: View {
                     canGoNext: currentWeekIndex < plan.planWeeks.count - 1
                 )
 
+                // MARK: Week slide — native TabView(.page) for continuous-track-during-drag.
+                // QA (Option A): reverted from .id() + .transition() + DragGesture because that
+                // pattern only commits on finger lift — no progressive tracking during drag.
+                // TabView(.page) provides native UIKit continuous-track behavior.
+                //
+                // .animation(value:) is intentionally omitted — it's known-unreliable for .page
+                // style. Chevron taps animate via withAnimation in goToWeek(_:plan:). Tab-reset
+                // snap-back stays instant via withTransaction(disablesAnimations: true) below.
                 TabView(selection: $currentWeekIndex) {
                     ForEach(plan.planWeeks.indices, id: \.self) { idx in
                         weekContent(weekIndex: idx, plan: plan)
@@ -137,7 +145,6 @@ struct CalendarView: View {
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.25), value: currentWeekIndex)
             } else {
                 ProgressView()
                     .scaleEffect(1.5)
@@ -158,6 +165,9 @@ struct CalendarView: View {
                 await generatePendingFeedback(plan: plan, weekIndex: newIdx)
             }
         }
+        // Snap-back on Calendar tab re-tap: intentionally instant (no animation).
+        // Animating a slide across many weeks would be jarring — suppress it via
+        // a disabled-animation transaction. The refetch is kicked off after the snap.
         .onChange(of: calendarReset) { _, _ in
             let target = plan.currentWeekIndex()
             // Re-tap is the iOS "refresh" gesture — purge the cached entry so the
@@ -171,8 +181,13 @@ struct CalendarView: View {
                     await generatePendingFeedback(plan: plan, weekIndex: target)
                 }
             } else {
-                // Different week — onChange(of: currentWeekIndex) handles the refetch.
-                currentWeekIndex = target
+                // Different week — snap instantly (no slide across many weeks).
+                // `.onChange(of: currentWeekIndex)` handles the refetch + feedback generation.
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    currentWeekIndex = target
+                }
             }
         }
         .onChange(of: stravaService.isSyncing) { oldValue, newValue in
@@ -378,11 +393,14 @@ struct CalendarView: View {
         }
     }
 
-    /// Navigates to a week by index (bounds-checked).
-    /// Animation is driven by `.animation(.easeInOut(duration: 0.25), value: currentWeekIndex)` on TabView.
+    /// Navigates to a week by index (bounds-checked). Wraps the mutation in
+    /// `withAnimation` so chevron taps drive a smooth page transition. Native
+    /// horizontal swipe doesn't go through here — TabView handles that itself.
     private func goToWeek(_ idx: Int, plan: TrainingPlan) {
         guard idx >= 0, idx < plan.planWeeks.count else { return }
-        currentWeekIndex = idx
+        withAnimation(.easeInOut(duration: 0.25)) {
+            currentWeekIndex = idx
+        }
     }
 
     // MARK: - Helper Methods
