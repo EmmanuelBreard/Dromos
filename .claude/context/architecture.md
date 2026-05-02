@@ -56,8 +56,8 @@ Dromos/Dromos/
 │   │   ├── WorkoutGraphView.swift    # Legacy interactive intensity bar chart with tap-to-reveal popovers (Calendar uses this; Home uses the new WorkoutShape)
 │   │   └── IntensityColorHelper.swift # Color extensions: Color.intensity(for:isRecovery:), Color.phaseColor(for:), Color.errorStrong (auto-synthesized from ErrorStrong.colorset)
 │   ├── Calendar/                     # Single-week paged plan view (formerly Home content)
-│   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering)
-│   │   └── CalendarWeekHeader.swift  # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
+│   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering). Week header lives inside each page's ScrollView so it scrolls away with day content; every week change / tab re-tap scrolls the active page back to the top via a UUID token observed by per-page ScrollViewReader (DRO-252).
+│   │   └── CalendarWeekHeader.swift  # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline. Rendered as the first element inside each TabView page's ScrollView (DRO-252) — no longer pinned above the TabView.
 │   ├── Plan/                         # Plan generation flow
 │   │   └── PlanGenerationView.swift  # Triggered from RootView when user has no plan yet
 │   ├── Chat/

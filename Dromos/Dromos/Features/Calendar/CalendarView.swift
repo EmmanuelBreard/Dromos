@@ -54,6 +54,11 @@ struct CalendarView: View {
     /// Guards the one-time initialisation of `currentWeekIndex` to avoid re-running on every appear.
     @State private var didInitializeWeekIndex: Bool = false
 
+    /// Bumped to signal every rendered week page's `ScrollViewReader` to scroll back to the
+    /// top anchor. Bumped on week change (swipe / chevron / snap-back) and on Calendar tab
+    /// re-tap so the header is always visible after navigation.
+    @State private var scrollToTopToken: UUID = UUID()
+
     // MARK: - Body
 
     var body: some View {
@@ -98,38 +103,23 @@ struct CalendarView: View {
 
     // MARK: - Content View
 
-    /// Main content view: CalendarWeekHeader + paged TabView (one page per plan week).
+    /// Main content view: paged TabView (one page per plan week). Each page renders its own
+    /// `CalendarWeekHeader` at the top of its `ScrollView`, so the header scrolls away with
+    /// day content instead of being pinned above the TabView.
     @ViewBuilder
     private func contentView(plan: TrainingPlan) -> some View {
-        if plan.planWeeks.indices.contains(currentWeekIndex),
-           let weekStart = plan.planWeeks[currentWeekIndex].startDateAsDate {
-            let currentWeek = plan.planWeeks[currentWeekIndex]
-            contentBody(plan: plan, currentWeek: currentWeek, weekStart: weekStart)
-        } else {
-            emptyStateView
-        }
+        contentBody(plan: plan)
     }
 
-    /// Inner content body, extracted to allow the bounds/date guard in contentView.
+    /// Inner content body. Owns only the paged TabView and the first-paint init gate; the
+    /// week header is rendered per-page inside `weekContent(weekIndex:plan:)`.
     @ViewBuilder
-    private func contentBody(plan: TrainingPlan, currentWeek: PlanWeek, weekStart: Date) -> some View {
-        VStack(spacing: 0) {
-            // Gate the header + week content on first-paint initialisation. Without this gate
-            // the view renders at index 0, then `.task` snaps it to the current week, and
-            // the animation scrubs visibly through every intervening week.
+    private func contentBody(plan: TrainingPlan) -> some View {
+        Group {
+            // Gate on first-paint initialisation. Without this gate the view renders at
+            // index 0, then `.task` snaps it to the current week, and the animation scrubs
+            // visibly through every intervening week.
             if didInitializeWeekIndex {
-                CalendarWeekHeader(
-                    weekNumber: currentWeek.weekNumber,
-                    totalWeeks: plan.planWeeks.count,
-                    phase: currentWeek.phase,
-                    weekStartDate: weekStart,
-                    titleVariant: titleVariant(for: currentWeekIndex, plan: plan),
-                    onPrevious: { goToWeek(currentWeekIndex - 1, plan: plan) },
-                    onNext:     { goToWeek(currentWeekIndex + 1, plan: plan) },
-                    canGoPrevious: currentWeekIndex > 0,
-                    canGoNext: currentWeekIndex < plan.planWeeks.count - 1
-                )
-
                 // MARK: Week slide — native TabView(.page) for continuous-track-during-drag.
                 // QA (Option A): reverted from .id() + .transition() + DragGesture because that
                 // pattern only commits on finger lift — no progressive tracking during drag.
@@ -160,6 +150,9 @@ struct CalendarView: View {
             await loadIfNeeded(weekIndex: currentWeekIndex, plan: plan)
         }
         .onChange(of: currentWeekIndex) { _, newIdx in
+            // Reset every page's scroll to the top so the destination week shows its
+            // header. Each page's ScrollViewReader observes the token.
+            scrollToTopToken = UUID()
             Task {
                 await loadIfNeeded(weekIndex: newIdx, plan: plan)
                 await generatePendingFeedback(plan: plan, weekIndex: newIdx)
@@ -169,6 +162,9 @@ struct CalendarView: View {
         // Animating a slide across many weeks would be jarring — suppress it via
         // a disabled-animation transaction. The refetch is kicked off after the snap.
         .onChange(of: calendarReset) { _, _ in
+            // Bump unconditionally so the same-week branch also scrolls back to the top.
+            // The different-week branch already scrolls via the currentWeekIndex onChange.
+            scrollToTopToken = UUID()
             let target = plan.currentWeekIndex()
             // Re-tap is the iOS "refresh" gesture — purge the cached entry so the
             // current week refetches. Other cached weeks remain.
@@ -204,23 +200,51 @@ struct CalendarView: View {
 
     // MARK: - Week Content
 
-    /// Scrollable day list for a single week page inside the TabView.
+    /// Scrollable day list for a single week page inside the TabView. The week header is
+    /// the first element inside the ScrollView so it translates off-screen with the day
+    /// cards as the user scrolls up. Each page's `ScrollViewReader` observes
+    /// `scrollToTopToken` and snaps back to the header anchor on week change / tab re-tap.
+    ///
+    /// The header has its own `.padding(.horizontal)`; the LazyVStack also applies its own.
+    /// They sit as siblings inside an outer VStack so neither double-pads the other.
     private func weekContent(weekIndex: Int, plan: TrainingPlan) -> some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                let week = plan.planWeeks[weekIndex]
-                let days = plan.daysForWeek(week)
-                ForEach(days, id: \.weekday) { dayInfo in
-                    daySectionView(
-                        dayInfo: dayInfo,
-                        plan: plan,
-                        weekIndex: weekIndex
+        let week = plan.planWeeks[weekIndex]
+        let days = plan.daysForWeek(week)
+        let weekStartDate = week.startDateAsDate ?? Date()
+
+        return ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 16) {
+                    CalendarWeekHeader(
+                        weekNumber: week.weekNumber,
+                        totalWeeks: plan.planWeeks.count,
+                        phase: week.phase,
+                        weekStartDate: weekStartDate,
+                        titleVariant: titleVariant(for: weekIndex, plan: plan),
+                        onPrevious: { goToWeek(weekIndex - 1, plan: plan) },
+                        onNext:     { goToWeek(weekIndex + 1, plan: plan) },
+                        canGoPrevious: weekIndex > 0,
+                        canGoNext: weekIndex < plan.planWeeks.count - 1
                     )
-                    .id("\(week.weekNumber)-\(dayInfo.weekday)")
+                    .id("weekTop")
+
+                    LazyVStack(spacing: 16) {
+                        ForEach(days, id: \.weekday) { dayInfo in
+                            daySectionView(
+                                dayInfo: dayInfo,
+                                plan: plan,
+                                weekIndex: weekIndex
+                            )
+                            .id("\(week.weekNumber)-\(dayInfo.weekday)")
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
             }
-            .padding(.horizontal)
-            .padding(.bottom, 20)
+            .onChange(of: scrollToTopToken) { _, _ in
+                withAnimation { proxy.scrollTo("weekTop", anchor: .top) }
+            }
         }
     }
 
