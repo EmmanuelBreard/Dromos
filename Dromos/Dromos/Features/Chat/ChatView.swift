@@ -94,10 +94,17 @@ struct ChatView: View {
                             .id(message.id)
                     }
 
-                    // Streaming bubble — replaces the old TypingIndicator.
-                    // Shown as soon as the SSE connection opens (streamingMessage == "")
-                    // and fills in word-by-word as tokens arrive.
-                    if let streaming = chatService.streamingMessage {
+                    // Typing indicator — shown while the edge function is processing
+                    // (isLoading = true, no chunks yet). Replaced by the streaming
+                    // bubble as soon as the first token arrives.
+                    if chatService.isLoading
+                        && (chatService.streamingMessage == nil || chatService.streamingMessage!.isEmpty) {
+                        TypingIndicator()
+                            .id("typing-indicator")
+                    }
+
+                    // Streaming bubble — fills in word-by-word as tokens arrive.
+                    if let streaming = chatService.streamingMessage, !streaming.isEmpty {
                         ChatBubbleView(message: ChatMessage(
                             id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
                             userId: UUID(),
@@ -120,6 +127,23 @@ struct ChatView: View {
             .onChange(of: chatService.streamingMessage) { _, _ in
                 withAnimation {
                     scrollProxy.scrollTo("streaming-bubble", anchor: .bottom)
+                }
+            }
+            // Auto-scroll when keyboard appears so the last AI message stays readable
+            // above the keyboard while the user types.
+            .onChange(of: isInputFocused) { _, focused in
+                if focused {
+                    Task {
+                        // Brief delay lets the keyboard avoidance area settle before scrolling.
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        withAnimation {
+                            if chatService.streamingMessage != nil {
+                                scrollProxy.scrollTo("streaming-bubble", anchor: .bottom)
+                            } else if let lastId = chatService.messages.last?.id {
+                                scrollProxy.scrollTo(lastId, anchor: .bottom)
+                            }
+                        }
+                    }
                 }
             }
             .onTapGesture {
@@ -220,6 +244,45 @@ private struct ChatBubbleView: View {
                 .padding(.horizontal, 4)
         }
         .padding(.horizontal)
+    }
+}
+
+// MARK: - TypingIndicator
+
+/// Three pulsing dots shown while waiting for the first SSE chunk to arrive.
+/// Mirrors the WhatsApp-style "someone is typing" pattern.
+private struct TypingIndicator: View {
+
+    @State private var phase = 0
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 0) {
+            HStack(spacing: 5) {
+                ForEach(0..<3) { index in
+                    Circle()
+                        .frame(width: 8, height: 8)
+                        .foregroundStyle(Color(.systemGray3))
+                        .scaleEffect(phase == index ? 1.3 : 0.85)
+                        .animation(
+                            .easeInOut(duration: 0.4)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.15),
+                            value: phase
+                        )
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .frame(maxWidth: 280, alignment: .leading)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal)
+        .onAppear {
+            phase = 1
+        }
     }
 }
 
