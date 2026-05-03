@@ -259,43 +259,48 @@ private struct ChatBubbleView: View {
 
 /// Three pulsing dots shown while waiting for the first SSE chunk to arrive.
 /// Mirrors the WhatsApp-style "someone is typing" pattern.
+///
+/// Uses TimelineView(.animation) to drive the dots frame-by-frame from the
+/// system time. Earlier attempts with .animation(value:) + .repeatForever
+/// triggered in .onAppear were unreliable — the animation occasionally never
+/// engaged, leaving the dots static or invisible. TimelineView is deterministic:
+/// it recomputes opacity from the current time on every frame, so the wave is
+/// guaranteed to render.
 private struct TypingIndicator: View {
 
-    // Single boolean toggle drives all three dots; the per-dot animation delay
-    // creates the staggered wave. The previous "phase == index" design only
-    // oscillated between two values, so the third dot never animated.
-    // Dot color uses Color.primary so the dots stay visible against the
-    // systemGray6 bubble in both light and dark mode (systemGray3 was washed
-    // out at low opacity).
-    @State private var animating = false
+    /// Total wave cycle in seconds — one full pulse per dot.
+    private let cycle: Double = 1.2
+    /// Per-dot phase offset so dots pulse in sequence rather than together.
+    private let dotOffset: Double = 0.2
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 0) {
-            HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .frame(width: 8, height: 8)
-                        .foregroundStyle(Color.primary.opacity(animating ? 0.25 : 0.85))
-                        .animation(
-                            .easeInOut(duration: 0.6)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 0.2),
-                            value: animating
-                        )
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            HStack(alignment: .bottom, spacing: 0) {
+                HStack(spacing: 6) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Circle()
+                            .frame(width: 9, height: 9)
+                            .foregroundStyle(Color.primary.opacity(opacity(for: index, at: t)))
+                    }
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .frame(maxWidth: 280, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray5))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            Spacer(minLength: 0)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
-        .onAppear {
-            animating = true
-        }
+    }
+
+    /// Map (dot index, time) → opacity in [0.25, 1.0].
+    /// Each dot rides a sine wave; the per-dot offset makes the wave travel.
+    private func opacity(for index: Int, at time: TimeInterval) -> Double {
+        let phase = (time - Double(index) * dotOffset).truncatingRemainder(dividingBy: cycle) / cycle
+        let wave = (sin(phase * 2 * .pi) + 1) / 2 // 0..1
+        return 0.25 + 0.75 * wave
     }
 }
 
