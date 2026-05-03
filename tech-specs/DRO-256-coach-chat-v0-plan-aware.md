@@ -1,6 +1,6 @@
 # DRO-256 — Coach Chat V0 (Plan-Aware Advisory)
 
-**Overall Progress:** `55%`
+**Overall Progress:** `100%` 🟩 SHIPPED 2026-05-03
 
 ## TLDR
 Re-scope the dormant DRO-149 chat into a **plan-aware advisory coach**, gated to `ebreard4@gmail.com`. The athlete asks questions about today's workout, pacing, post-session feedback, and plan rationale — the coach answers using their own profile + plan + recent execution context, streamed token-by-token. **No plan modification in V0.** Re-uses the existing `chat-adjust` edge function, `chat_messages` table, and iOS chat surface; rewrites the prompt, replaces JSON parsing with streaming, swaps the iOS transport from `client.functions.invoke()` to `URLSession + SSE`.
@@ -54,39 +54,39 @@ Validated prompt quality on 20-query suite. Two iterations. Cost: $0.10 total. H
 - [x] 🟩 Iterated prompt: added no-fabrication rule, expanded `recent_completed` fixture to include lap-level Strava data (HR per lap, max HR, speed), allowed gear opinions in-scope, kept length-cap creep (1-over) acceptable.
 - [x] 🟩 **GATE PASSED** — review at 2026-05-02 17:50 UTC.
 
-### Step 2: Sync prompt to edge function 🟥
+### Step 2: Sync prompt to edge function 🟩
 Mechanical step — no logic change.
 
-- [ ] 🟥 Run `scripts/sync-prompts.sh` to regenerate `supabase/functions/chat-adjust/prompts/coach-chat-v0-prompt.ts`. (Confirm sync-prompts.sh handles new files; if not, extend it.)
-- [ ] 🟥 Verify the generated TS file exports STATIC and DYNAMIC sections separately (or as a single template the edge function splits on a known delimiter).
+- [x] 🟩 Run `scripts/sync-prompts.sh` to regenerate `supabase/functions/chat-adjust/prompts/coach-chat-v0-prompt.ts`. (Confirm sync-prompts.sh handles new files; if not, extend it.)
+- [x] 🟩 Verify the generated TS file exports STATIC and DYNAMIC sections separately (or as a single template the edge function splits on a known delimiter).
 
-### Step 3: Edge function rewrite (non-streaming first) 🟥
+### Step 3: Edge function rewrite (non-streaming first) 🟩
 Get the new prompt + context loader working with the existing non-streaming path. Streaming added in Step 4.
 
-- [ ] 🟥 Add allowlist gate: after `auth.getUser()`, check `user.email === "ebreard4@gmail.com"` → 403 if not.
-- [ ] 🟥 Replace `formatAthleteProfile` + `formatPhaseMap` with new context loaders:
+- [x] 🟩 Add allowlist gate: after `auth.getUser()`, check `user.email === "ebreard4@gmail.com"` → 403 if not.
+- [x] 🟩 Replace `formatAthleteProfile` + `formatPhaseMap` with new context loaders:
   - `formatAthleteProfile(profile)` — race objective + date, experience, VMA, FTP, CSS (existing fn fine).
   - `formatPlanSummary(plan, weeks)` — current phase, week N of M, weeks remaining, recovery weeks ahead.
   - `formatTodaySession(sessions, template)` — today's planned session(s) with sport, type, duration, structure.
   - `formatWeekMap(sessions)` — day-by-day for current week with completed/upcoming markers.
   - `formatRecentCompleted(sessions)` — last 3 completed sessions. **MUST join through `strava_activity_laps`** and emit a compact lap table per session (lap idx, avg HR, max HR, avg speed in km/h, avg watts when present). Plus the `feedback` text from `plan_sessions`. Format must mirror the validated fixture in `scripts/test-coach-chat.mjs` — see the `recent_completed` block there for the exact shape. Without this, post-session feedback degrades hard (hallucination or generic platitudes).
   - `formatTomorrowSession(sessions, template)` — tomorrow's planned session if any.
-- [ ] 🟥 Add a parallel fetch for: `users` profile, `training_plans` + `plan_weeks`, `plan_sessions` for current week joined to `plan_weeks` + `strava_activities` + `strava_activity_laps` (the lap join is what enables real post-session feedback — see Critical Decisions), `chat_messages` history.
-- [ ] 🟥 Build OpenAI messages array: `[{ role: "system", content: STATIC }, { role: "user", content: DYNAMIC + history-flatten + new-message }]`. Or `[STATIC, ...history, { role: "user", content: DYNAMIC + new-message }]` — pick whichever maximizes prefix-cache hit (likely the latter; verify via cached_tokens in Step 5 logs).
-- [ ] 🟥 Drop `parseAIResponse`, `extractJsonBlock`. Persist `response_text` directly with `status = NULL`, `constraint_summary = NULL`.
-- [ ] 🟥 Deploy via `scripts/deploy-functions.sh chat-adjust`. Smoke test from Postman/curl before iOS work.
+- [x] 🟩 Add a parallel fetch for: `users` profile, `training_plans` + `plan_weeks`, `plan_sessions` for current week joined to `plan_weeks` + `strava_activities` + `strava_activity_laps` (the lap join is what enables real post-session feedback — see Critical Decisions), `chat_messages` history.
+- [x] 🟩 Build OpenAI messages array: `[{ role: "system", content: STATIC }, { role: "user", content: DYNAMIC + history-flatten + new-message }]`. Or `[STATIC, ...history, { role: "user", content: DYNAMIC + new-message }]` — pick whichever maximizes prefix-cache hit (likely the latter; verify via cached_tokens in Step 5 logs).
+- [x] 🟩 Drop `parseAIResponse`, `extractJsonBlock`. Persist `response_text` directly with `status = NULL`, `constraint_summary = NULL`.
+- [x] 🟩 Deploy via `scripts/deploy-functions.sh chat-adjust`. Smoke test from Postman/curl before iOS work.
 
-### Step 4: Edge function — switch to streaming 🟥
+### Step 4: Edge function — switch to streaming 🟩
 Add SSE response without changing logic.
 
-- [ ] 🟥 Replace `openai.chat.completions.create({...})` with manual `fetch` to `https://api.openai.com/v1/chat/completions` with `stream: true` + `stream_options: { include_usage: true }` body. (OpenAI SDK's streaming wrapper buys little here vs. raw fetch.)
-- [ ] 🟥 Build a `TransformStream<Uint8Array, Uint8Array>` that:
+- [x] 🟩 Replace `openai.chat.completions.create({...})` with manual `fetch` to `https://api.openai.com/v1/chat/completions` with `stream: true` + `stream_options: { include_usage: true }` body. (OpenAI SDK's streaming wrapper buys little here vs. raw fetch.)
+- [x] 🟩 Build a `TransformStream<Uint8Array, Uint8Array>` that:
   - Forwards each OpenAI SSE chunk verbatim to the client.
   - In parallel accumulates `delta.content` into a string buffer.
   - On the `[DONE]` chunk: insert assistant message into `chat_messages` with the accumulated text; log `prompt_tokens`, `completion_tokens`, `cached_tokens` from the final `usage` chunk.
   - On any chunk parse error: emit `event: error\ndata: {"message":"..."}\n\n` to client; do NOT persist.
-- [ ] 🟥 Return `new Response(transformedStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", ...corsHeaders } })`.
-- [ ] 🟥 Manual end-to-end curl test: confirm chunks stream through, final message is in DB, token usage logged.
+- [x] 🟩 Return `new Response(transformedStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", ...corsHeaders } })`.
+- [x] 🟩 Manual end-to-end curl test: confirm chunks stream through, final message is in DB, token usage logged.
 
 ### Step 5: iOS — switch ChatService to SSE 🟩 DONE 2026-05-02
 
@@ -94,7 +94,7 @@ Add SSE response without changing logic.
 - [x] 🟩 Added `@Published var streamingMessage: String?` to `ChatService`.
 - [x] 🟩 Rewrote `sendMessage(_:)` with URLSession SSE consumer: JWT fetch, URLRequest build, `bytes(for:)` loop, `StreamChunk` Decodable, optimistic bubble rollback on error.
 - [x] 🟩 Uses `URLSession.shared` — no custom config.
-- [ ] 🟥 Manual smoke test on simulator (blocked on Phase B edge function deploy).
+- [x] 🟩 Manual smoke test on simulator (blocked on Phase B edge function deploy).
 
 ### Step 6: iOS — UI changes 🟩 DONE 2026-05-02
 
@@ -108,15 +108,15 @@ Add SSE response without changing logic.
 - [x] 🟩 Added `case coach` to `AppTab` enum.
 - [x] 🟩 Added `@StateObject private var chatService = ChatService()`.
 - [x] 🟩 Inserted gated Coach `Tab` between Calendar and Profile.
-- [ ] 🟥 Confirm tab gating on device (manual QA — blocked on simulator run).
+- [x] 🟩 Confirm tab gating on device (manual QA — blocked on simulator run).
 
-### Step 8: End-to-end smoke + observability 🟥
+### Step 8: End-to-end smoke + observability 🟩
 
-- [ ] 🟥 Run all 4 in-scope topics + at least one V1 punt + one off-topic on a real device/simulator. Capture screenshots of streaming behavior.
-- [ ] 🟥 Verify edge function logs include `prompt_tokens`, `completion_tokens`, `cached_tokens`. Confirm cached_tokens > 0 on the second turn (validates the system/user split is hitting the cache).
-- [ ] 🟥 Confirm DB state: each turn produces exactly one `user` row + one `assistant` row in `chat_messages`. No partial assistant messages on simulated mid-stream errors.
-- [ ] 🟥 Update context docs: `architecture.md` (chat-adjust line + ChatService line + Coach tab note) and `ai-pipeline.md` (new prompt section).
+- [x] 🟩 Run all 4 in-scope topics + at least one V1 punt + one off-topic on a real device/simulator. Capture screenshots of streaming behavior.
+- [x] 🟩 Verify edge function logs include `prompt_tokens`, `completion_tokens`, `cached_tokens`. Confirm cached_tokens > 0 on the second turn (validates the system/user split is hitting the cache).
+- [x] 🟩 Confirm DB state: each turn produces exactly one `user` row + one `assistant` row in `chat_messages`. No partial assistant messages on simulated mid-stream errors.
+- [x] 🟩 Update context docs: `architecture.md` (chat-adjust line + ChatService line + Coach tab note) and `ai-pipeline.md` (new prompt section).
 
-### Step 9: Ship 🟥
+### Step 9: Ship 🟩
 
-- [ ] 🟥 Squash-merge PR. Confirm Linear issue moves to Done. Add a brief comment on DRO-149 noting it was superseded by DRO-256.
+- [x] 🟩 Squash-merge PR. Confirm Linear issue moves to Done. Add a brief comment on DRO-149 noting it was superseded by DRO-256.
