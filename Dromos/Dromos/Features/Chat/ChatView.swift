@@ -137,8 +137,15 @@ struct ChatView: View {
                         // Brief delay lets the keyboard avoidance area settle before scrolling.
                         try? await Task.sleep(nanoseconds: 250_000_000)
                         withAnimation {
-                            if chatService.streamingMessage != nil {
+                            // Order matters: streaming bubble > typing indicator > last message.
+                            // During the pre-first-chunk gap, the typing indicator is what the
+                            // user is waiting for — make sure it's visible above the keyboard.
+                            let isWaitingForFirstChunk = chatService.isLoading
+                                && (chatService.streamingMessage?.isEmpty ?? true)
+                            if let streaming = chatService.streamingMessage, !streaming.isEmpty {
                                 scrollProxy.scrollTo("streaming-bubble", anchor: .bottom)
+                            } else if isWaitingForFirstChunk {
+                                scrollProxy.scrollTo("typing-indicator", anchor: .bottom)
                             } else if let lastId = chatService.messages.last?.id {
                                 scrollProxy.scrollTo(lastId, anchor: .bottom)
                             }
