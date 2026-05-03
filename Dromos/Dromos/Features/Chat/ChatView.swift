@@ -163,12 +163,13 @@ struct ChatView: View {
     /// Floating capsule message composer that hovers above the tab bar.
     /// Multi-line input (up to 5 lines), 1000-char cap. Send button sits inside the
     /// capsule on the trailing edge — no divider separating it from the message list.
+    /// Horizontal inset matches iOS 18's floating tab bar so the two pills line up.
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
             TextField("Message your coach...", text: $messageText, axis: .vertical)
                 .focused($isInputFocused)
                 .lineLimit(1...5)
-                .padding(.leading, 16)
+                .padding(.leading, 18)
                 .padding(.vertical, 10)
                 .onChange(of: messageText) { _, newValue in
                     if newValue.count > 1000 {
@@ -185,13 +186,12 @@ struct ChatView: View {
             }
             .disabled(isSendDisabled)
             .padding(.trailing, 8)
-            .padding(.bottom, 6)
         }
         .background(
             Capsule()
                 .fill(Color(.secondarySystemBackground))
         )
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 20)
         .padding(.bottom, 8)
     }
 
@@ -261,19 +261,21 @@ private struct ChatBubbleView: View {
 /// Mirrors the WhatsApp-style "someone is typing" pattern.
 private struct TypingIndicator: View {
 
-    // Single boolean toggle drives all three dots; the per-dot animation
-    // delay creates the staggered wave. The previous "phase == index" design
-    // only oscillated between two values, so the third dot never animated.
+    // Single boolean toggle drives all three dots; the per-dot animation delay
+    // creates the staggered wave. The previous "phase == index" design only
+    // oscillated between two values, so the third dot never animated.
+    // Dot color uses Color.primary so the dots stay visible against the
+    // systemGray6 bubble in both light and dark mode (systemGray3 was washed
+    // out at low opacity).
     @State private var animating = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 ForEach(0..<3, id: \.self) { index in
                     Circle()
                         .frame(width: 8, height: 8)
-                        .foregroundStyle(Color(.systemGray3))
-                        .opacity(animating ? 0.3 : 1.0)
+                        .foregroundStyle(Color.primary.opacity(animating ? 0.25 : 0.85))
                         .animation(
                             .easeInOut(duration: 0.6)
                                 .repeatForever(autoreverses: true)
