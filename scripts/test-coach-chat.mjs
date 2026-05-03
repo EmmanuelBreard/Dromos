@@ -44,6 +44,8 @@ Phase map: W1-3 Base, W4-5 Recovery, W6-7 Build, W8 Peak, W9-10 Taper.
 
   today_session: `Saturday: BIKE Tempo (BIKE_Tempo_19), 180min — "150min Z1 @175-185W + 30min @230W block at end". Already completed today.`,
 
+  yesterday_session: `Friday: BIKE Easy 50min Z1 recovery (done) — actual: 38km in 1h01, avg HR 143 (no power meter)`,
+
   week_map: `Mon: SWIM Tempo 55min (done) — felt fast but cut short
 Tue: RUN Intervals 60min (done) — strong execution, race-pace stimulus
 Wed: BIKE Tempo 60min (done) — tempo intervals at 240W, HR drift in later reps
@@ -73,6 +75,7 @@ const FIXTURE_NO_PLAN = {
 Race objective: not set | VMA: unknown | FTP: unknown | CSS: unknown`,
   plan_summary: `No active training plan.`,
   today_session: `No session scheduled (no plan).`,
+  yesterday_session: `No session scheduled (no plan).`,
   week_map: `No plan generated yet.`,
   recent_completed: `No recent sessions.`,
   tomorrow_session: `No session scheduled (no plan).`,
@@ -94,6 +97,7 @@ function renderDynamic(fixture) {
     .replace("{{athlete_profile}}", fixture.athlete_profile)
     .replace("{{plan_summary}}", fixture.plan_summary)
     .replace("{{today_session}}", fixture.today_session)
+    .replace("{{yesterday_session}}", fixture.yesterday_session)
     .replace("{{week_map}}", fixture.week_map)
     .replace("{{recent_completed}}", fixture.recent_completed)
     .replace("{{tomorrow_session}}", fixture.tomorrow_session);
@@ -134,6 +138,9 @@ const CASES = [
   // Edge cases — degraded context
   { cat: "edge-no-plan",   fixture: FIXTURE_NO_PLAN, q: "how should I train this week?" },
   { cat: "edge-rest-day",  fixture: FIXTURE_REST_DAY, q: "what's today's session?" },
+
+  // Yesterday hallucination regression
+  { cat: "yesterday",      fixture: FIXTURE_FULL, q: "how did yesterday's session go?" },
 ];
 
 // ── CLI args ──────────────────────────────────────────────────────────────────

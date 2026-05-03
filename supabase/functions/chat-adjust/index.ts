@@ -59,6 +59,21 @@ function tomorrowInUserTz(): { date: string; day: string } {
   return { date: dateFmt.format(tomorrow), day: dayFmt.format(tomorrow) };
 }
 
+function yesterdayInUserTz(): { date: string; day: string } {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const dateFmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: USER_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const dayFmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: USER_TIMEZONE,
+    weekday: "long",
+  });
+  return { date: dateFmt.format(yesterday), day: dayFmt.format(yesterday) };
+}
+
 // Parse a "YYYY-MM-DD" date string as UTC midnight for calendar-day diff.
 function dateStrToUTCMidnight(dateStr: string): number {
   return new Date(dateStr + "T00:00:00Z").getTime();
@@ -305,6 +320,67 @@ function formatTodaySession(
       const completed = s.matched_activity_id ? " Already completed today." : "";
       const notesStr = s.notes ? ` — "${s.notes}"` : "";
       return `${todayName}: ${s.sport.toUpperCase()} ${s.type} (${s.template_id}), ${s.duration_minutes}min${notesStr}.${completed}`;
+    })
+    .join("\n");
+}
+
+/**
+ * Yesterday's session(s) — identical shape to formatTodaySession but includes the
+ * actual activity summary and lap data when matched.
+ * Format: "Friday: BIKE Easy 50min Z1 recovery (done) — actual: 38km in 1h01, avg HR 143 (no power meter)"
+ * If no session was scheduled, returns a REST DAY / no-data message so the model
+ * never needs to infer what yesterday was.
+ */
+function formatYesterdaySession(
+  sessions: PlanSession[],
+  yesterdayName: string,
+  yesterdayStr: string,
+  activitiesMap: Map<string, StravaActivity>,
+  lapsMap: Map<string, StravaActivityLap[]>,
+): string {
+  const yesterdaySessions = sessions
+    .filter((s) => s.day === yesterdayName)
+    .sort((a, b) => a.order_in_day - b.order_in_day);
+
+  if (yesterdaySessions.length === 0) {
+    return `${yesterdayName} (yesterday): REST DAY (no scheduled training).`;
+  }
+
+  return yesterdaySessions
+    .map((s) => {
+      // Activity summary line (same logic as formatRecentCompleted)
+      let activitySummary = "";
+      const powerNote = (() => {
+        if (!s.matched_activity_id) return "";
+        const laps = lapsMap.get(s.matched_activity_id) ?? [];
+        const hasPower = laps.some((l) => l.average_watts != null && l.average_watts > 0);
+        return laps.length > 0 && !hasPower ? " (no power meter)" : "";
+      })();
+
+      if (s.matched_activity_id) {
+        const act = activitiesMap.get(s.matched_activity_id);
+        if (act) {
+          const distKm = act.distance != null ? Math.round(act.distance / 100) / 10 : null;
+          let durationStr = "";
+          if (act.elapsed_time != null) {
+            const h = Math.floor(act.elapsed_time / 3600);
+            const m = Math.floor((act.elapsed_time % 3600) / 60);
+            durationStr = h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m}min`;
+          }
+          const hrStr = act.average_heartrate != null
+            ? `avg HR ${Math.round(act.average_heartrate)}`
+            : null;
+          const parts: string[] = [];
+          if (distKm != null) parts.push(`${distKm}km`);
+          if (durationStr) parts.push(`in ${durationStr}`);
+          if (hrStr) parts.push(hrStr);
+          if (parts.length > 0) activitySummary = ` — actual: ${parts.join(", ")}${powerNote}`;
+        }
+      }
+
+      const completedStr = s.matched_activity_id ? " (done)" : " (not completed)";
+      const notesStr = s.notes ? ` — "${s.notes}"` : "";
+      return `${yesterdayName} (yesterday): ${s.sport.toUpperCase()} ${s.type} ${s.duration_minutes}min${completedStr}${notesStr}${activitySummary}.`;
     })
     .join("\n");
 }
@@ -575,6 +651,7 @@ Deno.serve(async (req) => {
     // plan_sessions.day column values (e.g. "Saturday").
     const { date: todayStr, day: todayName } = todayInUserTz();
     const { day: tomorrowName } = tomorrowInUserTz();
+    const { date: yesterdayStr, day: yesterdayName } = yesterdayInUserTz();
 
     // 8. Parallel fetch all context data
     const [
@@ -582,13 +659,13 @@ Deno.serve(async (req) => {
       profileResult,
       planResult,
     ] = await Promise.all([
-      // a) Last 50 messages DESC (newest first), reversed to chronological below
+      // a) Last 10 messages DESC (newest first), reversed to chronological below
       db
         .from("chat_messages")
         .select("role, content")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(50),
+        .limit(10),
 
       // b) User profile (fields consumed by formatAthleteProfile only)
       db
@@ -779,6 +856,73 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 10c. Resolve yesterday's sessions. Yesterday may fall in currentWeek (Mon–Sat today)
+    // or in the previous week (today is Sunday or Monday and yesterday was the last day of
+    // the prior week). We search allWeeks for the week that contains yesterdayStr.
+    const yesterdayWeek = allWeeks.find((w) => {
+      const weekStartMs = dateStrToUTCMidnight(w.start_date);
+      const weekEndMs = weekStartMs + 7 * 86_400_000;
+      const yMs = dateStrToUTCMidnight(yesterdayStr);
+      return yMs >= weekStartMs && yMs < weekEndMs;
+    }) ?? null;
+
+    let yesterdaySessions: PlanSession[] = [];
+    const yesterdayActivitiesMap = new Map<string, StravaActivity>();
+
+    if (yesterdayWeek) {
+      // If yesterday is in the same week as today, reuse weekSessions (already fetched).
+      // Otherwise fetch the previous week's sessions.
+      const sourceSessionsForYesterday: PlanSession[] = yesterdayWeek.id === currentWeek?.id
+        ? weekSessions
+        : await (async () => {
+            const res = await db
+              .from("plan_sessions")
+              .select("id, day, sport, type, template_id, duration_minutes, notes, feedback, matched_activity_id, order_in_day")
+              .eq("week_id", yesterdayWeek.id)
+              .order("order_in_day", { ascending: true });
+            if (res.error) {
+              console.error("yesterday plan_sessions fetch warning:", res.error.message);
+              return [] as PlanSession[];
+            }
+            return (res.data ?? []) as PlanSession[];
+          })();
+
+      yesterdaySessions = sourceSessionsForYesterday.filter((s) => s.day === yesterdayName);
+
+      // Fetch activities + laps for yesterday's matched sessions (if not already in lapsMap)
+      const yMatchedIds = yesterdaySessions
+        .map((s) => s.matched_activity_id)
+        .filter((id): id is string => id != null);
+
+      if (yMatchedIds.length > 0) {
+        const yActivitiesRes = await db
+          .from("strava_activities")
+          .select("id, distance, elapsed_time, average_heartrate, average_watts")
+          .in("id", yMatchedIds);
+
+        if (!yActivitiesRes.error) {
+          for (const act of ((yActivitiesRes.data ?? []) as StravaActivity[])) {
+            yesterdayActivitiesMap.set(act.id, act);
+          }
+        }
+
+        const yLapsMissing = yMatchedIds.filter((id) => !lapsMap.has(id));
+        if (yLapsMissing.length > 0) {
+          const yLapsRes = await db
+            .from("strava_activity_laps")
+            .select("activity_id, lap_index, average_heartrate, max_heartrate, average_speed, average_watts")
+            .in("activity_id", yLapsMissing)
+            .order("lap_index", { ascending: true });
+          if (!yLapsRes.error) {
+            for (const lap of ((yLapsRes.data ?? []) as StravaActivityLapRow[])) {
+              if (!lapsMap.has(lap.activity_id)) lapsMap.set(lap.activity_id, []);
+              lapsMap.get(lap.activity_id)!.push(lap);
+            }
+          }
+        }
+      }
+    }
+
     // 11. Build context strings
     const userProfile = profileResult.data as UserProfile | null;
 
@@ -789,6 +933,13 @@ Deno.serve(async (req) => {
       currentWeek
     );
     const todaySessionStr = formatTodaySession(weekSessions, todayName);
+    const yesterdaySessionStr = formatYesterdaySession(
+      yesterdaySessions,
+      yesterdayName,
+      yesterdayStr,
+      yesterdayActivitiesMap,
+      lapsMap,
+    );
     const weekMapStr = formatWeekMap(weekSessions, todayName);
     const recentCompletedStr = formatRecentCompleted(recentCompletedSessions, lapsMap, todayStr);
     const tomorrowSessionStr = formatTomorrowSession(weekSessions, tomorrowName);
@@ -798,6 +949,7 @@ Deno.serve(async (req) => {
       .replace("{{athlete_profile}}", athleteProfileStr)
       .replace("{{plan_summary}}", planSummaryStr)
       .replace("{{today_session}}", todaySessionStr)
+      .replace("{{yesterday_session}}", yesterdaySessionStr)
       .replace("{{week_map}}", weekMapStr)
       .replace("{{recent_completed}}", recentCompletedStr)
       .replace("{{tomorrow_session}}", tomorrowSessionStr)
