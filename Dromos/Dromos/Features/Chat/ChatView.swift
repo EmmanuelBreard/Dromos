@@ -50,8 +50,7 @@ struct ChatView: View {
                         .padding(.top, 4)
                 }
 
-                // ── Input bar ──────────────────────────────────────────────
-                Divider()
+                // ── Input bar (floating capsule, no divider) ───────────────
                 inputBar
             }
             .navigationTitle("Chat")
@@ -161,18 +160,16 @@ struct ChatView: View {
 
     // MARK: - Input Bar
 
-    /// Message composition area at the bottom of the screen.
-    /// Supports multi-line input (up to 5 lines) and enforces a 1000-char limit.
+    /// Floating capsule message composer that hovers above the tab bar.
+    /// Multi-line input (up to 5 lines), 1000-char cap. Send button sits inside the
+    /// capsule on the trailing edge — no divider separating it from the message list.
     private var inputBar: some View {
         HStack(alignment: .bottom, spacing: 8) {
             TextField("Message your coach...", text: $messageText, axis: .vertical)
                 .focused($isInputFocused)
                 .lineLimit(1...5)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                // Enforce 1000-char limit.
+                .padding(.leading, 16)
+                .padding(.vertical, 10)
                 .onChange(of: messageText) { _, newValue in
                     if newValue.count > 1000 {
                         messageText = String(newValue.prefix(1000))
@@ -187,11 +184,15 @@ struct ChatView: View {
                     .foregroundStyle(.accent)
             }
             .disabled(isSendDisabled)
-            .padding(.bottom, 8)
+            .padding(.trailing, 8)
+            .padding(.bottom, 6)
         }
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .background(
+            Capsule()
+                .fill(Color(.secondarySystemBackground))
+        )
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Helpers
@@ -260,21 +261,24 @@ private struct ChatBubbleView: View {
 /// Mirrors the WhatsApp-style "someone is typing" pattern.
 private struct TypingIndicator: View {
 
-    @State private var phase = 0
+    // Single boolean toggle drives all three dots; the per-dot animation
+    // delay creates the staggered wave. The previous "phase == index" design
+    // only oscillated between two values, so the third dot never animated.
+    @State private var animating = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             HStack(spacing: 5) {
-                ForEach(0..<3) { index in
+                ForEach(0..<3, id: \.self) { index in
                     Circle()
                         .frame(width: 8, height: 8)
                         .foregroundStyle(Color(.systemGray3))
-                        .scaleEffect(phase == index ? 1.3 : 0.85)
+                        .opacity(animating ? 0.3 : 1.0)
                         .animation(
-                            .easeInOut(duration: 0.4)
+                            .easeInOut(duration: 0.6)
                                 .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 0.15),
-                            value: phase
+                                .delay(Double(index) * 0.2),
+                            value: animating
                         )
                 }
             }
@@ -288,7 +292,7 @@ private struct TypingIndicator: View {
         }
         .padding(.horizontal)
         .onAppear {
-            phase = 1
+            animating = true
         }
     }
 }
