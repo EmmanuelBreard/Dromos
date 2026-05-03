@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Coach tab — plan-aware advisory chat (V0, gated dogfood)** — Ask the coach about today's session, how to pace tomorrow's effort, why a session is in your plan, or how a recent workout went. Replies are personalized using your VMA, FTP, CSS, today's plan, yesterday's actual data (with HR + distance + duration from Strava), and your recent execution. Responses stream token-by-token. The coach is **advisory only** — it can't move sessions yet — but it'll help you get the most out of what's already on the plan. Tab is currently visible only for `ebreard4@gmail.com` while we sharpen the prompt before wider rollout (DRO-256).
+
 ### Changed
 - **Today tab polish** — The today pill on the week strip now keeps the green border by default and the border follows you as you preview other days (instead of disappearing on today). Multi-session days show one sport icon per session inline in the small pill instead of just the first session's icon. Session cards on the today hero collapse the title onto one line — `[icon] Tempo Bike - 1h30` — and the redundant duration caption on the right side of the card header is removed. Horizontal swipe between days is back: drag left/right on the hero card to navigate the week, with a hard stop at Monday/Sunday. Pill taps and swipes share the same `.easeInOut(0.25)` slide+fade transition.
 

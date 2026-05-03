@@ -173,41 +173,56 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 
 ---
 
-## Chat Adjust Pipeline (V0)
+## Coach Chat Pipeline (V0 — DRO-256)
 
-**Feature:** DRO-149 Chat V0
-**Edge Function:** `supabase/functions/chat-adjust/index.ts`
+**Feature:** DRO-256 Coach Chat V0 — plan-aware advisory (supersedes the dormant DRO-149 constraint-detection chat)
+**Edge Function:** `supabase/functions/chat-adjust/index.ts` (re-used; behavior fully replaced)
 
-Single-step pipeline — no multi-step orchestration needed. The agent both converses and classifies in one turn.
+Plan-aware conversational coach. **Advisory only** in V0 — answers questions about today's session, pacing, post-session feedback, and plan rationale, but does NOT modify the plan. Streams responses end-to-end via Server-Sent Events. Gated to `ebreard4@gmail.com` only via a server-side email allowlist for V0 dogfood.
 
 ### Prompt
 | File | Purpose |
 |------|---------|
-| `ai/prompts/adjust-step1-v0.txt` | V0 fork of conversation prompt — advisory mode (no plan modification) |
-| `supabase/functions/chat-adjust/prompts/adjust-step1-v0-prompt.ts` | Auto-generated TS module. Run `scripts/sync-prompts.sh` to regenerate. |
+| `ai/prompts/coach-chat-v0.txt` | Validated prompt with two sections separated by `--- DYNAMIC ---`. STATIC (system message): persona (efficient/sharp/warm; he-pronoun; no name), 4 in-scope topics + length caps, 4 V1 advisory punts + Calendar pointer, no-fabrication rule. DYNAMIC (user message, rendered per request): athlete profile, plan summary, today / yesterday / tomorrow sessions, week map, last 3 completed sessions with lap data. |
+| `supabase/functions/chat-adjust/prompts/coach-chat-v0-prompt.ts` | Auto-generated. Run `scripts/sync-prompts.sh` to regenerate. |
+| `scripts/test-coach-chat.mjs` | Validation harness — fetches user profile + plan, renders prompt, calls gpt-4.1 directly. Use for prompt iteration without touching DB. |
+
+The legacy `ai/prompts/adjust-step1-v0.txt` is kept on disk as historical reference but no longer imported.
 
 ### Flow
-1. Extract and validate JWT via `auth.getUser()`
-2. Parse `{ message: string }` body (max 1000 chars)
-3. Fetch in parallel: last 50 chat messages (chronological), user profile, active plan weeks
-4. Render prompt by replacing `{{athlete_profile}}` and `{{phase_map}}` placeholders
-5. Call OpenAI `gpt-4o` with history + new message (temperature 0, max_tokens 1024)
-6. Parse response: extract outermost JSON block if present, else treat as `need_info`
-7. Insert user message then assistant message via service_role
-8. Return `{ response_text, status, constraint_summary? }`
+1. CORS preflight, POST guard, env check
+2. JWT validated via `auth.getUser()`
+3. **Email allowlist gate**: reject 403 if `user.email !== "ebreard4@gmail.com"`
+4. Parse `{ message: string }` body (max 1000 chars)
+5. **Insert user message** into `chat_messages` BEFORE the OpenAI call (so user input is durable on AI failure)
+6. Parallel fetch: last 10 chat messages (chronological), user profile, active plan + weeks (`.maybeSingle()` so `generating` plans degrade gracefully)
+7. Resolve current/yesterday/tomorrow weeks using `Intl.DateTimeFormat` in `Europe/Paris` (V0 single-user TZ); fetch `plan_sessions` for current week; fetch `strava_activities` + `strava_activity_laps` for matched activities
+8. Yesterday loader: separate `plan_weeks!inner` query covers the prior-week boundary case; activity + laps fetched for matched yesterday session if present
+9. Recent-completed loader: cross-plan query ordered by `(start_date DESC, day DESC)`, slice top 3
+10. Render DYNAMIC by replacing `{{athlete_profile}}`, `{{plan_summary}}`, `{{today_session}}`, `{{yesterday_session}}`, `{{week_map}}`, `{{recent_completed}}`, `{{tomorrow_session}}`
+11. Build OpenAI message array: `[system(STATIC), user(DYNAMIC), ...history(ASC), user(message)]` — this prefix ordering maximizes OpenAI's prompt cache hit rate within a multi-turn conversation
+12. Call OpenAI `gpt-4.1` with `stream: true` + `stream_options: { include_usage: true }` via raw `fetch` (no SDK)
+13. Stream upstream body through a `TransformStream<Uint8Array, Uint8Array>`: forwards bytes verbatim to client + parses each `data:` line in parallel to accumulate `delta.content` server-side
+14. On `[DONE]`: insert complete assistant message with `status=NULL`, `constraint_summary=NULL`; log structured token usage `{ event: "chat-adjust-tokens", prompt, completion, cached }`
+15. On upstream abort mid-stream: `pipeThrough` rejects, `flush` does NOT run, no partial assistant row persisted
+16. Return `text/event-stream; charset=utf-8` with CORS headers
 
 ### Model
-| Step | Model | Max Tokens | Temperature | Why |
-|------|-------|-----------|-------------|-----|
-| Intake agent | gpt-4.1 | 1,024 | 0 | Deterministic classification; short response |
+| Model | Max Tokens | Temperature | Stream | Why |
+|-------|-----------|-------------|--------|-----|
+| gpt-4.1 | 400 | 0.3 | true | Plan-aware coaching with mild creativity for tone; capped low to keep cost bounded ($~0.0026/message at 60% cache hit) |
 
-### Statuses
-| Status | Meaning |
-|--------|---------|
-| `need_info` | Agent still gathering required fields; plain text reply |
-| `ready` | All required fields collected; constraint summary present |
-| `no_action` | Not a training disruption (chitchat, gratitude) |
-| `escalate` | Disruption too severe to modify plan; recommend plan regeneration |
+### Status & constraint columns
+The `status` and `constraint_summary` columns on `chat_messages` are kept (NULL for V0) for forward-compat with V1 plan-modification work. V0 responses are pure conversational text.
+
+### Caching
+The static system message is ~1.2k tokens (above OpenAI's 1024-token cache threshold). System+DYNAMIC prefix is reused turn-to-turn within a conversation, hitting the prefix cache after the first turn.
+
+### iOS client
+`Dromos/Dromos/Core/Services/ChatService.swift` — uses `URLSession.bytes(for:)` to consume SSE; manual JWT via `client.auth.session.accessToken`. `@Published streamingMessage: String?` drives the partial-bubble UI in `ChatView`. Empty-stream guard surfaces an error rather than promoting an empty assistant bubble.
+
+### Validation harness
+`scripts/test-coach-chat.mjs` runs ~21 representative cases (4 in-scope topics × 3 phrasings, 4 punts, 2 off-topic, 2 edge cases, yesterday-hallucination regression). Used during Phase 1 (PoC gate) and any future prompt iteration. ~$0.05 per full run.
 
 ---
 

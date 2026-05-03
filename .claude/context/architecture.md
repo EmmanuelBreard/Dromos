@@ -29,7 +29,7 @@ Dromos/Dromos/
 │       ├── ProfileService.swift      # User profile CRUD + onboarding save
 │       ├── StravaService.swift       # Strava OAuth (ASWebAuthenticationSession), disconnect, sync, activity fetch
 │       ├── WorkoutLibraryService.swift # Bundled JSON library, O(1) template lookup, flattenedSegments(), stepSummaries()
-│       └── ChatService.swift          # @MainActor ObservableObject: fetchMessages(), sendMessage(), clearHistory()
+│       └── ChatService.swift          # @MainActor ObservableObject: fetchMessages(), sendMessage() via URLSession.bytes(for:) SSE consumer + manual JWT, clearHistory(). Streams partial assistant text into @Published `streamingMessage` (DRO-256).
 │
 ├── Features/
 │   ├── Auth/                         # Login + SignUp views
@@ -109,6 +109,7 @@ Authenticated + plan → MainTabView
 **Tab navigation** (`MainTabView.swift`): `TabView` with iOS 18+ `Tab` syntax:
 - Home (house icon) → `HomeView` (Today screen; receives shared `authService`, `planService`, `profileService`, `stravaService`, plus a `homeReset` binding for tab re-tap)
 - Calendar (calendar icon) → `CalendarView` (receives shared `authService`, `planService`, `profileService`, `stravaService`, plus `calendarReset`; fetches activities and manages per-session completion status)
+- Coach (`bubble.left.fill`) → `ChatView` — **gated by `authService.currentUserEmail == "ebreard4@gmail.com"`** for V0 dogfood; tab is hidden for all other users. Receives shared `chatService` (DRO-256).
 - Profile (person icon) → `ProfileView` (receives shared `profileService` + `stravaService`; chatService is NOT injected)
 
 **Tab reset behavior**: Custom `Binding<AppTab>` (`tabSelection`) wraps the tab selection to detect both tab switches and same-tab re-taps. On navigation to:
@@ -281,7 +282,7 @@ All services follow:
 | `strava-auth` | `supabase/functions/strava-auth/` | POST: OAuth code exchange + token storage. DELETE: token revocation + full cleanup (strava_activities + strava_connections). JWT validated via `auth.getUser()`. |
 | `strava-sync` | `supabase/functions/strava-sync/` | POST: Paginated Strava activity fetch (up to 2000), token auto-refresh, upsert into `strava_activities`, then fetch laps + streams per activity (non-fatal). Laps stored in `strava_activity_laps`, streams as JSONB on activity row. JWT validated via `auth.getUser()`. |
 | `session-feedback` | `supabase/functions/session-feedback/` | POST: Auth → fetch session/activity/profile/week context → OpenAI gpt-4.1 → write feedback to plan_sessions. JWT validated via `auth.getUser()`. |
-| `chat-adjust` | `supabase/functions/chat-adjust/` | POST: Auth → history fetch → OpenAI gpt-4o → DB write (both user & assistant messages). JWT validated via `auth.getUser()`. Returns `{ response_text, status, constraint_summary? }`. |
+| `chat-adjust` | `supabase/functions/chat-adjust/` | POST: Auth → email allowlist gate (V0: `ebreard4@gmail.com` only, 403 otherwise) → parallel context fetch (profile, plan + weeks, current-week sessions + Strava activities + laps, last-3 completed across plan, history) → OpenAI gpt-4.1 with `stream: true` → SSE passthrough via `TransformStream` → DB write of complete assistant message on stream end. JWT validated via `auth.getUser()`. Returns `text/event-stream` (OpenAI SSE chunks verbatim). Prompt: `coach-chat-v0.txt` with STATIC (system) + DYNAMIC (user) split for OpenAI prefix caching. (DRO-256). |
 
 **Deployment:** All functions are deployed with `--no-verify-jwt` (gateway JWT check disabled — each function validates JWTs itself via `auth.getUser()`). Use `scripts/deploy-functions.sh` to deploy one or all functions with the correct flags.
 
