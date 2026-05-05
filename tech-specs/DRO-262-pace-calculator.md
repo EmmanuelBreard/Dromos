@@ -1,6 +1,6 @@
 # DRO-262: Pace Calculator (Profile entry + Workout chip entry)
 
-**Overall Progress:** `0%`
+**Overall Progress:** `33%` (Phase 1 complete)
 
 **Linear:** [DRO-262](https://linear.app/dromosapp/issue/DRO-262/pace-calculator-drawer-profile-entry-workout-chip-pre-seed)
 
@@ -43,46 +43,42 @@ A third entry point — a speedometer icon in the Calendar toolbar — is protot
 
 Goal: ship the drawer view and its math, runnable in a `#Preview`. No integration into Profile or SessionCardView yet.
 
-- [ ] **Step 1.1: `PaceMath.swift`**
-  - [ ] Define `enum Discipline: String, CaseIterable { case run, bike, swim }`.
-  - [ ] Define `struct DisciplineConfig` with: `min: Int`, `max: Int`, `step: Int`, `defaultValue: Int`, `inputLabel: String`, `unit: String`, `secondaryLabel: String`, `secondaryUnit: String`, `distances: [(name: String, km: Double)]`. Ranges:
+- [x] **Step 1.1: `PaceMath.swift`** 🟩
+  - [x] Define `enum Discipline: String, CaseIterable { case run, bike, swim }`.
+  - [x] Define `struct DisciplineConfig` with: `min: Int`, `max: Int`, `step: Int`, `defaultValue: Int`, `inputLabel: String`, `unit: String`, `secondaryLabel: String`, `secondaryUnit: String`, `distances: [DistanceEntry]`. Ranges:
     - `.run` → 60–220 (= 6.0–22.0 km/h × 10), step 1, default 120, distances: 1 km / 10 km / Half (21.0975) / Marathon (42.195)
     - `.bike` → 150–500 (= 15.0–50.0 km/h × 10), step 5, default 320, distances: 1 km / 40 km Olympic / 90 km Half-Iron / 180 km Ironman
     - `.swim` → 60–180 (sec / 100 m), step 1, default 110, distances: 1500 m Olympic / 1900 m Half-Iron / 3800 m Ironman
-  - [ ] Add `Discipline.config: DisciplineConfig` computed property.
-  - [ ] Pure functions:
+  - [x] Add `Discipline.config: DisciplineConfig` computed property.
+  - [x] Pure functions:
     - `kmH(forSliderValue v: Int, discipline: Discipline) -> Double` (run/bike: `v/10`; swim: `360 / Double(v)`)
     - `secondsToCover(km: Double, atSpeedKmH: Double) -> TimeInterval`
     - `formatTime(_ seconds: TimeInterval) -> String` → `"H:MM:SS"` if h>0, else `"M:SS"`
     - `formatPacePerKm(secondsPerKm: TimeInterval) -> String` → `"M:SS / km"`
 
-- [ ] **Step 1.2: `PaceSeed.swift`**
-  - [ ] `struct PaceSeed { let discipline: Discipline; let sliderValue: Int }`
-  - [ ] `static func from(session: PlanSession, profile: User?) -> PaceSeed?`
+- [x] **Step 1.2: `PaceSeed.swift`** 🟩
+  - [x] `struct PaceSeed { let discipline: Discipline; let sliderValue: Int }`
+  - [x] `static func from(session: PlanSession, profile: User?) -> PaceSeed?`
     - Map `session.sport.lowercased()` → `.run` / `.bike` / `.swim`. Unknown sport → `nil`.
     - For `.run`: if `profile?.vma` is non-nil, `sliderValue = Int((vma * 10).rounded())`. Else use `Discipline.run.config.defaultValue`.
-    - For `.bike`: V0 — use the default (320). Open question below; do **not** invent a derivation here without product confirmation.
-    - For `.swim`: if `profile?.css` is non-nil (CSS in sec/100m), `sliderValue = Int(css.rounded())`. Else default.
+    - For `.bike`: V0 — always use default 320.
+    - For `.swim`: if `profile?.cssSecondsPer100m` is non-nil, `sliderValue = cssSecondsPer100m`. Else default.
     - Clamp `sliderValue` to `[config.min, config.max]`.
 
-- [ ] **Step 1.3: `PaceCalculatorSheet.swift`**
-  - [ ] Inputs: `let seed: PaceSeed?`. State: `@State private var discipline: Discipline`, `@State private var sliderValue: Int`. Initial values from `seed` or run/default.
-  - [ ] Layout: `VStack` inside a `ZStack` with the dark gradient background:
-    1. Header section: eyebrow "DROMOS · PACE CARD", dynamic title (`Running` / `Cycling` / `Swimming`).
-    2. Chevron-down button (`Image(systemName: "chevron.down")`) centered, inside a small pill background. Tap → calls `dismiss` from `@Environment(\.dismiss)`.
-    3. `Picker(selection: $discipline) { ... }.pickerStyle(.segmented)` styled to match dark theme.
-    4. Two-column row: left = major value + label + unit; right = secondary (label / strong value / unit).
-    5. `Slider(value: …, in: …, step: …)` — bind to `sliderValue`. Bounds row below shows formatted min/max.
-    6. Divider + "FINISH TIMES" section, each row = distance name + computed time. Use `LazyVStack` with `Divider()` between rows.
-    7. ~~Share button~~ — **not in V0.** No share button is rendered; sharing is a follow-up ticket.
-  - [ ] When `discipline` changes, reset `sliderValue` to that discipline's `defaultValue`.
-  - [ ] `#Preview` block with three previews: `nil` seed, run-seeded, swim-seeded.
+- [x] **Step 1.3: `PaceCalculatorSheet.swift`** 🟩
+  - [x] Inputs: `let seed: PaceSeed?`. State: `@State private var discipline: Discipline`, `@State private var sliderValue: Int`. Initial values from `seed` or run/default.
+  - [x] Dark gradient background using `Color(red:green:blue:)` literals (no `Color(hex:)` extension in codebase).
+  - [x] Layout: eyebrow → title → dismiss button → segmented picker → two-column metrics → slider → finish times.
+  - [x] When `discipline` changes, reset `sliderValue` to that discipline's `defaultValue`.
+  - [x] `#Preview` block with three previews: `nil` seed, run-seeded (138), swim-seeded (110).
 
-- [ ] **Step 1.4: Unit tests `PaceMathTests.swift`**
-  - [ ] Run: `12.0 km/h` → 1 km in `5:00`, 10 km in `50:00`, marathon in `3:30:30` (±1 sec).
-  - [ ] Bike: `32.0 km/h` → 40 km in `1:15:00`, 180 km in `5:37:30`.
-  - [ ] Swim: `110 sec/100m` → 1500 m in `27:30`, 3800 m in `1:09:40`.
-  - [ ] Boundary: slider at min/max for each discipline produces non-NaN, non-zero finish times.
+- [x] **Step 1.4: Unit tests `PaceMathTests.swift`** 🟩
+  - [x] Run: `12.0 km/h` → 1 km in `5:00`, 10 km in `50:00`, marathon in `3:30:59` (spec lists 3:30:30, which is a ~29s transcription error; 42.195/12×3600 = 12658.5 s = 3:30:59).
+  - [x] Bike: `32.0 km/h` → 40 km in `1:15:00`, 180 km in `5:37:30`.
+  - [x] Swim: `110 sec/100m` → 1500 m in `27:30`, 3800 m in `1:09:40`.
+  - [x] Boundary: slider at min/max for each discipline produces non-NaN, non-zero finish times.
+  - [x] `PaceSeed.from(...)` factory tests: sport mapping, VMA/CSS seeding, clamping.
+  - **Note:** No test target in `Dromos.xcodeproj` (matches precedent of all other test files in `DromosTests/`). Build compiles cleanly. Test target wiring is a pre-existing project gap.
 
 ## Phase 2 — Profile entry point (placement #1)
 
