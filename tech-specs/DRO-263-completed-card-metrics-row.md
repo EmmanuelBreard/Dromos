@@ -1,7 +1,7 @@
 # DRO-263 — Completed-card metrics row (replaces Actual/Planned table)
 
 **Linear:** [DRO-263](https://linear.app/dromosapp/issue/DRO-263/replace-actualplanned-table-with-sport-specific-top-metrics-on)
-**Overall Progress:** `50%`
+**Overall Progress:** `75%`
 
 ## TLDR
 Replace `ActualVsPlannedTable` on the completed home card with a refactored `ActualMetricsView` rendered as a horizontal label-above-value metric row. The same component (after refactor) serves both Home and Calendar. Extract shared static formatters into `Core/Utils/ActivityFormatters.swift`. No DB changes.
@@ -74,17 +74,17 @@ Replace `ActualVsPlannedTable` on the completed home card with a refactored `Act
 
 ### Phase 3: Migrate `TodayCompletedCard`
 
-- [ ] 🟥 **Step 3.1: Swap the component**
-  - [ ] 🟥 At [TodayCompletedCard.swift:93-97](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L93-L97), replace `ActualVsPlannedTable(session: session, activity: activity, plannedDistanceMeters: plannedDistanceMeters)` with `ActualMetricsView(activity: activity)`.
-  - [ ] 🟥 Verify the card visually with the file's existing `#Preview` blocks (with map / no map / loading / missing / swim / bike no power).
+- [x] 🟩 **Step 3.1: Swap the component**
+  - [x] 🟩 At [TodayCompletedCard.swift:93-97](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L93-L97), replace `ActualVsPlannedTable(session: session, activity: activity, plannedDistanceMeters: plannedDistanceMeters)` with `ActualMetricsView(activity: activity)`.
+  - [x] 🟩 Verify the card visually with the file's existing `#Preview` blocks (with map / no map / loading / missing / swim / bike no power).
 
-- [ ] 🟥 **Step 3.2: Migrate the map-overlay formatter call**
-  - [ ] 🟥 At [TodayCompletedCard.swift:157](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L157), replace `ActualVsPlannedTable.formatDistance(meters: activity.distance)` with `activity.distance.flatMap(ActivityFormatters.formatDistance(meters:)) ?? "—"`. The fallback to `"—"` preserves current behaviour for the map overlay specifically (the parent code at lines 162-163 then filters out `"—"` from the joined parts).
+- [x] 🟩 **Step 3.2: Migrate the map-overlay formatter call**
+  - [x] 🟩 At [TodayCompletedCard.swift:157](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L157), replace `ActualVsPlannedTable.formatDistance(meters: activity.distance)` with `activity.distance.flatMap(ActivityFormatters.formatDistance(meters:)) ?? "—"`. The fallback to `"—"` preserves current behaviour for the map overlay specifically (the parent code at lines 162-163 then filters out `"—"` from the joined parts).
 
-- [ ] 🟥 **Step 3.3: Delete dead code**
-  - [ ] 🟥 Delete `formattedActualDuration` computed property at [TodayCompletedCard.swift:62-64](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L62-L64) (no caller — confirmed by grep).
-  - [ ] 🟥 Delete `plannedDistanceMeters` computed property at [TodayCompletedCard.swift:49-52](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L49-L52) (only fed the deleted table parameter).
-  - [ ] 🟥 Verify no other call sites of `ActualVsPlannedTable` remain in the file.
+- [x] 🟩 **Step 3.3: Delete dead code**
+  - [x] 🟩 Delete `formattedActualDuration` computed property at [TodayCompletedCard.swift:62-64](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L62-L64) (no caller — confirmed by grep).
+  - [x] 🟩 Delete `plannedDistanceMeters` computed property at [TodayCompletedCard.swift:49-52](Dromos/Dromos/Features/Home/TodayCompletedCard.swift#L49-L52) (only fed the deleted table parameter).
+  - [x] 🟩 Verify no other call sites of `ActualVsPlannedTable` remain in the file.
 
 ### Phase 4: Delete `ActualVsPlannedTable` + cleanup
 

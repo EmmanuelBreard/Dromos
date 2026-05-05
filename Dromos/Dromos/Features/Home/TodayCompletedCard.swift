@@ -13,7 +13,7 @@ import SwiftUI
 /// - `CompletedTag` (or `SessionSequenceBadge` in multi-session days) at the top.
 /// - The session's display name in title case.
 /// - `CoachFeedbackBlock` (handles all 3 states internally — filled / loading / missing).
-/// - `ActualVsPlannedTable` showing what the athlete actually did vs. what was planned.
+/// - `ActualMetricsView` — sport-specific horizontal metric row (duration, distance, pace/speed, HR, power).
 /// - Optional `StravaRouteMapView` when the activity has a `summaryPolyline` (outdoor runs / rides).
 /// - A bottom disclosure button revealing the original planned workout (`WorkoutShape`
 ///   + `WorkoutStepList`) without the rationale paragraph.
@@ -42,25 +42,10 @@ struct TodayCompletedCard: View {
         )
     }
 
-    /// Sum of `distanceMeters` across all flattened segments. Returns `nil` when zero so
-    /// `ActualVsPlannedTable` falls back to `—` (e.g. duration-only run/bike sessions where
-    /// no segment carries an explicit distance — the "2k @5:30/km" cue-text case is out of
-    /// scope; see DRO-231 QA notes).
-    private var plannedDistanceMeters: Int? {
-        let total = segments.compactMap { $0.distanceMeters }.reduce(0, +)
-        return total > 0 ? total : nil
-    }
-
     private var steps: [StepSummary] {
         workoutLibrary.stepSummaries(
             for: session, ftp: ftp, vma: vma, css: css, maxHr: maxHr
         )
-    }
-
-    /// `H:MM` actual duration derived from Strava's `movingTime`. Tabular-nums + matches
-    /// the apostrophe glyph used elsewhere in Phase 1.
-    private var formattedActualDuration: String {
-        ActualVsPlannedTable.formatDuration(seconds: activity.movingTime)
     }
 
     /// Heuristic that tells `CoachFeedbackBlock` whether to render the silent skeleton.
@@ -90,11 +75,7 @@ struct TodayCompletedCard: View {
                 isLoading: shouldExpectFeedback
             )
 
-            ActualVsPlannedTable(
-                session: session,
-                activity: activity,
-                plannedDistanceMeters: plannedDistanceMeters
-            )
+            ActualMetricsView(activity: activity)
 
             if let polyline = activity.summaryPolyline, !polyline.isEmpty {
                 mapBlock(polyline: polyline)
@@ -154,7 +135,7 @@ struct TodayCompletedCard: View {
 
     @ViewBuilder
     private var mapOverlay: some View {
-        let distance = ActualVsPlannedTable.formatDistance(meters: activity.distance)
+        let distance = activity.distance.flatMap(ActivityFormatters.formatDistance(meters:)) ?? "—"
         let elevationText: String? = {
             guard let elev = activity.totalElevationGain, elev > 0 else { return nil }
             return "+\(Int(elev.rounded()))m"
