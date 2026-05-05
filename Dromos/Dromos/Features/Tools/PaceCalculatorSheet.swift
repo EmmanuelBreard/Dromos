@@ -15,20 +15,15 @@ import SwiftUI
 ///
 /// Layout (top → bottom):
 /// 1. Eyebrow + title header
-/// 2. Chevron-down dismiss affordance
-/// 3. Segmented discipline picker
-/// 4. Two-column speed / pace display
-/// 5. Slider with min/max captions
-/// 6. Divider + "FINISH TIMES" section
+/// 2. Segmented discipline picker
+/// 3. Two-column speed / pace display
+/// 4. Divider + "FINISH TIMES" section (scrollable)
+/// 5. Slider with caption pinned at bottom (non-scrolling)
 struct PaceCalculatorSheet: View {
 
     // MARK: Input
 
     let seed: PaceSeed?
-
-    // MARK: Environment
-
-    @Environment(\.dismiss) private var dismiss
 
     // MARK: State
 
@@ -88,17 +83,21 @@ struct PaceCalculatorSheet: View {
             )
             .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    headerSection
-                    dismissButton
-                    pickerSection
-                    metricsRow
-                    sliderSection
-                    finishTimesSection
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        headerSection
+                        pickerSection
+                        metricsRow
+                        finishTimesSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+
+                sliderSection
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
             }
         }
         // Per V0 spec: switching disciplines resets the slider to that discipline's
@@ -128,25 +127,6 @@ struct PaceCalculatorSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, 12)
-    }
-
-    // MARK: - Dismiss button
-
-    private var dismissButton: some View {
-        Button {
-            dismiss()
-        } label: {
-            Image(systemName: "chevron.down")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white.opacity(0.6))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.08))
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Dismiss")
-        .padding(.bottom, 20)
     }
 
     // MARK: - Discipline picker
@@ -239,6 +219,12 @@ struct PaceCalculatorSheet: View {
 
     private var sliderSection: some View {
         VStack(spacing: 6) {
+            Text(discipline == .swim ? "Adjust the pace" : "Adjust the speed")
+                .font(.caption2.weight(.semibold))
+                .tracking(1.5)
+                .foregroundColor(.white.opacity(0.5))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             Slider(
                 value: Binding(
                     get: { Double(sliderValue) },
@@ -261,7 +247,6 @@ struct PaceCalculatorSheet: View {
                     .foregroundColor(.white.opacity(0.4))
             }
         }
-        .padding(.bottom, 24)
     }
 
     /// Human-readable label for the slider's minimum bound.

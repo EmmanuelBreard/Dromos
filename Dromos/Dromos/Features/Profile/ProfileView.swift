@@ -141,7 +141,7 @@ struct ProfileView: View {
             // Pace calculator bottom drawer — no pre-seed, uses neutral run defaults.
             .sheet(isPresented: $showPaceCalculator) {
                 PaceCalculatorSheet(seed: nil)
-                    .presentationDetents([.fraction(0.8)])
+                    .presentationDetents([.fraction(0.95)])
                     .presentationDragIndicator(.visible)
                     .presentationBackground(.black)
             }
