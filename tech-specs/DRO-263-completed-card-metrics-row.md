@@ -1,7 +1,7 @@
 # DRO-263 — Completed-card metrics row (replaces Actual/Planned table)
 
 **Linear:** [DRO-263](https://linear.app/dromosapp/issue/DRO-263/replace-actualplanned-table-with-sport-specific-top-metrics-on)
-**Overall Progress:** `25%`
+**Overall Progress:** `50%`
 
 ## TLDR
 Replace `ActualVsPlannedTable` on the completed home card with a refactored `ActualMetricsView` rendered as a horizontal label-above-value metric row. The same component (after refactor) serves both Home and Calendar. Extract shared static formatters into `Core/Utils/ActivityFormatters.swift`. No DB changes.
@@ -55,22 +55,22 @@ Replace `ActualVsPlannedTable` on the completed home card with a refactored `Act
 
 ### Phase 2: Refactor `ActualMetricsView`
 
-- [ ] 🟥 **Step 2.1: Update grid + typography**
-  - [ ] 🟥 In `body`, change `LazyVGrid` columns from `[GridItem(.flexible()), GridItem(.flexible())]` to `[GridItem(.adaptive(minimum: 90))]`.
-  - [ ] 🟥 Update each cell's value `Text`: `.font(.title3).fontWeight(.bold).monospacedDigit()` (was `.subheadline` bold).
-  - [ ] 🟥 Keep label `.font(.caption).foregroundColor(.secondary)`.
-  - [ ] 🟥 Visual sanity check via the existing `#Preview` blocks (run/bike-with-power/bike-no-power/swim).
+- [x] 🟩 **Step 2.1: Update grid + typography**
+  - [x] 🟩 In `body`, change `LazyVGrid` columns from `[GridItem(.flexible()), GridItem(.flexible())]` to `[GridItem(.adaptive(minimum: 90))]`.
+  - [x] 🟩 Update each cell's value `Text`: `.font(.title3).fontWeight(.bold).monospacedDigit()` (was `.subheadline` bold).
+  - [x] 🟩 Keep label `.font(.caption).foregroundColor(.secondary)`.
+  - [x] 🟩 Visual sanity check via the existing `#Preview` blocks (run/bike-with-power/bike-no-power/swim).
 
-- [ ] 🟥 **Step 2.2: Update metric ordering per spec**
-  - [ ] 🟥 Run branch: Duration → Distance → Avg pace → Avg HR (already matches; verify).
-  - [ ] 🟥 Swim branch: Duration → Distance → Avg pace → Avg HR (already matches; verify).
-  - [ ] 🟥 Bike branch (with power): Duration → Distance → Avg power → Avg HR → Avg speed. (Current is Power → HR → Speed; need to ensure Duration + Distance lead — already added at lines 33-39 — but power must come BEFORE HR which must come BEFORE speed. Verify.)
-  - [ ] 🟥 Bike branch (no power): Duration → Distance → Avg HR → Avg speed. (Current order under no-power path is HR → Speed which already matches; verify Duration + Distance leads.)
+- [x] 🟩 **Step 2.2: Update metric ordering per spec**
+  - [x] 🟩 Run branch: Duration → Distance → Avg pace → Avg HR (already matched; verified).
+  - [x] 🟩 Swim branch: Duration → Distance → Avg pace → Avg HR (already matched; verified).
+  - [x] 🟩 Bike branch (with power): Duration → Distance → Avg power → Avg HR → Avg speed. (Duration + Distance lead via shared prefix; Power → HR → Speed ordering verified.)
+  - [x] 🟩 Bike branch (no power): Duration → Distance → Avg HR → Avg speed. (Duration + Distance lead; HR → Speed ordering verified.)
 
-- [ ] 🟥 **Step 2.3: Replace inline formatters with `ActivityFormatters`**
-  - [ ] 🟥 Replace the 5 private static helpers (`formatDuration`, `formatDistance`, `formatRunPace`, `formatSwimPace`, plus implicit speed/power/HR strings inline) with calls to `ActivityFormatters.*`.
-  - [ ] 🟥 Delete the now-unused private helper functions.
-  - [ ] 🟥 Add `import Foundation` if not present (the file currently only imports SwiftUI; ActivityFormatters lives in Core/Utils so it's the same module).
+- [x] 🟩 **Step 2.3: Replace inline formatters with `ActivityFormatters`**
+  - [x] 🟩 Replace the 4 private instance helpers (`formatDuration`, `formatDistance`, `formatRunPace`, `formatSwimPace`) and inline speed/power/HR strings with calls to `ActivityFormatters.*`.
+  - [x] 🟩 Deleted the now-unused private helper functions.
+  - [x] 🟩 No `import Foundation` needed — `ActivityFormatters` is in the same module (SwiftUI import is sufficient).
 
 ### Phase 3: Migrate `TodayCompletedCard`
 
