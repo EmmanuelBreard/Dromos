@@ -14,6 +14,8 @@ Dromos/Dromos/
 ├── Core/
 │   ├── Configuration.swift           # Reads from Secrets.swift (git-ignored)
 │   ├── Secrets.swift                 # supabaseURL, supabaseAnonKey (git-ignored)
+│   ├── Utils/
+│   │   └── PaceMath.swift            # Namespaced (`enum PaceMath`) pure math for pace calculator: kmH/secondsToCover/formatTime/formatPacePerKm/formatPacePer100m + Discipline enum + DisciplineConfig (DRO-262)
 │   ├── Models/
 │   │   ├── TrainingPlan.swift        # TrainingPlan, PlanWeek, PlanSession, Weekday, DayInfo
 │   │   ├── User.swift               # User profile + RaceObjective enum
@@ -62,9 +64,12 @@ Dromos/Dromos/
 │   │   └── PlanGenerationView.swift  # Triggered from RootView when user has no plan yet
 │   ├── Chat/
 │   │   └── ChatView.swift            # Chat UI: message list, bubbles, typing indicator, input bar, welcome state
-│   └── Profile/
-│       ├── ProfileView.swift         # User profile display/edit + Strava connect/disconnect/sync UI
-│       └── WebAuthPresentationContext.swift # ASWebAuthenticationPresentationContextProviding impl
+│   ├── Profile/
+│   │   ├── ProfileView.swift         # User profile display/edit + Strava connect/disconnect/sync UI; "Tools" section presents PaceCalculatorSheet at .fraction(0.85) (DRO-262)
+│   │   └── WebAuthPresentationContext.swift # ASWebAuthenticationPresentationContextProviding impl
+│   └── Tools/                         # Utility calculators presented as bottom drawers (DRO-262)
+│       ├── PaceCalculatorSheet.swift # Slider-driven pace/time tool — dark gradient drawer; pinned bottom slider with discipline-aware caption ("Adjust the speed/pace"); dismiss via system drag indicator only
+│       └── PaceSeed.swift            # `PaceSeed` struct + `from(session:profile:)` factory mapping PlanSession.sport → Discipline + clamping VMA/CSS to slider bounds (factory currently unused in V0; reserved for future workout-card chip)
 │
 └── Resources/
     ├── Assets.xcassets/              # Icons, colors

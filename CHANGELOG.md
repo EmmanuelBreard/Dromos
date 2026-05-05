@@ -7,6 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Pace calculator** — Profile → Tools → "Pace calculator" opens a slider-driven tool that converts speed (run/bike) or pace per 100m (swim) into finish times for the standard race distances. Run shows 1 km / 10 km / Half / Marathon; Bike shows 1 km / 40 km Olympic / 90 km Half-Iron / 180 km Ironman; Swim shows 1500 m / 1900 m / 3800 m. Drawer presented at 85% screen height with the slider pinned at the bottom so your hand doesn't cover the times while dragging (DRO-262).
+
+### Added
 - **Coach tab — plan-aware advisory chat (V0, gated dogfood)** — Ask the coach about today's session, how to pace tomorrow's effort, why a session is in your plan, or how a recent workout went. Replies are personalized using your VMA, FTP, CSS, today's plan, yesterday's actual data (with HR + distance + duration from Strava), and your recent execution. Responses stream token-by-token. The coach is **advisory only** — it can't move sessions yet — but it'll help you get the most out of what's already on the plan. Tab is currently visible only for `ebreard4@gmail.com` while we sharpen the prompt before wider rollout (DRO-256).
 
 ### Changed
