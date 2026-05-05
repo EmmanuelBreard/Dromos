@@ -1,6 +1,6 @@
 # DRO-262: Pace Calculator (Profile entry + Workout chip entry)
 
-**Overall Progress:** `33%` (Phase 1 complete)
+**Overall Progress:** `100%` (Phases 1 + 2 + 3 complete)
 
 **Linear:** [DRO-262](https://linear.app/dromosapp/issue/DRO-262/pace-calculator-drawer-profile-entry-workout-chip-pre-seed)
 
@@ -82,8 +82,8 @@ Goal: ship the drawer view and its math, runnable in a `#Preview`. No integratio
 
 ## Phase 2 — Profile entry point (placement #1)
 
-- [ ] **Step 2.1: Add Tools section to ProfileView**
-  - [ ] In `ProfileView.swift`, add a new section above `Section("Goals")`:
+- [x] **Step 2.1: Add Tools section to ProfileView** 🟩
+  - [x] In `ProfileView.swift`, add a new section above `Section("Goals")`:
     ```swift
     Section("Tools") {
         Button {
@@ -98,8 +98,8 @@ Goal: ship the drawer view and its math, runnable in a `#Preview`. No integratio
         }
     }
     ```
-  - [ ] Add `@State private var showPaceCalculator = false` to `ProfileView`.
-  - [ ] Attach the sheet:
+  - [x] Add `@State private var showPaceCalculator = false` to `ProfileView`.
+  - [x] Attach the sheet:
     ```swift
     .sheet(isPresented: $showPaceCalculator) {
         PaceCalculatorSheet(seed: nil)
@@ -108,11 +108,11 @@ Goal: ship the drawer view and its math, runnable in a `#Preview`. No integratio
             .presentationBackground(.black)
     }
     ```
-  - [ ] Verify the system drag indicator + the in-view chevron-down both work.
+  - [x] Verify the system drag indicator + the in-view chevron-down both work.
 
 ## Phase 3 — Workout card chip entry point (placement #2)
 
-- [ ] **Step 3.1: `PaceChipView` inside `SessionCardView`**
+- [x] **Step 3.1: `PaceChipView` inside `SessionCardView`** 🟩
   - [ ] Add a private `paceChip` view inside `SessionCardView` Row 1, placed *between* the duration `VStack` and the existing trailing content (or next to the type tag — match what looks balanced in the live build).
     ```swift
     private var paceChip: some View {
@@ -133,17 +133,17 @@ Goal: ship the drawer view and its math, runnable in a `#Preview`. No integratio
     ```
   - [ ] Show the chip only when `PaceSeed.from(session:profile:)` returns non-nil (i.e. sport is recognized). For unknown sports we hide it rather than showing an inert chip.
 
-- [ ] **Step 3.2: Add `profile` parameter to `SessionCardView`**
+- [x] **Step 3.2: Add `profile` parameter to `SessionCardView`** 🟩
   - [ ] Add `var profile: User? = nil` (defaulted so call sites without profile data still compile).
   - [ ] Add `@State private var showPaceCalculator = false`.
   - [ ] Attach `.sheet(isPresented: $showPaceCalculator) { … PaceCalculatorSheet(seed: PaceSeed.from(session: session, profile: profile)) … }` with the same detent/drag-indicator/background as Phase 2.
 
-- [ ] **Step 3.3: Wire `profile` from call sites**
-  - [ ] `HomeView.swift`: pass `profile: profileService.user` into the `SessionCardView(...)` call.
-  - [ ] `CalendarView.swift`: same.
+- [x] **Step 3.3: Wire `profile` from call sites** 🟩
+  - [x] `HomeView.swift`: pass `profile: profileService.user` into the `SessionCardView(...)` call.
+  - [x] `CalendarView.swift`: same.
 
-- [ ] **Step 3.4: Update context doc**
-  - [ ] `architecture.md` — `SessionCardView` now optionally consumes `profile` for pre-seeding the pace calculator. Add `Features/Tools/` description.
+- [x] **Step 3.4: Update context doc** 🟩
+  - [x] `architecture.md` — `SessionCardView` now optionally consumes `profile` for pre-seeding the pace calculator. Add `Features/Tools/` description.
 
 ## Manual QA checklist
 

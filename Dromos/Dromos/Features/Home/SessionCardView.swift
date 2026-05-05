@@ -10,6 +10,10 @@ import SwiftUI
 /// Rich session card for the Home tab.
 /// Displays sport icon, workout name, duration, type tag, workout steps, and intensity graph.
 /// Renders visual completion state via a colored left border and optional dimming.
+///
+/// DRO-266: Accepts an optional `profile: User?` so the Pace chip can pre-seed the
+/// calculator with the athlete's VMA / CSS thresholds. Defaulted to nil so all existing
+/// call sites compile unchanged.
 struct SessionCardView: View {
     let session: PlanSession
     let swimDistance: Int?
@@ -21,12 +25,18 @@ struct SessionCardView: View {
     var maxHr: Int? = nil
     /// Completion status drives visual treatment: green border (completed), red border + dim (missed), no change (planned).
     var completionStatus: SessionCompletionStatus = .planned
+    /// Athlete profile used to pre-seed the pace calculator chip (DRO-266).
+    /// Nil is safe — the chip will still appear but the slider opens at the sport's neutral default.
+    var profile: User? = nil
 
     /// Controls visibility of the planned workout disclosure (completed cards only).
     @State private var showPlannedWorkout = false
 
     /// Controls whether coach feedback text is fully expanded (default: collapsed to 2 lines).
     @State private var showFeedback = false
+
+    /// Controls presentation of the pace calculator bottom drawer (DRO-266).
+    @State private var showPaceCalculator = false
 
     /// Shared workout library service for segment operations
     private let workoutLibrary = WorkoutLibraryService.shared
@@ -49,6 +59,11 @@ struct SessionCardView: View {
     }
 
     var body: some View {
+        // Compute the pace seed once — used both to decide chip visibility and to
+        // pre-fill the sheet. Nil means the session's sport is unrecognised, so
+        // we hide the chip entirely rather than showing an inert one.
+        let paceSeed = PaceSeed.from(session: session, profile: profile)
+
         VStack(alignment: .leading, spacing: 12) {
             // Row 1: Sport icon + name + duration + type badge
             HStack(spacing: 12) {
@@ -78,7 +93,13 @@ struct SessionCardView: View {
 
                 Spacer()
 
-                // Type tag chip (moved to top-right)
+                // Pace chip (DRO-266): shown only when the sport is recognised (run/bike/swim).
+                // Tapping opens PaceCalculatorSheet pre-seeded with the athlete's threshold.
+                if paceSeed != nil {
+                    paceChip
+                }
+
+                // Type tag chip (top-right)
                 Text(session.type.uppercased())
                     .font(.caption)
                     .fontWeight(.semibold)
@@ -193,6 +214,38 @@ struct SessionCardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        // Pace calculator drawer — DRO-266.
+        // `paceSeed` is recomputed each time `showPaceCalculator` flips, so the seed
+        // always reflects the latest profile state at the moment of presentation.
+        .sheet(isPresented: $showPaceCalculator) {
+            PaceCalculatorSheet(seed: PaceSeed.from(session: session, profile: profile))
+                .presentationDetents([.fraction(0.8)])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.black)
+        }
+    }
+
+    // MARK: - Pace Chip (DRO-266)
+
+    /// Tappable capsule chip that opens `PaceCalculatorSheet` pre-seeded with the
+    /// session's sport and the athlete's threshold (VMA / CSS).
+    /// Rendered in Row 1 only when `PaceSeed.from(session:profile:)` is non-nil.
+    private var paceChip: some View {
+        Button {
+            showPaceCalculator = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "speedometer").font(.caption2)
+                Text("Pace").font(.caption2.weight(.semibold))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color.accentColor.opacity(0.12))
+            .foregroundColor(.accentColor)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open pace calculator")
     }
 
     // MARK: - Planned Workout Content

@@ -264,7 +264,10 @@ struct CalendarView: View {
                                 vma: profileService.user?.vma,
                                 css: profileService.user?.cssSecondsPer100m,
                                 maxHr: profileService.user?.maxHr,
-                                completionStatus: status
+                                completionStatus: status,
+                                // DRO-266: pass full profile so the pace chip can pre-seed
+                                // the calculator with the athlete's VMA / CSS thresholds.
+                                profile: profileService.user
                             )
                             // Skeleton while Strava fetch is in flight (Strava-connected users only).
                             .redacted(reason: loadingWeeks.contains(weekIndex) ? .placeholder : [])

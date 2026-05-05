@@ -12,6 +12,8 @@ Dromos/Dromos/
 │   └── MainTabView.swift             # TabView (Home/Calendar/Profile) + PlanService/ProfileService/StravaService owner
 │
 ├── Core/
+│   ├── Utils/
+│   │   └── PaceMath.swift            # Pure math utility (namespaced under enum PaceMath): pace⇄speed⇄time conversions; Discipline enum + DisciplineConfig; DistanceEntry; no dependencies (DRO-264)
 │   ├── Configuration.swift           # Reads from Secrets.swift (git-ignored)
 │   ├── Secrets.swift                 # supabaseURL, supabaseAnonKey (git-ignored)
 │   ├── Models/
@@ -58,6 +60,9 @@ Dromos/Dromos/
 │   ├── Calendar/                     # Single-week paged plan view (formerly Home content)
 │   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering)
 │   │   └── CalendarWeekHeader.swift  # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
+│   ├── Tools/                        # Sport utility tools (DRO-262)
+│   │   ├── PaceCalculatorSheet.swift # Dark-gradient 80%-height bottom drawer; segmented discipline picker + slider + finish-time table; takes optional PaceSeed for pre-fill (DRO-264)
+│   │   └── PaceSeed.swift            # PaceSeed(discipline:sliderValue:) struct + factory from(session:profile:) → nil for unknown sports (DRO-264)
 │   ├── Plan/                         # Plan generation flow
 │   │   └── PlanGenerationView.swift  # Triggered from RootView when user has no plan yet
 │   ├── Chat/
@@ -245,7 +250,7 @@ All services follow:
 
 ## Key Shared Components
 
-**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph; completed cards show actual Strava data first with planned workout behind local disclosure
+**SessionCardView** — Rich workout card with sport icon, duration, type tag, workout steps, intensity graph; completed cards show actual Strava data first with planned workout behind local disclosure. Optionally accepts `profile: User?` (default nil) to pre-seed the pace calculator chip — the chip is hidden for unrecognized sports (DRO-266)
 **ActualMetricsView** — Sport-specific metric grid for expanded completed cards (duration, distance, power/pace/HR)
 **StravaRouteMapView** — Non-interactive MapKit view rendering a GPS route from encoded polyline (iOS 17+); includes static `decodePolyline(_:)` for Google-encoded polyline format
 **WorkoutStepsView** — Workout step list with intensity-colored dots (Phase 2)
