@@ -43,6 +43,15 @@ struct PaceCalculatorSheet: View {
         let v = seed?.sliderValue ?? Discipline.run.config.defaultValue
         _discipline = State(initialValue: d)
         _sliderValue = State(initialValue: v)
+        Self.configureSegmentedControlAppearance()
+    }
+
+    private static func configureSegmentedControlAppearance() {
+        let appearance = UISegmentedControl.appearance()
+        appearance.selectedSegmentTintColor = UIColor(Color.accentColor)
+        appearance.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
+        appearance.setTitleTextAttributes([.foregroundColor: UIColor.white.withAlphaComponent(0.7)], for: .normal)
+        appearance.backgroundColor = UIColor.white.withAlphaComponent(0.08)
     }
 
     // MARK: Colours
@@ -56,7 +65,7 @@ struct PaceCalculatorSheet: View {
 
     /// Current speed in km/h derived from the slider value.
     private var speedKmH: Double {
-        kmH(forSliderValue: sliderValue, discipline: discipline)
+        PaceMath.kmH(forSliderValue: sliderValue, discipline: discipline)
     }
 
     /// Seconds per kilometre at the current speed.
@@ -92,7 +101,10 @@ struct PaceCalculatorSheet: View {
                 .padding(.bottom, 32)
             }
         }
-        // Reset slider when discipline changes via the picker.
+        // Per V0 spec: switching disciplines resets the slider to that discipline's
+        // default. A seeded value (e.g. user's CSS for swim) is lost if the user
+        // navigates away and back. Acceptable trade-off for V0 — revisit if users
+        // complain. See DRO-262 Open Question #4 (persistence).
         .onChange(of: discipline) { _, newDiscipline in
             sliderValue = newDiscipline.config.defaultValue
         }
@@ -133,6 +145,7 @@ struct PaceCalculatorSheet: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Dismiss")
         .padding(.bottom, 20)
     }
 
@@ -145,8 +158,6 @@ struct PaceCalculatorSheet: View {
             }
         }
         .pickerStyle(.segmented)
-        // Tint the segmented control for visibility on the dark surface.
-        .colorMultiply(Color.accentColor.opacity(0.85))
         .padding(.bottom, 24)
     }
 
@@ -174,8 +185,8 @@ struct PaceCalculatorSheet: View {
                 .foregroundColor(.white.opacity(0.5))
 
             if discipline == .swim {
-                // Swim major = pace per 100m (M:SS format, no km/h step).
-                Text(formatTime(TimeInterval(sliderValue)))
+                // Swim major = pace per 100m (M:SS format).
+                Text(PaceMath.formatPacePer100m(secondsPer100m: TimeInterval(sliderValue)))
                     .font(.system(size: 40, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
             } else {
@@ -204,20 +215,27 @@ struct PaceCalculatorSheet: View {
                 Text(String(format: "%.2f", speedKmH))
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                Text(config.secondaryUnit)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.white.opacity(0.6))
             } else {
                 // Run / bike secondary = pace per km.
-                Text(formatPacePerKm(secondsPerKm: secPerKm))
+                Text(PaceMath.formatPacePerKm(secondsPerKm: secPerKm))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                // secondaryUnit already included in formatPacePerKm output ("/ km").
             }
+
+            Text(config.secondaryUnit)
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.white.opacity(0.6))
         }
     }
 
     // MARK: - Slider
+
+    /// Text shown in the major value display — used for accessibility.
+    private var majorValueText: String {
+        discipline == .swim
+            ? PaceMath.formatPacePer100m(secondsPer100m: TimeInterval(sliderValue))
+            : String(format: "%.1f", speedKmH)
+    }
 
     private var sliderSection: some View {
         VStack(spacing: 6) {
@@ -226,10 +244,11 @@ struct PaceCalculatorSheet: View {
                     get: { Double(sliderValue) },
                     set: { sliderValue = Int($0.rounded()) }
                 ),
-                in: Double(config.min)...Double(config.max),
+                in: Double(config.lowerBound)...Double(config.upperBound),
                 step: Double(config.step)
             )
             .tint(.accentColor)
+            .accessibilityValue("\(majorValueText) \(config.unit)")
 
             // Min / max captions
             HStack {
@@ -249,9 +268,9 @@ struct PaceCalculatorSheet: View {
     private var minCaption: String {
         switch discipline {
         case .run, .bike:
-            return String(format: "%.1f km/h", Double(config.min) / 10.0)
+            return String(format: "%.1f km/h", Double(config.lowerBound) / 10.0)
         case .swim:
-            return "\(config.min) s / 100m"
+            return "\(config.lowerBound) s / 100m"
         }
     }
 
@@ -259,9 +278,9 @@ struct PaceCalculatorSheet: View {
     private var maxCaption: String {
         switch discipline {
         case .run, .bike:
-            return String(format: "%.1f km/h", Double(config.max) / 10.0)
+            return String(format: "%.1f km/h", Double(config.upperBound) / 10.0)
         case .swim:
-            return "\(config.max) s / 100m"
+            return "\(config.upperBound) s / 100m"
         }
     }
 
@@ -283,10 +302,12 @@ struct PaceCalculatorSheet: View {
                 .background(Color.white.opacity(0.12))
 
             LazyVStack(spacing: 0) {
-                ForEach(config.distances) { entry in
+                ForEach(Array(config.distances.enumerated()), id: \.element.id) { index, entry in
                     finishTimeRow(entry: entry)
-                    Divider()
-                        .background(Color.white.opacity(0.08))
+                    if index < config.distances.count - 1 {
+                        Divider()
+                            .background(Color.white.opacity(0.08))
+                    }
                 }
             }
         }
@@ -294,13 +315,13 @@ struct PaceCalculatorSheet: View {
 
     /// One distance-name + computed time row.
     private func finishTimeRow(entry: DistanceEntry) -> some View {
-        let elapsed = secondsToCover(km: entry.km, atSpeedKmH: speedKmH)
+        let elapsed = PaceMath.secondsToCover(km: entry.km, atSpeedKmH: speedKmH)
         return HStack {
             Text(entry.name)
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.85))
             Spacer()
-            Text(formatTime(elapsed))
+            Text(PaceMath.formatTime(elapsed))
                 .font(.system(.subheadline, design: .monospaced).weight(.semibold))
                 .foregroundColor(.white)
         }

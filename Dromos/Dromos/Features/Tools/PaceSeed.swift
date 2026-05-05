@@ -18,7 +18,7 @@ import Foundation
 struct PaceSeed {
     /// The discipline to pre-select in the segmented control.
     let discipline: Discipline
-    /// The initial integer slider value (already clamped to `discipline.config.[min, max]`).
+    /// The initial integer slider value (already clamped to `discipline.config.[lowerBound, upperBound]`).
     let sliderValue: Int
 }
 
@@ -33,21 +33,14 @@ extension PaceSeed {
     /// - `.swim` → `sliderValue` = `cssSecondsPer100m` if CSS is set, else default.
     /// - Unknown sport → returns `nil` (chip is hidden for non-triathlon sessions).
     ///
-    /// The `sliderValue` is always clamped to `[config.min, config.max]` before returning.
+    /// The `sliderValue` is always clamped to `[config.lowerBound, config.upperBound]` before returning.
     ///
     /// - Parameters:
     ///   - session: The training session providing the sport string.
     ///   - profile: The athlete profile providing VMA / CSS; may be `nil`.
     /// - Returns: A `PaceSeed`, or `nil` if the sport is not recognised.
     static func from(session: PlanSession, profile: User?) -> PaceSeed? {
-        let discipline: Discipline
-
-        switch session.sport.lowercased() {
-        case "run":  discipline = .run
-        case "bike": discipline = .bike
-        case "swim": discipline = .swim
-        default:     return nil
-        }
+        guard let discipline = Discipline(rawValue: session.sport.lowercased()) else { return nil }
 
         let config = discipline.config
         var raw: Int
@@ -73,7 +66,7 @@ extension PaceSeed {
         }
 
         // Clamp to the valid slider range.
-        let clamped = max(config.min, min(config.max, raw))
+        let clamped = max(config.lowerBound, min(config.upperBound, raw))
         return PaceSeed(discipline: discipline, sliderValue: clamped)
     }
 }

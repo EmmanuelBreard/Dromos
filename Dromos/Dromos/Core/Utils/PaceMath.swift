@@ -12,9 +12,9 @@ import Foundation
 
 /// The three triathlon disciplines supported by the pace calculator.
 enum Discipline: String, CaseIterable {
-    case run  = "run"
-    case bike = "bike"
-    case swim = "swim"
+    case run
+    case bike
+    case swim
 }
 
 // MARK: - Distance Entry
@@ -37,9 +37,9 @@ struct DisciplineConfig {
     // MARK: Slider bounds
 
     /// Minimum slider integer value.
-    let min: Int
+    let lowerBound: Int
     /// Maximum slider integer value.
-    let max: Int
+    let upperBound: Int
     /// Slider step size.
     let step: Int
     /// Default slider value shown when no seed is provided.
@@ -70,8 +70,8 @@ extension Discipline {
         switch self {
         case .run:
             return DisciplineConfig(
-                min: 60,
-                max: 220,
+                lowerBound: 60,
+                upperBound: 220,
                 step: 1,
                 defaultValue: 120,
                 inputLabel: "SPEED",
@@ -88,8 +88,8 @@ extension Discipline {
 
         case .bike:
             return DisciplineConfig(
-                min: 150,
-                max: 500,
+                lowerBound: 150,
+                upperBound: 500,
                 step: 5,
                 defaultValue: 320,
                 inputLabel: "SPEED",
@@ -106,8 +106,8 @@ extension Discipline {
 
         case .swim:
             return DisciplineConfig(
-                min: 60,
-                max: 180,
+                lowerBound: 60,
+                upperBound: 180,
                 step: 1,
                 defaultValue: 110,
                 inputLabel: "PACE",
@@ -133,68 +133,87 @@ extension Discipline {
     }
 }
 
-// MARK: - Pure Conversion Functions
+// MARK: - PaceMath
 
-/// Converts a slider integer value to a speed in km/h.
-///
-/// - For `.run` and `.bike` the slider stores speed × 10 (e.g. 120 → 12.0 km/h).
-/// - For `.swim` the slider stores the CSS pace in seconds per 100 m; this is
-///   converted to a speed using the formula: speed = 360 / pace_sec_per_100m.
-///
-/// - Parameters:
-///   - v: Integer slider value.
-///   - discipline: The active discipline.
-/// - Returns: Speed in km/h.
-func kmH(forSliderValue v: Int, discipline: Discipline) -> Double {
-    switch discipline {
-    case .run, .bike:
-        return Double(v) / 10.0
-    case .swim:
-        guard v > 0 else { return 0 }
-        return 360.0 / Double(v)
+/// Namespace for pure pace/speed conversion and formatting utilities.
+enum PaceMath {
+
+    /// Converts a slider integer value to a speed in km/h.
+    ///
+    /// - For `.run` and `.bike` the slider stores speed × 10 (e.g. 120 → 12.0 km/h).
+    /// - For `.swim` the slider stores the CSS pace in seconds per 100 m; this is
+    ///   converted to a speed using the formula: speed = 360 / pace_sec_per_100m.
+    ///
+    /// - Parameters:
+    ///   - v: Integer slider value.
+    ///   - discipline: The active discipline.
+    /// - Returns: Speed in km/h.
+    static func kmH(forSliderValue v: Int, discipline: Discipline) -> Double {
+        switch discipline {
+        case .run, .bike:
+            return Double(v) / 10.0
+        case .swim:
+            guard v > 0 else { return 0 }
+            return 360.0 / Double(v)
+        }
     }
-}
 
-/// Calculates the time in seconds required to cover a given distance at a given speed.
-///
-/// - Parameters:
-///   - km: Distance in kilometres.
-///   - speedKmH: Speed in km/h. Must be > 0; passing 0 returns 0.
-/// - Returns: `TimeInterval` (seconds).
-func secondsToCover(km: Double, atSpeedKmH speedKmH: Double) -> TimeInterval {
-    guard speedKmH > 0 else { return 0 }
-    return (km / speedKmH) * 3600.0
-}
+    /// Calculates the time in seconds required to cover a given distance at a given speed.
+    ///
+    /// - Parameters:
+    ///   - km: Distance in kilometres.
+    ///   - speedKmH: Speed in km/h. Must be > 0; passing 0 returns 0.
+    /// - Returns: `TimeInterval` (seconds).
+    static func secondsToCover(km: Double, atSpeedKmH speedKmH: Double) -> TimeInterval {
+        guard speedKmH > 0 else { return 0 }
+        return (km / speedKmH) * 3600.0
+    }
 
-/// Formats a `TimeInterval` (seconds) as a human-readable finish time.
-///
-/// - Returns `"H:MM:SS"` when the duration is 1 hour or longer.
-/// - Returns `"M:SS"` for durations under one hour.
-///
-/// Seconds are rounded to the nearest integer before formatting.
-///
-/// - Parameter seconds: Duration in seconds.
-/// - Returns: Formatted time string.
-func formatTime(_ seconds: TimeInterval) -> String {
-    let rounded = Int(seconds.rounded())
-    let h = rounded / 3600
-    let m = (rounded % 3600) / 60
-    let s = rounded % 60
+    /// Formats a `TimeInterval` (seconds) as a human-readable finish time.
+    ///
+    /// - Returns `"H:MM:SS"` when the duration is 1 hour or longer.
+    /// - Returns `"M:SS"` for durations under one hour.
+    ///
+    /// Seconds are rounded to the nearest integer before formatting.
+    ///
+    /// - Parameter seconds: Duration in seconds.
+    /// - Returns: Formatted time string.
+    static func formatTime(_ seconds: TimeInterval) -> String {
+        let rounded = Int(seconds.rounded())
+        let h = rounded / 3600
+        let m = (rounded % 3600) / 60
+        let s = rounded % 60
 
-    if h > 0 {
-        return String(format: "%d:%02d:%02d", h, m, s)
-    } else {
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        } else {
+            return String(format: "%d:%02d", m, s)
+        }
+    }
+
+    /// Formats a pace expressed as seconds-per-kilometre into a readable `"M:SS"` string.
+    ///
+    /// The unit (`/ km`) is intentionally omitted — it is rendered separately
+    /// as `config.secondaryUnit` in the view for uniform layout across disciplines.
+    ///
+    /// - Parameter secondsPerKm: Pace in seconds per kilometre.
+    /// - Returns: Formatted pace string, e.g. `"5:00"`.
+    static func formatPacePerKm(secondsPerKm: TimeInterval) -> String {
+        let rounded = Int(secondsPerKm.rounded())
+        let m = rounded / 60
+        let s = rounded % 60
         return String(format: "%d:%02d", m, s)
     }
-}
 
-/// Formats a pace expressed as seconds-per-kilometre into a readable `"M:SS / km"` string.
-///
-/// - Parameter secondsPerKm: Pace in seconds per kilometre.
-/// - Returns: Formatted pace string, e.g. `"5:00 / km"`.
-func formatPacePerKm(secondsPerKm: TimeInterval) -> String {
-    let rounded = Int(secondsPerKm.rounded())
-    let m = rounded / 60
-    let s = rounded % 60
-    return String(format: "%d:%02d / km", m, s)
+    /// Formats a swim pace expressed as seconds per 100 m into a readable `"M:SS"` string.
+    ///
+    /// The unit (`/ 100m`) is intentionally omitted — it is rendered separately
+    /// as `config.unit` in the view for uniform layout across disciplines.
+    ///
+    /// - Parameter secondsPer100m: Pace in seconds per 100 m.
+    /// - Returns: Formatted pace string, e.g. `"1:50"`.
+    static func formatPacePer100m(secondsPer100m: TimeInterval) -> String {
+        let totalSec = Int(secondsPer100m.rounded())
+        return String(format: "%d:%02d", totalSec / 60, totalSec % 60)
+    }
 }
