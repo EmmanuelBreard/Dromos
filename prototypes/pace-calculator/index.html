@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dromos prototype — Pace calculator (drawer + entry points)</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <style>
+    /* ============ PAGE CHROME ============ */
+    body {
+      background: #2a2a2e;
+      min-height: 100vh;
+      color: #fff;
+      padding: var(--space-xl) var(--space-lg) var(--space-xxl);
+      font-family: var(--font-system);
+    }
+    .meta { max-width: 1100px; margin: 0 auto var(--space-lg); font: var(--weight-medium) var(--type-meta-small)/1.45 var(--font-system); color: rgba(255,255,255,0.7); }
+    .meta h1 { font-size: var(--type-headline); font-weight: var(--weight-semibold); margin-bottom: var(--space-xs); color: #fff; }
+    .meta p { margin-bottom: var(--space-sm); }
+
+    .tablist {
+      position: sticky; top: 0; z-index: 10;
+      max-width: 1100px; margin: 0 auto var(--space-xl);
+      background: #2a2a2e; padding: var(--space-md) 0;
+      display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .tab-btn {
+      flex: 1; padding: var(--space-md);
+      background: transparent; color: rgba(255,255,255,0.55);
+      font: var(--weight-semibold) var(--type-body)/1.2 var(--font-system);
+      border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+      cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 4px;
+      transition: color 200ms var(--easing-ios), border-color 200ms var(--easing-ios);
+    }
+    .tab-btn .tab-num { font: var(--weight-medium) 11px/1 var(--font-system); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.55; }
+    .tab-btn[aria-selected="true"] { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+    .tab-btn[aria-selected="true"] .tab-num { opacity: 0.85; }
+
+    .panel { display: none; }
+    .panel[data-active="true"] { display: block; }
+    .panel-bet {
+      max-width: 1100px; margin: 0 auto var(--space-lg);
+      font: var(--weight-medium) var(--type-meta-small)/1.5 var(--font-system); color: rgba(255,255,255,0.7);
+    }
+    .panel-bet .lead { color: var(--color-accent); font-weight: var(--weight-semibold); }
+    .panel-bet code { font-family: var(--font-mono); font-size: 12px; background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; }
+
+    .frames { display: flex; gap: var(--space-xl); align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+    .frame-group { display: flex; flex-direction: column; align-items: center; }
+    .frame-label { font: var(--weight-semibold) var(--type-meta-small)/1 var(--font-system); color: rgba(255,255,255,0.85); margin-bottom: var(--space-sm); letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* ============ DEVICE FRAME ============ */
+    .device {
+      width: var(--device-width); height: var(--device-height);
+      background: var(--color-page-surface);
+      border-radius: 48px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      display: flex; flex-direction: column;
+      color: var(--color-text-primary);
+      position: relative;
+    }
+
+    /* ============ SHARED iOS chrome ============ */
+    .statusbar {
+      height: var(--status-bar-height); padding: 14px var(--space-xl) 0;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      font: var(--weight-semibold) 15px/1 var(--font-system); flex-shrink: 0;
+    }
+    .nav-large {
+      padding: var(--space-sm) var(--space-lg) 0;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-shrink: 0;
+    }
+    .nav-title {
+      font: var(--weight-bold) var(--type-title-large)/1 var(--font-system);
+      letter-spacing: -0.02em;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 16px; }
+    .nav-icon-btn {
+      width: 32px; height: 32px;
+      background: rgba(120,120,128,0.16);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-accent);
+      cursor: pointer; transition: transform 160ms var(--easing-ios), background 160ms;
+      border: none;
+    }
+    .nav-icon-btn svg { width: 17px; height: 17px; }
+    .nav-icon-btn:hover { background: rgba(0,155,119,0.16); }
+    .nav-icon-btn.pulse { animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,155,119,0.6); }
+      50% { box-shadow: 0 0 0 8px rgba(0,155,119,0); }
+    }
+
+    .tab-bar {
+      margin-top: auto; height: var(--tab-bar-height);
+      padding: var(--space-md) 0 var(--safe-bottom);
+      background: var(--color-card-surface); border-top: 0.5px solid var(--color-divider);
+      display: flex; justify-content: space-around; align-items: flex-start; flex-shrink: 0;
+    }
+    .ios-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--color-text-secondary); font: var(--weight-medium) 10px/1 var(--font-system); }
+    .ios-tab.active { color: var(--color-accent); }
+    .ios-tab svg { width: 24px; height: 24px; }
+
+    /* ============ CALENDAR background (mock) ============ */
+    .cal-screen { flex: 1; overflow: hidden; }
+    .cal-week-strip {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      padding: var(--space-md) var(--space-lg) var(--space-sm);
+      gap: 4px; flex-shrink: 0;
+    }
+    .cal-day {
+      text-align: center;
+      font: var(--weight-medium) 11px/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      padding: 6px 2px 8px; border-radius: 8px;
+    }
+    .cal-day strong { display: block; font: var(--weight-semibold) 17px/1 var(--font-system); color: var(--color-text-primary); margin-top: 4px; }
+    .cal-day.today { background: rgba(0,155,119,0.12); }
+    .cal-day.today strong { color: var(--color-accent); }
+    .cal-cards {
+      padding: var(--space-md) var(--space-lg) var(--space-lg);
+      display: flex; flex-direction: column; gap: var(--space-md);
+      overflow-y: auto;
+    }
+    .cal-section-label {
+      font: var(--weight-semibold) 11px/1 var(--font-system);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--color-text-secondary);
+      padding-top: 4px;
+    }
+    .cal-card {
+      background: var(--color-card-surface);
+      border-radius: 16px; padding: 14px 16px;
+      display: flex; gap: 12px; align-items: center;
+    }
+    .cal-card-emoji {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .cal-card-emoji.run  { background: rgba(255, 95, 41, 0.15); }
+    .cal-card-emoji.bike { background: rgba(48, 209, 88, 0.15); }
+    .cal-card-emoji.swim { background: rgba(10, 132, 255, 0.15); }
+    .cal-card-body { flex: 1; min-width: 0; }
+    .cal-card-row1 {
+      display: flex; align-items: center; gap: 8px;
+      font: var(--weight-semibold) 16px/1.2 var(--font-system);
+    }
+    .cal-card-row2 {
+      font: var(--weight-regular) 13px/1.2 var(--font-system);
+      color: var(--color-text-secondary);
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cal-card-tag {
+      font: var(--weight-semibold) 10px/1 var(--font-system);
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 95, 41, 0.15);
+      color: #cc4a1a;
+      letter-spacing: 0.02em;
+    }
+    /* Pace chip inside a workout card (placement #2) */
+    .pace-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0,155,119,0.12);
+      color: var(--color-accent);
+      font: var(--weight-semibold) 11px/1 var(--font-system);
+      cursor: pointer; flex-shrink: 0;
+      border: none;
+      transition: background 160ms;
+    }
+    .pace-chip:hover { background: rgba(0,155,119,0.20); }
+    .pace-chip svg { width: 11px; height: 11px; }
+    .pace-chip.pulse { animation: pulse 1.6s ease-in-out infinite; }
+
+    /* ============ DRAWER (sheet at 80% height) ============ */
+    .backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0, 0, 0, 0);
+      pointer-events: none;
+      transition: background 280ms var(--easing-ios);
+      z-index: 5;
+    }
+    .backdrop[data-open="true"] {
+      background: rgba(0, 0, 0, 0.32);
+      pointer-events: auto;
+    }
+    .drawer {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 80%;
+      background: linear-gradient(180deg, #0a1612 0%, #021510 100%);
+      color: #fff;
+      border-radius: 24px 24px 0 0;
+      box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.4);
+      transform: translateY(100%);
+      transition: transform 320ms var(--easing-ios);
+      z-index: 6;
+      display: flex; flex-direction: column;
+      will-change: transform;
+      overflow: hidden;
+    }
+    .drawer[data-open="true"] { transform: translateY(0); }
+    .drawer.dragging { transition: none; }
+
+    .drawer-grabber {
+      width: 100%; padding: 8px 0 4px;
+      display: flex; justify-content: center; align-items: center;
+      flex-shrink: 0; cursor: grab; touch-action: none;
+    }
+    .drawer-grabber:active { cursor: grabbing; }
+    .drawer-grabber span {
+      width: 36px; height: 5px;
+      background: rgba(255,255,255,0.28);
+      border-radius: 999px;
+    }
+    .drawer-header {
+      padding: 8px var(--space-lg) 0;
+      flex-shrink: 0;
+    }
+    .drawer-eyebrow {
+      font: var(--weight-semibold) 11px/1 var(--font-system);
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--color-accent); margin-bottom: 4px;
+    }
+    .drawer-title {
+      font: var(--weight-bold) 28px/1.05 var(--font-rounded);
+      letter-spacing: -0.02em;
+    }
+    .drawer-dismiss {
+      display: flex; justify-content: center;
+      padding: 12px 0 4px;
+      flex-shrink: 0;
+    }
+    .drawer-dismiss button {
+      width: 36px; height: 24px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 999px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: rgba(255,255,255,0.6);
+      transition: background 160ms, color 160ms;
+    }
+    .drawer-dismiss button:hover {
+      background: rgba(255,255,255,0.10);
+      color: #fff;
+    }
+    .drawer-dismiss svg { width: 16px; height: 16px; }
+
+    .drawer-content {
+      flex: 1; overflow-y: auto;
+      padding: var(--space-md) var(--space-lg) var(--space-xl);
+    }
+
+    /* ============ Calculator (Option C, inside drawer) ============ */
+    .seg {
+      display: flex; padding: 2px; gap: 2px; border-radius: 9px;
+      background: rgba(255,255,255,0.08);
+    }
+    .seg-btn {
+      flex: 1; padding: 8px; background: transparent; border: none;
+      border-radius: 7px;
+      font: var(--weight-semibold) 13px/1 var(--font-system);
+      color: rgba(255,255,255,0.85); cursor: pointer;
+      transition: background 160ms var(--easing-ios), color 160ms;
+    }
+    .seg-btn[aria-selected="true"] {
+      background: var(--color-accent); color: #fff;
+    }
+
+    .pace-block { padding: var(--space-md) 0 var(--space-sm); }
+    .pace-row {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      gap: var(--space-md);
+    }
+    .pace-major-label {
+      font: var(--weight-semibold) 11px/1 var(--font-system);
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: rgba(255,255,255,0.6); margin-bottom: 6px;
+    }
+    .pace-major {
+      font: var(--weight-bold) 56px/1 var(--font-rounded);
+      letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+    }
+    .pace-major-unit {
+      font: var(--weight-regular) 13px/1 var(--font-system);
+      color: rgba(255,255,255,0.6); margin-top: 6px;
+    }
+    .pace-minor {
+      text-align: right; font-variant-numeric: tabular-nums;
+      line-height: 1.3; flex-shrink: 0;
+    }
+    .pace-minor span, .pace-minor strong { display: block; }
+    .pace-minor .lbl {
+      font: var(--weight-semibold) 11px/1 var(--font-system);
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+    }
+    .pace-minor strong {
+      font: var(--weight-bold) 22px/1 var(--font-rounded);
+      letter-spacing: -0.02em; color: #fff; margin: 4px 0 2px;
+    }
+    .pace-minor .unit { font: var(--weight-regular) 11px/1 var(--font-system); color: rgba(255,255,255,0.55); }
+
+    .slider {
+      width: 100%; -webkit-appearance: none; appearance: none;
+      height: 4px; background: rgba(255,255,255,0.18);
+      border-radius: 999px; outline: none;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 28px; height: 28px;
+      background: var(--color-accent); border: none; border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(0,155,119,0.30);
+      cursor: pointer;
+    }
+    .slider::-moz-range-thumb {
+      width: 28px; height: 28px;
+      background: var(--color-accent); border: none; border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(0,155,119,0.30);
+      cursor: pointer;
+    }
+    .slider-wrap { padding: var(--space-md) 0 var(--space-xl); }
+    .slider-bounds {
+      display: flex; justify-content: space-between;
+      font: var(--weight-regular) 11px/1 var(--font-system);
+      color: rgba(255,255,255,0.4); margin-top: var(--space-sm);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .table { padding: var(--space-md) 0 var(--space-sm); border-top: 1px solid rgba(255,255,255,0.12); }
+    .table-title {
+      font: var(--weight-semibold) 11px/1 var(--font-system);
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.5); margin-bottom: var(--space-md);
+    }
+    .table-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 12px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08);
+    }
+    .table-row:last-child { border-bottom: none; }
+    .table-row .name { font: var(--weight-regular) 17px/1.2 var(--font-system); }
+    .table-row .time {
+      font: var(--weight-bold) 22px/1 var(--font-rounded);
+      letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+    }
+    .share-btn {
+      margin-top: var(--space-lg); width: 100%;
+      padding: 14px;
+      background: var(--color-accent); color: #fff;
+      border-radius: 16px;
+      font: var(--weight-semibold) 17px/1 var(--font-system);
+      border: none; cursor: pointer;
+    }
+    .share-btn:hover { filter: brightness(1.05); }
+
+    /* ============ Annotation (helper text near interactive parts) ============ */
+    .hint {
+      position: absolute; right: -240px; top: 90px;
+      width: 220px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px;
+      font: var(--weight-regular) 12px/1.4 var(--font-system); color: rgba(255,255,255,0.75);
+    }
+    .hint strong { color: #fff; font-weight: 600; }
+    .hint::before {
+      content: ''; position: absolute; top: 16px; left: -8px;
+      width: 0; height: 0; border-style: solid; border-width: 6px 8px 6px 0;
+      border-color: transparent rgba(255,255,255,0.12) transparent transparent;
+    }
+
+    @media (max-width: 1100px) {
+      .hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="meta">
+    <h1>Pace calculator — entry points + bottom drawer</h1>
+    <p>Option C visual (chosen) presented as an 80%-height bottom drawer. Dismiss via chevron in the header, drag-down on the grabber, or tap the dimmed backdrop.</p>
+    <p>Two entry points to compare: <strong>Calendar toolbar</strong> (placement #3 — prototyped here for visual review) and <strong>workout card "Pace" chip</strong> (placement #2 — opens the drawer pre-seeded with the workout's sport + threshold).</p>
+  </header>
+
+  <nav class="tablist" role="tablist">
+    <button class="tab-btn" role="tab" aria-selected="true" data-target="entry-toolbar">
+      <span class="tab-num">Placement #3 · prototype</span>
+      <span>Calendar toolbar icon</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-target="entry-chip">
+      <span class="tab-num">Placement #2 · in tech spec</span>
+      <span>Workout card "Pace" chip</span>
+    </button>
+  </nav>
+
+  <!-- ============== TAB 1: Calendar toolbar ============== -->
+  <section class="panel" data-active="true" id="entry-toolbar">
+    <div class="panel-bet">
+      <p><span class="lead">The bet:</span> a small speedometer icon in the Calendar toolbar (top-right) is one tap from the most-used surface. Tap → drawer slides up to 80% height, calculator inside is fully usable. Tap chevron / drag down / tap backdrop to dismiss.</p>
+    </div>
+    <div class="frames">
+      <div class="frame-group">
+        <span class="frame-label">Tap the speedometer icon</span>
+        <div class="device" data-device>
+          <div class="statusbar"><span>9:41</span><span>● ●●●● 100%</span></div>
+          <div class="nav-large">
+            <div class="nav-title">May</div>
+            <div class="nav-actions">
+              <button class="nav-icon-btn pulse" data-open-drawer aria-label="Open pace calculator">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 14l3.5-3.5"/>
+                  <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+                  <path d="M5.6 17.4A8 8 0 1 1 18.4 17.4"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="cal-screen">
+            <div class="cal-week-strip">
+              <div class="cal-day">M<strong>4</strong></div>
+              <div class="cal-day">T<strong>5</strong></div>
+              <div class="cal-day">W<strong>6</strong></div>
+              <div class="cal-day today">T<strong>7</strong></div>
+              <div class="cal-day">F<strong>8</strong></div>
+              <div class="cal-day">S<strong>9</strong></div>
+              <div class="cal-day">S<strong>10</strong></div>
+            </div>
+            <div class="cal-cards">
+              <div class="cal-section-label">Today · Thu 7 May</div>
+              <div class="cal-card">
+                <div class="cal-card-emoji run">🏃</div>
+                <div class="cal-card-body">
+                  <div class="cal-card-row1">10 km tempo<span class="cal-card-tag">RUN</span></div>
+                  <div class="cal-card-row2">50 min · target 4:30 / km</div>
+                </div>
+              </div>
+              <div class="cal-section-label">Tomorrow · Fri 8 May</div>
+              <div class="cal-card">
+                <div class="cal-card-emoji bike">🚴</div>
+                <div class="cal-card-body">
+                  <div class="cal-card-row1">Endurance ride<span class="cal-card-tag" style="background:rgba(48,209,88,0.15);color:#1a8a3a">BIKE</span></div>
+                  <div class="cal-card-row2">2h 00 · target 32 km/h</div>
+                </div>
+              </div>
+              <div class="cal-card">
+                <div class="cal-card-emoji swim">🏊</div>
+                <div class="cal-card-body">
+                  <div class="cal-card-row1">Tech + threshold<span class="cal-card-tag" style="background:rgba(10,132,255,0.15);color:#0a5ec2">SWIM</span></div>
+                  <div class="cal-card-row2">45 min · target 1:50 / 100m</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-bar">
+            <div class="ios-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Home</div>
+            <div class="ios-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Calendar</div>
+            <div class="ios-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3v-15a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>Coach</div>
+            <div class="ios-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</div>
+          </div>
+
+          <div class="backdrop" data-backdrop></div>
+          <div class="drawer" data-drawer>
+            <div class="drawer-grabber" data-grabber><span></span></div>
+            <div class="drawer-header">
+              <div class="drawer-eyebrow">Dromos · Pace card</div>
+              <div class="drawer-title" data-title>Running</div>
+            </div>
+            <div class="drawer-dismiss">
+              <button data-close-drawer aria-label="Close pace calculator">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </div>
+            <div class="drawer-content">
+              <div class="seg">
+                <button class="seg-btn" aria-selected="true" data-disc="run">Run</button>
+                <button class="seg-btn" aria-selected="false" data-disc="bike">Bike</button>
+                <button class="seg-btn" aria-selected="false" data-disc="swim">Swim</button>
+              </div>
+              <div class="pace-block">
+                <div class="pace-row">
+                  <div>
+                    <div class="pace-major-label" data-input-label>Speed</div>
+                    <div class="pace-major" data-input-major>12.0</div>
+                    <div class="pace-major-unit" data-input-unit>km/h</div>
+                  </div>
+                  <div class="pace-minor">
+                    <span class="lbl" data-input-secondary-label>Pace</span>
+                    <strong data-input-secondary-major>5:00</strong>
+                    <span class="unit" data-input-secondary-unit>/ km</span>
+                  </div>
+                </div>
+                <div class="slider-wrap">
+                  <input type="range" class="slider" data-slider>
+                  <div class="slider-bounds"><span data-bound-min></span><span data-bound-max></span></div>
+                </div>
+              </div>
+              <div class="table">
+                <div class="table-title">Finish times</div>
+                <div data-rows></div>
+              </div>
+              <button class="share-btn">Share pace card</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint">
+          <strong>Try it</strong><br>
+          • Tap the speedometer (top-right) to open<br>
+          • Tap the chevron at the bottom of the header to dismiss<br>
+          • Drag the grabber down<br>
+          • Tap the dimmed backdrop
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== TAB 2: Workout card chip ============== -->
+  <section class="panel" id="entry-chip">
+    <div class="panel-bet">
+      <p><span class="lead">The bet:</span> a small "Pace" chip in the workout card header. Tap → drawer opens <strong>pre-seeded</strong> with that workout's sport + the user's threshold (VMA / FTP-derived speed / CSS). Highest contextual value — answers "what does this pace feel like over X km?" right next to the workout that prompted the question.</p>
+      <p>Code-spec note: chip lives in <code>SessionCardView</code> Row 1 next to the type tag. Pre-seed values come from <code>PlanSession.sport</code> + <code>ProfileService</code> metrics.</p>
+    </div>
+    <div class="frames">
+      <div class="frame-group">
+        <span class="frame-label">Tap "Pace" on the workout card</span>
+        <div class="device" data-device>
+          <div class="statusbar"><span>9:41</span><span>● ●●●● 100%</span></div>
+          <div class="nav-large">
+            <div class="nav-title">May</div>
+            <div class="nav-actions">
+              <button class="nav-icon-btn" aria-label="Open pace calculator (placement #3, not in this view)" style="opacity:0.4;cursor:default" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 14l3.5-3.5"/>
+                  <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+                  <path d="M5.6 17.4A8 8 0 1 1 18.4 17.4"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="cal-screen">
+            <div class="cal-week-strip">
+              <div class="cal-day">M<strong>4</strong></div>
+              <div class="cal-day">T<strong>5</strong></div>
+              <div class="cal-day">W<strong>6</strong></div>
+              <div class="cal-day today">T<strong>7</strong></div>
+              <div class="cal-day">F<strong>8</strong></div>
+              <div class="cal-day">S<strong>9</strong></div>
+              <div class="cal-day">S<strong>10</strong></div>
+            </div>
+            <div class="cal-cards">
+              <div class="cal-section-label">Today · Thu 7 May</div>
+              <div class="cal-card">
+                <div class="cal-card-emoji run">🏃</div>
+                <div class="cal-card-body">
+                  <div class="cal-card-row1">
+                    10 km tempo
+                    <button class="pace-chip pulse" data-open-drawer data-preseed-disc="run" data-preseed-value="138">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 14l3.5-3.5"/>
+                        <circle cx="12" cy="14" r="1.2" fill="currentColor"/>
+                        <path d="M5.6 17.4A8 8 0 1 1 18.4 17.4"/>
+                      </svg>
+                      Pace
+                    </button>
+                  </div>
+                  <div class="cal-card-row2">50 min · target 4:30 / km</div>
+                </div>
+              </div>
+              <div class="cal-section-label">Tomorrow · Fri 8 May</div>
+              <div class="cal-card">
+                <div class="cal-card-emoji bike">🚴</div>
+                <div class="cal-card-body">
+                  <div class="cal-card-row1">
+                    Endurance ride
+                    <button class="pace-chip" data-open-drawer data-preseed-disc="bike" data-preseed-value="320">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 14l3.5-3.5"/>
+                        <circle cx="12" cy="14" r="1.2" fill="currentColor"/>
+                        <path d="M5.6 17.4A8 8 0 1 1 18.4 17.4"/>
+                      </svg>
+                      Pace
+                    </button>
+                  </div>
+                  <div class="cal-card-row2">2h 00 · target 32 km/h</div>
+                </div>
+              </div>
+              <div class="cal-card">
+                <div class="cal-card-emoji swim">🏊</div>
+                <div class="cal-card-body">
+                  <div class="cal-card-row1">
+                    Tech + threshold
+                    <button class="pace-chip" data-open-drawer data-preseed-disc="swim" data-preseed-value="110">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 14l3.5-3.5"/>
+                        <circle cx="12" cy="14" r="1.2" fill="currentColor"/>
+                        <path d="M5.6 17.4A8 8 0 1 1 18.4 17.4"/>
+                      </svg>
+                      Pace
+                    </button>
+                  </div>
+                  <div class="cal-card-row2">45 min · target 1:50 / 100m</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-bar">
+            <div class="ios-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Home</div>
+            <div class="ios-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Calendar</div>
+            <div class="ios-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3v-15a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>Coach</div>
+            <div class="ios-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</div>
+          </div>
+
+          <div class="backdrop" data-backdrop></div>
+          <div class="drawer" data-drawer>
+            <div class="drawer-grabber" data-grabber><span></span></div>
+            <div class="drawer-header">
+              <div class="drawer-eyebrow">Dromos · Pace card</div>
+              <div class="drawer-title" data-title>Running</div>
+            </div>
+            <div class="drawer-dismiss">
+              <button data-close-drawer aria-label="Close pace calculator">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </div>
+            <div class="drawer-content">
+              <div class="seg">
+                <button class="seg-btn" aria-selected="true" data-disc="run">Run</button>
+                <button class="seg-btn" aria-selected="false" data-disc="bike">Bike</button>
+                <button class="seg-btn" aria-selected="false" data-disc="swim">Swim</button>
+              </div>
+              <div class="pace-block">
+                <div class="pace-row">
+                  <div>
+                    <div class="pace-major-label" data-input-label>Speed</div>
+                    <div class="pace-major" data-input-major>12.0</div>
+                    <div class="pace-major-unit" data-input-unit>km/h</div>
+                  </div>
+                  <div class="pace-minor">
+                    <span class="lbl" data-input-secondary-label>Pace</span>
+                    <strong data-input-secondary-major>5:00</strong>
+                    <span class="unit" data-input-secondary-unit>/ km</span>
+                  </div>
+                </div>
+                <div class="slider-wrap">
+                  <input type="range" class="slider" data-slider>
+                  <div class="slider-bounds"><span data-bound-min></span><span data-bound-max></span></div>
+                </div>
+              </div>
+              <div class="table">
+                <div class="table-title">Finish times</div>
+                <div data-rows></div>
+              </div>
+              <button class="share-btn">Share pace card</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint">
+          <strong>Pre-seed flow</strong><br>
+          • Tap "Pace" on the run card → opens with Run + 13.8 km/h (~4:20/km) seeded<br>
+          • Tap on the bike card → opens with Bike + 32 km/h<br>
+          • Tap on the swim card → opens with Swim + 1:50 / 100m
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // ====== distance / sport configuration ======
+    const config = {
+      run: {
+        title: 'Running', inputLabel: 'Speed', unit: 'km/h',
+        secondaryLabel: 'Pace', secondaryUnit: '/ km',
+        min: 60, max: 220, step: 1, default: 120,
+        toKmH: v => v / 10,
+        formatMajor: v => (v / 10).toFixed(1),
+        formatBound: v => (v / 10).toFixed(0) + ' km/h',
+        secondary: kmh => fmtPace(3600 / kmh),
+        secondaryMajor: kmh => fmtMMSS(3600 / kmh),
+        distances: [
+          { name: '1 km',          km: 1 },
+          { name: '10 km',         km: 10 },
+          { name: 'Half marathon', km: 21.0975 },
+          { name: 'Marathon',      km: 42.195 },
+        ],
+      },
+      bike: {
+        title: 'Cycling', inputLabel: 'Speed', unit: 'km/h',
+        secondaryLabel: 'Pace', secondaryUnit: '/ km',
+        min: 150, max: 500, step: 5, default: 320,
+        toKmH: v => v / 10,
+        formatMajor: v => (v / 10).toFixed(1),
+        formatBound: v => (v / 10).toFixed(0) + ' km/h',
+        secondary: kmh => fmtPace(3600 / kmh),
+        secondaryMajor: kmh => fmtMMSS(3600 / kmh),
+        distances: [
+          { name: '1 km',                 km: 1 },
+          { name: '40 km · Olympic',      km: 40 },
+          { name: '90 km · Half-Iron',    km: 90 },
+          { name: '180 km · Ironman',     km: 180 },
+        ],
+      },
+      swim: {
+        title: 'Swimming', inputLabel: 'Pace', unit: '/ 100 m',
+        secondaryLabel: 'Speed', secondaryUnit: 'km/h',
+        min: 60, max: 180, step: 1, default: 110,
+        toKmH: v => 360 / v,
+        formatMajor: v => fmtMMSS(v),
+        formatBound: v => fmtMMSS(v),
+        secondary: v => (360 / v).toFixed(2) + ' km/h',
+        secondaryMajor: v => (360 / v).toFixed(2),
+        distances: [
+          { name: '1500 m · Olympic',     km: 1.5 },
+          { name: '1900 m · Half-Iron',   km: 1.9 },
+          { name: '3800 m · Ironman',     km: 3.8 },
+        ],
+      },
+    };
+
+    function fmtMMSS(totalSec) {
+      const m = Math.floor(totalSec / 60);
+      const s = Math.round(totalSec % 60);
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+    function fmtPace(secPerKm) { return fmtMMSS(secPerKm) + ' / km'; }
+    function fmtTime(totalSec) {
+      totalSec = Math.round(totalSec);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    // ====== wire each device frame independently ======
+    document.querySelectorAll('[data-device]').forEach(device => {
+      const drawer = device.querySelector('[data-drawer]');
+      const backdrop = device.querySelector('[data-backdrop]');
+      const slider = device.querySelector('[data-slider]');
+      const segBtns = device.querySelectorAll('[data-disc]');
+      const grabber = device.querySelector('[data-grabber]');
+      const state = { disc: 'run' };
+
+      function setBound(sel, txt) {
+        const el = device.querySelector(sel);
+        if (el) el.textContent = txt;
+      }
+
+      function applyConfig() {
+        const c = config[state.disc];
+        slider.min = c.min; slider.max = c.max; slider.step = c.step;
+        if (state.preseedValue == null) slider.value = c.default;
+        else { slider.value = state.preseedValue; state.preseedValue = null; }
+        setBound('[data-bound-min]', c.formatBound(c.min));
+        setBound('[data-bound-max]', c.formatBound(c.max));
+        setBound('[data-input-label]', c.inputLabel);
+        setBound('[data-input-unit]', c.unit);
+        setBound('[data-input-secondary-label]', c.secondaryLabel);
+        setBound('[data-input-secondary-unit]', c.secondaryUnit);
+        setBound('[data-title]', c.title);
+        // Update segmented control selection
+        segBtns.forEach(b => b.setAttribute('aria-selected', b.dataset.disc === state.disc ? 'true' : 'false'));
+        update();
+      }
+
+      function update() {
+        const c = config[state.disc];
+        const v = +slider.value;
+        const kmh = c.toKmH(v);
+        setBound('[data-input-major]', c.formatMajor(v));
+        const secMajor = device.querySelector('[data-input-secondary-major]');
+        if (secMajor) {
+          secMajor.textContent = state.disc === 'swim' ? c.secondaryMajor(v) : c.secondaryMajor(kmh);
+        }
+        const rowsHost = device.querySelector('[data-rows]');
+        rowsHost.innerHTML = '';
+        c.distances.forEach(d => {
+          const seconds = (d.km / kmh) * 3600;
+          const row = document.createElement('div');
+          row.className = 'table-row';
+          row.innerHTML = `<span class="name">${d.name}</span><span class="time">${fmtTime(seconds)}</span>`;
+          rowsHost.appendChild(row);
+        });
+      }
+
+      segBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.disc = btn.dataset.disc;
+          applyConfig();
+        });
+      });
+      slider.addEventListener('input', update);
+
+      // ====== drawer open / close ======
+      function openDrawer() {
+        drawer.setAttribute('data-open', 'true');
+        backdrop.setAttribute('data-open', 'true');
+        // remove pulse from triggers (UX cue: once seen, no need to keep pulsing)
+        device.querySelectorAll('.pulse').forEach(el => el.classList.remove('pulse'));
+      }
+      function closeDrawer() {
+        drawer.removeAttribute('data-open');
+        backdrop.removeAttribute('data-open');
+        drawer.style.transform = '';
+      }
+
+      device.querySelectorAll('[data-open-drawer]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          // Pre-seed if the trigger carries seed data (workout chip case)
+          const seedDisc = btn.dataset.preseedDisc;
+          const seedValue = btn.dataset.preseedValue;
+          if (seedDisc) {
+            state.disc = seedDisc;
+            if (seedValue != null) state.preseedValue = +seedValue;
+            applyConfig();
+          }
+          openDrawer();
+        });
+      });
+      device.querySelector('[data-close-drawer]').addEventListener('click', closeDrawer);
+      backdrop.addEventListener('click', closeDrawer);
+
+      // ====== drag-down dismiss on grabber ======
+      let dragStartY = null;
+      let dragOffset = 0;
+      const drawerHeight = () => drawer.offsetHeight;
+
+      grabber.addEventListener('pointerdown', e => {
+        if (drawer.getAttribute('data-open') !== 'true') return;
+        dragStartY = e.clientY;
+        dragOffset = 0;
+        drawer.classList.add('dragging');
+        grabber.setPointerCapture(e.pointerId);
+      });
+      grabber.addEventListener('pointermove', e => {
+        if (dragStartY == null) return;
+        dragOffset = Math.max(0, e.clientY - dragStartY);
+        drawer.style.transform = `translateY(${dragOffset}px)`;
+        // dim backdrop proportionally
+        const progress = Math.min(1, dragOffset / drawerHeight());
+        backdrop.style.background = `rgba(0,0,0,${0.32 * (1 - progress)})`;
+      });
+      grabber.addEventListener('pointerup', e => {
+        if (dragStartY == null) return;
+        drawer.classList.remove('dragging');
+        backdrop.style.background = '';
+        if (dragOffset > drawerHeight() * 0.25) {
+          closeDrawer();
+        } else {
+          drawer.style.transform = '';
+        }
+        dragStartY = null;
+        dragOffset = 0;
+      });
+
+      applyConfig();
+    });
+
+    // ====== top tab strip ======
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.setAttribute('aria-selected', 'false'));
+        btn.setAttribute('aria-selected', 'true');
+        document.querySelectorAll('.panel').forEach(p => p.removeAttribute('data-active'));
+        document.getElementById(btn.dataset.target).setAttribute('data-active', 'true');
+      });
+    });
+  </script>
+</body>
+</html>

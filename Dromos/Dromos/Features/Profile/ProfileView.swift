@@ -30,6 +30,8 @@ struct ProfileView: View {
     @State private var showValidationError = false
     @State private var validationMessage = ""
     @State private var showDisconnectAlert = false
+    /// Controls presentation of the pace calculator bottom drawer.
+    @State private var showPaceCalculator = false
 
     /// Provides the key UIWindow for ASWebAuthenticationSession presentation.
     private let authSessionContext = WebAuthPresentationContext()
@@ -68,6 +70,20 @@ struct ProfileView: View {
                     ProgressView()
                 } else if let user = user {
                     Form {
+                        // SECTION 0: TOOLS — utility calculators and helpers
+                        Section("Tools") {
+                            Button {
+                                showPaceCalculator = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "speedometer").foregroundColor(.accentColor)
+                                    Text("Pace calculator").foregroundColor(.primary)
+                                    Spacer()
+                                    Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+                                }
+                            }
+                        }
+
                         // SECTION 1: GOALS
                         Section("Goals") {
                             if isEditing {
@@ -122,6 +138,13 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Profile")
+            // Pace calculator bottom drawer — no pre-seed, uses neutral run defaults.
+            .sheet(isPresented: $showPaceCalculator) {
+                PaceCalculatorSheet(seed: nil)
+                    .presentationDetents([.fraction(0.85)])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(.black)
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isEditing {
