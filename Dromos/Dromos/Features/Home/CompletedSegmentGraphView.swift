@@ -335,26 +335,25 @@ struct CompletedSegmentGraphView: View {
     // MARK: - Height Bucket Helper
 
     /// Maps intensity percentage to a height fraction of `graphHeight`.
-    /// Buckets match `WorkoutShape.heightFraction(for:)` exactly for visual consistency.
     ///
-    /// - Recovery / very easy (< 60%)  → 30%
-    /// - Moderate (60–79%)             → 55%
-    /// - Tempo (80–87%)                → 75%
-    /// - Threshold (88–95%)            → 88%
-    /// - VO2 / max (≥ 96%)             → 100%
+    /// Continuous linear mapping (NOT the bucket scheme used by `WorkoutShape`):
+    /// the completed graph shows actual execution where small lap-to-lap deltas
+    /// are the signal. Buckets clustered the entire 60–80% range to one height,
+    /// flattening visible variation (e.g. a steady-state run with all laps in
+    /// that band rendered as identical bars). Linear preserves differentiation.
     ///
-    /// nil or 0 intensity → 30% floor (visible but clearly low).
+    /// - 30% → 0.20 (floor)
+    /// - 110% → 1.00 (ceiling)
+    /// - Linear interpolation between, clamped to [0.20, 1.00].
+    /// - nil or 0 intensity → 30% floor (visible but clearly low).
     ///
-    /// TODO: consolidate with WorkoutShape.heightFraction(for:) — deferred to Phase 5 refactor.
+    /// `WorkoutShape` keeps the bucket scheme since the planned graph encodes
+    /// prescribed training zones — different visual language by design.
     private func heightFractionFor(pct: Int?) -> CGFloat {
         guard let pct = pct, pct > 0 else { return 0.30 }
-        switch pct {
-        case ..<60:    return 0.30
-        case 60..<80:  return 0.55
-        case 80..<88:  return 0.75
-        case 88...95:  return 0.88
-        default:       return 1.00
-        }
+        let normalized = (Double(pct) - 30.0) / 80.0
+        let clamped = min(max(normalized, 0.0), 1.0)
+        return CGFloat(0.20 + clamped * 0.80)
     }
 }
 
