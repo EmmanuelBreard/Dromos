@@ -286,24 +286,25 @@ struct CompletedSegmentGraphView: View {
 
     /// Renders 5 distance labels along the axis: 0%, 25%, 50%, 75%, 100% of total distance.
     /// Uses `formatDistance(meters:)` (km, not compact) per spec.
-    /// ZStack + .position(x:) mirrors `WorkoutGraphView.timeAxisView` to anchor each label's
-    /// center at its true axis x-position, preventing drift with variable-width labels.
+    ///
+    /// First label is leading-anchored, last is trailing-anchored, middles are centered —
+    /// keeps the edge labels (e.g. "11.2 km") fully inside the card instead of half-spilling
+    /// past the chart bounds. Implementation trick: zero-width frame with directional alignment
+    /// lets the text overflow inward only.
     private func distanceAxisView(totalDistance: Double) -> some View {
         let fractions: [Double] = [0.0, 0.25, 0.50, 0.75, 1.0]
         let labels: [String] = fractions.map { ActivityFormatters.formatDistance(meters: totalDistance * $0) }
         return GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                ForEach(labels.indices, id: \.self) { i in
-                    let frac = fractions[i]
-                    Text(labels[i])
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .fixedSize()
-                        .position(
-                            x: CGFloat(frac) * geo.size.width,
-                            y: axisHeight / 2
-                        )
-                }
+            ForEach(labels.indices, id: \.self) { i in
+                let alignment: Alignment = (i == 0) ? .topLeading
+                    : (i == labels.count - 1) ? .topTrailing
+                    : .top
+                Text(labels[i])
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize()
+                    .frame(width: 0, height: axisHeight, alignment: alignment)
+                    .offset(x: CGFloat(fractions[i]) * geo.size.width)
             }
         }
         .frame(height: axisHeight)
