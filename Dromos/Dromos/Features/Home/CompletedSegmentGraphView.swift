@@ -79,11 +79,6 @@ struct CompletedSegmentGraphView: View {
         // no basis to differentiate effort. In that case every bar renders at 100% / green.
         let isAllNil = intensities.allSatisfy { $0 == nil }
 
-        // Per-activity detection: for bike tooltip, use power only when every lap has watts.
-        // Must match the calculator's own power-availability check (LapIntensityCalculator.bikeIntensities).
-        let usePowerInTooltip = sport.lowercased() == "bike" &&
-            validLaps.allSatisfy { ($0.averageWatts ?? 0) > 0 }
-
         // Total distance across valid laps — denominator for width fractions.
         let totalDistance = validLaps.reduce(0.0) { $0 + ($1.distance ?? 0) }
 
@@ -172,8 +167,7 @@ struct CompletedSegmentGraphView: View {
                         lapTooltipView(
                             for: validLaps[index],
                             lapNumber: index + 1,
-                            intensity: isAllNil ? nil : intensities[index],
-                            usePowerInTooltip: usePowerInTooltip
+                            intensity: isAllNil ? nil : intensities[index]
                         )
                         .fixedSize()
                         .allowsHitTesting(false)
@@ -216,8 +210,7 @@ struct CompletedSegmentGraphView: View {
     private func lapTooltipView(
         for lap: StravaLap,
         lapNumber: Int,
-        intensity: Int?,
-        usePowerInTooltip: Bool
+        intensity: Int?
     ) -> some View {
         VStack(alignment: .leading, spacing: 3) {
 
@@ -227,11 +220,14 @@ struct CompletedSegmentGraphView: View {
                 .foregroundColor(.secondary)
 
             // Line 2: primary metric — sport-specific, large semibold tabular-numeric
-            Text(primaryMetric(for: lap, usePowerInTooltip: usePowerInTooltip))
-                .font(.title3)
-                .fontWeight(.semibold)
-                .monospacedDigit()
-                .foregroundColor(.primary)
+            // Bike: speed if available, watts if not, omit if neither.
+            if let metric = primaryMetric(for: lap) {
+                Text(metric)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+                    .foregroundColor(.primary)
+            }
 
             // Line 3: duration · distance
             Text("\(ActivityFormatters.formatDuration(seconds: lap.elapsedTime)) · \(ActivityFormatters.formatDistanceCompact(meters: lap.distance ?? 0))")
@@ -258,27 +254,26 @@ struct CompletedSegmentGraphView: View {
         )
     }
 
-    /// Returns the sport-specific primary metric string for the tooltip.
+    /// Returns the sport-specific primary metric string for the tooltip, or nil to omit the line.
     ///
     /// Sport routing:
     /// - Run: running pace `/km`
-    /// - Bike (power path): watts
-    /// - Bike (HR fallback): bpm
+    /// - Bike: avg speed (km/h) if available; avg watts if speed unavailable and watts > 0; omit otherwise
     /// - Swim: swim pace `/100m`
     /// - Default: running pace (safe fallback for unknown sports)
-    private func primaryMetric(for lap: StravaLap, usePowerInTooltip: Bool) -> String {
+    private func primaryMetric(for lap: StravaLap) -> String? {
         switch sport.lowercased() {
         case "run":
             guard let speed = lap.averageSpeed, speed > 0 else { return "—" }
             return ActivityFormatters.formatPaceRunPerKm(speedMps: speed)
 
         case "bike":
-            if usePowerInTooltip {
-                guard let watts = lap.averageWatts, watts > 0 else { return "—" }
+            if let speed = lap.averageSpeed {
+                return ActivityFormatters.formatSpeedKmh(speedMps: speed)
+            } else if let watts = lap.averageWatts, watts > 0 {
                 return ActivityFormatters.formatPower(watts: watts)
             } else {
-                guard let hr = lap.averageHeartrate, hr > 0 else { return "—" }
-                return ActivityFormatters.formatHR(bpm: hr)
+                return nil // omit line 2 entirely
             }
 
         case "swim":
