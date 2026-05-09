@@ -77,6 +77,23 @@ enum ActivityFormatters {
         return String(format: "%.1f km", km)
     }
 
+    // MARK: Distance — Compact
+
+    /// Formats a distance in meters with a compact unit choice — meters under 1 km, km otherwise.
+    ///
+    /// Used by tooltips on per-lap displays where short segments (e.g., a 870m interval rep)
+    /// read more naturally as `"870 m"` than `"0.9 km"`. For values >= 1000 m the formatter
+    /// delegates to `formatDistance(meters:)` so the existing rounding rule applies unchanged.
+    ///
+    /// - Parameter meters: Distance in metres (non-negative).
+    /// - Returns: e.g. `"0 m"`, `"870 m"`, `"999 m"`, `"1.7 km"`, `"11 km"`.
+    static func formatDistanceCompact(meters: Double) -> String {
+        if meters < 1000 {
+            return "\(Int(meters.rounded())) m"
+        }
+        return formatDistance(meters: meters)
+    }
+
     // MARK: Pace — Run
 
     /// Converts an average speed in m/s into a running pace string (`M:SS/km`).
