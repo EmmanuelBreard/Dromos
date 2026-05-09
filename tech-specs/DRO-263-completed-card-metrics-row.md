@@ -1,7 +1,7 @@
 # DRO-263 — Completed-card metrics row (replaces Actual/Planned table)
 
 **Linear:** [DRO-263](https://linear.app/dromosapp/issue/DRO-263/replace-actualplanned-table-with-sport-specific-top-metrics-on)
-**Overall Progress:** `75%`
+**Overall Progress:** `95%`
 
 ## TLDR
 Replace `ActualVsPlannedTable` on the completed home card with a refactored `ActualMetricsView` rendered as a horizontal label-above-value metric row. The same component (after refactor) serves both Home and Calendar. Extract shared static formatters into `Core/Utils/ActivityFormatters.swift`. No DB changes.

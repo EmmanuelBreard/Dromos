@@ -135,7 +135,7 @@ struct TodayCompletedCard: View {
 
     @ViewBuilder
     private var mapOverlay: some View {
-        let distance = activity.distance.flatMap(ActivityFormatters.formatDistance(meters:)) ?? "—"
+        let distance = activity.distance.map { ActivityFormatters.formatDistance(meters: $0) } ?? "—"
         let elevationText: String? = {
             guard let elev = activity.totalElevationGain, elev > 0 else { return nil }
             return "+\(Int(elev.rounded()))m"
