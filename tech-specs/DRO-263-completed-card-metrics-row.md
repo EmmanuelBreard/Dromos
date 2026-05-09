@@ -1,7 +1,7 @@
 # DRO-263 — Completed-card metrics row (replaces Actual/Planned table)
 
 **Linear:** [DRO-263](https://linear.app/dromosapp/issue/DRO-263/replace-actualplanned-table-with-sport-specific-top-metrics-on)
-**Overall Progress:** `95%`
+**Overall Progress:** `100%`
 
 ## TLDR
 Replace `ActualVsPlannedTable` on the completed home card with a refactored `ActualMetricsView` rendered as a horizontal label-above-value metric row. The same component (after refactor) serves both Home and Calendar. Extract shared static formatters into `Core/Utils/ActivityFormatters.swift`. No DB changes.
@@ -88,25 +88,25 @@ Replace `ActualVsPlannedTable` on the completed home card with a refactored `Act
 
 ### Phase 4: Delete `ActualVsPlannedTable` + cleanup
 
-- [ ] 🟥 **Step 4.1: Delete the file**
-  - [ ] 🟥 Confirm zero remaining references via `grep -rn "ActualVsPlannedTable" --include="*.swift"`.
-  - [ ] 🟥 Delete [Dromos/Dromos/Features/Home/ActualVsPlannedTable.swift](Dromos/Dromos/Features/Home/ActualVsPlannedTable.swift).
-  - [ ] 🟥 Remove from Xcode project file references if not auto-managed.
+- [x] 🟩 **Step 4.1: Delete the file**
+  - [x] 🟩 Confirm zero remaining references via `grep -rn "ActualVsPlannedTable" --include="*.swift"`.
+  - [x] 🟩 Delete [Dromos/Dromos/Features/Home/ActualVsPlannedTable.swift](Dromos/Dromos/Features/Home/ActualVsPlannedTable.swift).
+  - [x] 🟩 Remove from Xcode project file references if not auto-managed.
 
-- [ ] 🟥 **Step 4.2: Update `.claude/context/architecture.md`**
-  - [ ] 🟥 Folder tree: remove the `ActualVsPlannedTable.swift` line. Update `ActualMetricsView.swift` description to "Sport-specific metric row used by both Home (TodayCompletedCard) and Calendar (SessionCardView). Adaptive LazyVGrid cells; hides nil values entirely."
-  - [ ] 🟥 Folder tree: add `Core/Utils/ActivityFormatters.swift` line — "Static formatters for `StravaActivity` display (duration, distance, pace, speed, power, HR). Mirrors `PaceMath` pattern."
-  - [ ] 🟥 Note in `Key Shared Components` section: update the `ActualMetricsView` line. Note that DRO-240 is closed by this PR.
+- [x] 🟩 **Step 4.2: Update `.claude/context/architecture.md`**
+  - [x] 🟩 Folder tree: remove the `ActualVsPlannedTable.swift` line. Update `ActualMetricsView.swift` description to "Sport-specific metric row used by both Home (TodayCompletedCard) and Calendar (SessionCardView). Adaptive LazyVGrid cells; hides nil values entirely."
+  - [x] 🟩 Folder tree: add `Core/Utils/ActivityFormatters.swift` line — "Static formatters for `StravaActivity` display (duration, distance, pace, speed, power, HR). Mirrors `PaceMath` pattern."
+  - [x] 🟩 Note in `Key Shared Components` section: update the `ActualMetricsView` line. Note that DRO-240 is closed by this PR.
 
-- [ ] 🟥 **Step 4.3: Manual QA pass**
-  - [ ] 🟥 Run app, open Today tab on a day with a completed run — verify 4 cells (Duration / Distance / Avg pace / Avg HR), bold tabular nums, no `—`, no table chrome.
-  - [ ] 🟥 Verify Today tab on a completed bike WITH power — 5 cells in order (Duration / Distance / Avg power / Avg HR / Avg speed), wrapping to 2nd row.
-  - [ ] 🟥 Verify Today tab on a completed bike WITHOUT power — 4 cells (Duration / Distance / Avg HR / Avg speed).
-  - [ ] 🟥 Verify Today tab on a completed swim — 4 cells (Duration / Distance / Avg pace / Avg HR).
-  - [ ] 🟥 Verify Today tab on a manual entry (no Strava) — only Duration cell.
-  - [ ] 🟥 Verify Calendar tab — same component, same metrics, larger typography than before.
-  - [ ] 🟥 Verify the "View planned workout" disclosure still expands correctly.
-  - [ ] 🟥 Verify the GPS map overlay still shows distance correctly.
+- [x] 🟩 **Step 4.3: Manual QA pass**
+  - [x] 🟩 Run app, open Today tab on a day with a completed run — verify 4 cells (Duration / Distance / Avg pace / Avg HR), bold tabular nums, no `—`, no table chrome.
+  - [x] 🟩 Verify Today tab on a completed bike WITH power — 5 cells in order (Duration / Distance / Avg power / Avg HR / Avg speed), wrapping to 2nd row.
+  - [x] 🟩 Verify Today tab on a completed bike WITHOUT power — 4 cells (Duration / Distance / Avg HR / Avg speed).
+  - [x] 🟩 Verify Today tab on a completed swim — 4 cells (Duration / Distance / Avg pace / Avg HR).
+  - [x] 🟩 Verify Today tab on a manual entry (no Strava) — only Duration cell.
+  - [x] 🟩 Verify Calendar tab — same component, same metrics, larger typography than before.
+  - [x] 🟩 Verify the "View planned workout" disclosure still expands correctly.
+  - [x] 🟩 Verify the GPS map overlay still shows distance correctly.
 
 ## Risks / Notes
 - **Calendar visual change** is intentional but may surprise; flag in PR description.

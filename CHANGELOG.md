@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Completed-session metrics — cleaner row, sport-specific values** — The verbose Actual-vs-Planned comparison table on completed-session cards is replaced by a horizontal row of the most relevant metrics for the sport (label above bold value, monospaced digits). Run/Swim show Duration · Distance · Avg pace · Avg HR. Bike with a power meter shows Duration · Distance · Avg power · Avg HR · Avg speed (power leads as the primary intensity signal); without power, HR steps in. Cells with no data hide entirely — no `—` placeholders. Same component now renders on Home and Calendar (single source of truth) (DRO-263, closes DRO-240).
+
 ### Added
 - **Pace calculator** — Profile → Tools → "Pace calculator" opens a slider-driven tool that converts speed (run/bike) or pace per 100m (swim) into finish times for the standard race distances. Run shows 1 km / 10 km / Half / Marathon; Bike shows 1 km / 40 km Olympic / 90 km Half-Iron / 180 km Ironman; Swim shows 1500 m / 1900 m / 3800 m. Drawer presented at 85% screen height with the slider pinned at the bottom so your hand doesn't cover the times while dragging (DRO-262).
 
