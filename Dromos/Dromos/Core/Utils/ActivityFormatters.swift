@@ -88,8 +88,8 @@ enum ActivityFormatters {
     /// - Parameter meters: Distance in metres (non-negative).
     /// - Returns: e.g. `"0 m"`, `"870 m"`, `"999 m"`, `"1.7 km"`, `"11 km"`.
     static func formatDistanceCompact(meters: Double) -> String {
-        if meters < 1000 {
-            return "\(Int(meters.rounded())) m"
+        if meters.rounded() < 1000 {
+            return String(format: "%d m", Int(meters.rounded()))
         }
         return formatDistance(meters: meters)
     }

@@ -131,6 +131,12 @@ final class ActivityFormatters_DistanceCompactTests: XCTestCase {
         XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 999), "999 m")
     }
 
+    /// 999.5 m rounds to 1000 → falls through to km path → "1 km".
+    /// Locks the rounding-before-threshold behavior so the formatter never produces "1000 m".
+    func test_distanceCompact_999point5m_roundsAndDelegatesToKm() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 999.5), "1 km")
+    }
+
     // MARK: >= 1 km — delegates to formatDistance
 
     /// 1000 m → exactly at boundary → delegates to formatDistance → "1 km".
