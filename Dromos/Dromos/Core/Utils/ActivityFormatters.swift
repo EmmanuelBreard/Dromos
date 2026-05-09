@@ -6,7 +6,11 @@
 //  Stateless pure functions — no services, no caching, trivially unit-testable.
 //
 //  Mirrors the PaceMath.swift pattern. All formatters take non-optional values;
-//  callers are responsible for nil-guarding before calling in.
+//  callers are responsible for nil-guarding (and zero-guarding for speed inputs)
+//  before calling in. Pace formatters additionally self-guard `speedMps > 0` as a
+//  safety net to prevent a division-by-zero crash on contract violation — the
+//  call-site guard remains the canonical UX rule ("hide cells for invalid data"),
+//  while the in-formatter guard is a defensive backstop, not a UX decision.
 //
 //  Output conventions:
 //  - Duration:  `Hh MM'` when ≥ 1 h, `MM'` otherwise (apostrophe glyph, not "min")
@@ -59,8 +63,10 @@ enum ActivityFormatters {
     /// < 0.05 or > 0.95) the value is rounded to the nearest integer and rendered
     /// without a decimal — so `970 m` becomes `"1 km"` and `1 050 m` becomes `"1 km"`.
     ///
-    /// - Parameter meters: Distance in metres (non-negative). Pass `> 0`; a `0` input
-    ///   returns `"0 km"` — callers should guard before calling if they want `"—"`.
+    /// - Parameter meters: Distance in metres. Pass non-negative; behaviour for
+    ///   negatives is undefined (Strava activities cannot have negative distance).
+    ///   A `0` input returns `"0 km"` — callers should guard before calling if they
+    ///   want the cell hidden entirely.
     /// - Returns: Formatted distance string, e.g. `"10.5 km"` or `"42 km"`.
     static func formatDistance(meters: Double) -> String {
         let km = meters / 1000.0
@@ -126,16 +132,16 @@ enum ActivityFormatters {
     /// - Parameter watts: Power in watts.
     /// - Returns: Power string, e.g. `"215 W"`.
     static func formatPower(watts: Double) -> String {
-        return "\(Int(watts.rounded())) W"
+        return String(format: "%d W", Int(watts.rounded()))
     }
 
     // MARK: Heart Rate
 
     /// Formats an average heart rate as an integer-rounded bpm string.
     ///
-    /// - Parameter hr: Heart rate in beats per minute.
+    /// - Parameter bpm: Heart rate in beats per minute.
     /// - Returns: HR string, e.g. `"152 bpm"`.
-    static func formatHR(_ hr: Double) -> String {
-        return "\(Int(hr.rounded())) bpm"
+    static func formatHR(bpm: Double) -> String {
+        return String(format: "%d bpm", Int(bpm.rounded()))
     }
 }

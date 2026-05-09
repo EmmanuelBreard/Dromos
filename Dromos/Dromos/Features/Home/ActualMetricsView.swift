@@ -71,7 +71,7 @@ struct ActualMetricsView: View {
             if let hr = activity.averageHeartrate {
                 result.append(MetricCell(
                     label: "Avg HR",
-                    value: ActivityFormatters.formatHR(hr)
+                    value: ActivityFormatters.formatHR(bpm: hr)
                 ))
             }
             // Average Speed (km/h) — converted from m/s
@@ -94,7 +94,7 @@ struct ActualMetricsView: View {
             if let hr = activity.averageHeartrate {
                 result.append(MetricCell(
                     label: "Avg HR",
-                    value: ActivityFormatters.formatHR(hr)
+                    value: ActivityFormatters.formatHR(bpm: hr)
                 ))
             }
 
@@ -110,7 +110,7 @@ struct ActualMetricsView: View {
             if let hr = activity.averageHeartrate {
                 result.append(MetricCell(
                     label: "Avg HR",
-                    value: ActivityFormatters.formatHR(hr)
+                    value: ActivityFormatters.formatHR(bpm: hr)
                 ))
             }
 

@@ -11,7 +11,7 @@
 //  - `ActivityFormatters.formatPaceSwimPer100m(speedMps:)` — M:SS/100m from m/s
 //  - `ActivityFormatters.formatSpeedKmh(speedMps:)` — X.X km/h from m/s
 //  - `ActivityFormatters.formatPower(watts:)` — integer W string
-//  - `ActivityFormatters.formatHR(_:)` — integer bpm string
+//  - `ActivityFormatters.formatHR(bpm:)` — integer bpm string
 //  - Boundary cases: sub-1-min duration, exactly 60 min, pace boundary at 359.7 s,
 //    fractional-km rendering near integer thresholds, speed conversion, zero guards.
 //
@@ -130,8 +130,9 @@ final class ActivityFormatters_RunPaceTests: XCTestCase {
 
     // MARK: Boundary — pace near a minute crossover
 
-    /// 359.7 s/km must NOT round to "6:00/km" (it rounds to 360 s → "6:00/km" is correct here);
-    /// the test verifies round-then-decompose gives the right answer (360 s → 6 min 0 s).
+    /// 359.7 s/km must produce "6:00/km" via round-then-decompose. Naive truncation would
+    /// produce "5:59/km" (Int(359.7) = 359 → 5 min 59 s); the rounding strategy lifts to 360 s
+    /// before decomposition so we get 6 min 0 s.
     func test_runPace_boundary359point7s_roundsTo6min00() {
         // 1000 / mps = 359.7  →  mps = 1000 / 359.7
         let mps = 1000.0 / 359.7
@@ -239,20 +240,20 @@ final class ActivityFormatters_PowerTests: XCTestCase {
 final class ActivityFormatters_HRTests: XCTestCase {
 
     func test_hr_162bpm_exact() {
-        XCTAssertEqual(ActivityFormatters.formatHR(162.0), "162 bpm")
+        XCTAssertEqual(ActivityFormatters.formatHR(bpm: 162.0), "162 bpm")
     }
 
     /// 152.4 bpm → rounds to 152.
     func test_hr_rounds_down() {
-        XCTAssertEqual(ActivityFormatters.formatHR(152.4), "152 bpm")
+        XCTAssertEqual(ActivityFormatters.formatHR(bpm: 152.4), "152 bpm")
     }
 
     /// 152.6 bpm → rounds to 153.
     func test_hr_rounds_up() {
-        XCTAssertEqual(ActivityFormatters.formatHR(152.6), "153 bpm")
+        XCTAssertEqual(ActivityFormatters.formatHR(bpm: 152.6), "153 bpm")
     }
 
     func test_hr_zero() {
-        XCTAssertEqual(ActivityFormatters.formatHR(0), "0 bpm")
+        XCTAssertEqual(ActivityFormatters.formatHR(bpm: 0), "0 bpm")
     }
 }
