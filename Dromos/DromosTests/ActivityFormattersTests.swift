@@ -110,6 +110,51 @@ final class ActivityFormatters_DistanceTests: XCTestCase {
     }
 }
 
+// MARK: - formatDistanceCompact
+
+final class ActivityFormatters_DistanceCompactTests: XCTestCase {
+
+    // MARK: Sub-1 km — meters path
+
+    /// 0 m → exactly zero → "0 m".
+    func test_distanceCompact_zero_showsMeters() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 0), "0 m")
+    }
+
+    /// 549.6 m → rounds to nearest int → "550 m".
+    func test_distanceCompact_549point6m_roundsTo550() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 549.6), "550 m")
+    }
+
+    /// 999 m → still under threshold → "999 m".
+    func test_distanceCompact_999m_showsMeters() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 999), "999 m")
+    }
+
+    /// 999.5 m rounds to 1000 → falls through to km path → "1 km".
+    /// Locks the rounding-before-threshold behavior so the formatter never produces "1000 m".
+    func test_distanceCompact_999point5m_roundsAndDelegatesToKm() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 999.5), "1 km")
+    }
+
+    // MARK: >= 1 km — delegates to formatDistance
+
+    /// 1000 m → exactly at boundary → delegates to formatDistance → "1 km".
+    func test_distanceCompact_1000m_delegatesToKm() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 1000), "1 km")
+    }
+
+    /// 1700 m → 1.7 km → decimal form via formatDistance → "1.7 km".
+    func test_distanceCompact_1700m_showsDecimalKm() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 1700), "1.7 km")
+    }
+
+    /// 11200 m → 11.2 km → fractional part 0.2 → "11.2 km".
+    func test_distanceCompact_11200m_showsKm() {
+        XCTAssertEqual(ActivityFormatters.formatDistanceCompact(meters: 11200), "11.2 km")
+    }
+}
+
 // MARK: - Run Pace
 
 final class ActivityFormatters_RunPaceTests: XCTestCase {
