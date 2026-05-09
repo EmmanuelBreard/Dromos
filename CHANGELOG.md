@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Segments graph on completed-session cards** — Below the metrics row on every completed session, a new horizontal bar chart shows what actually happened in the activity, lap by lap. One bar per Strava lap; bar **width** flexes by the lap's share of total distance; bar **height** encodes effort intensity using the same color gradient as the planned-workout view (green → yellow → orange → red). Touch-and-hold on any bar to inspect that segment — the tooltip shows lap number, primary metric (run pace / bike speed / swim pace per 100m), duration, distance, and average HR. Sliding your finger across the chart updates the tooltip live. Bars dim and the selected one highlights. Bar height normalizes to your VMA / FTP / CSS when those are set; falls back to session-relative scaling when they aren't. Hidden for brick sessions, single-lap activities, and activities with no lap data (DRO-223).
+
 ### Changed
 - **Completed-session metrics — cleaner row, sport-specific values** — The verbose Actual-vs-Planned comparison table on completed-session cards is replaced by a horizontal row of the most relevant metrics for the sport (label above bold value, monospaced digits). Run/Swim show Duration · Distance · Avg pace · Avg HR. Bike with a power meter shows Duration · Distance · Avg power · Avg HR · Avg speed (power leads as the primary intensity signal); without power, HR steps in. Cells with no data hide entirely — no `—` placeholders. Same component now renders on Home and Calendar (single source of truth) (DRO-263, closes DRO-240).
 
