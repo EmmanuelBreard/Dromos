@@ -55,16 +55,15 @@ struct CompletedSegmentGraphView: View {
 
     // MARK: Body
 
+    @ViewBuilder
     var body: some View {
         // Filter out laps with zero or nil distance — they produce zero-width bars
         // and cannot be normalized meaningfully.
         let validLaps = laps.filter { ($0.distance ?? 0) > 0 }
 
         // Defensive early exit — parent should guard laps.count < 2 before rendering,
-        // but we protect here as well.
-        if validLaps.count < 2 {
-            return AnyView(EmptyView())
-        }
+        // but we protect here as well. Implicit empty branch renders nothing.
+        if validLaps.count >= 2 {
 
         // Compute intensities exactly once for this render pass.
         let intensities = LapIntensityCalculator.intensities(
@@ -88,8 +87,7 @@ struct CompletedSegmentGraphView: View {
         // Total distance across valid laps — denominator for width fractions.
         let totalDistance = validLaps.reduce(0.0) { $0 + ($1.distance ?? 0) }
 
-        return AnyView(
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
 
                 // Section header
                 Text("Segments")
@@ -102,17 +100,10 @@ struct CompletedSegmentGraphView: View {
                     let totalSpacing = CGFloat(max(0, validLaps.count - 1)) * 2
                     let usableWidth = max(0, geometry.size.width - totalSpacing)
 
-                    // Precompute bar center x-positions — avoids O(n) reduce inside gesture.
+                    // Precompute bar center x-positions in O(n) via a single forward scan.
                     // X-axis is distance-based (divergence from WorkoutGraphView which uses duration).
-                    let barCenterXs: [CGFloat] = validLaps.indices.map { i in
-                        let preceding = validLaps[0..<i].reduce(CGFloat(0)) { acc, lap in
-                            let frac = (lap.distance ?? 0) / totalDistance
-                            return acc + max(frac * usableWidth, 2) + 2
-                        }
-                        let thisFrac = (validLaps[i].distance ?? 0) / totalDistance
-                        let thisWidth = max(thisFrac * usableWidth, 2)
-                        return preceding + thisWidth / 2
-                    }
+                    // The for-loop lives in a helper to avoid a @ViewBuilder control-flow conflict.
+                    let barCenterXs: [CGFloat] = barCenters(for: validLaps, totalDistance: totalDistance, usableWidth: usableWidth)
 
                     HStack(spacing: 2) {
                         ForEach(Array(validLaps.enumerated()), id: \.element.id) { idx, lap in
@@ -188,9 +179,11 @@ struct CompletedSegmentGraphView: View {
                         .allowsHitTesting(false)
                         .transition(.opacity)
                         // Center on the selected bar, clamp x to keep bubble inside graph bounds.
+                        // y: -60 places the bottom edge of the 4-line bubble (~80–100pt tall) ~10pt
+                        // above the chart top — avoids the overlap that y: -28 caused.
                         .position(
                             x: min(max(tooltipXOffset, tooltipHalfWidth), graphWidth - tooltipHalfWidth),
-                            y: -28
+                            y: -60
                         )
                     }
                 }
@@ -208,7 +201,7 @@ struct CompletedSegmentGraphView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-        )
+        } // end if validLaps.count >= 2
     }
 
     // MARK: - Tooltip
@@ -301,20 +294,52 @@ struct CompletedSegmentGraphView: View {
 
     // MARK: - X-Axis
 
-    /// Renders 5 evenly-spaced distance labels along the axis: 0%, 25%, 50%, 75%, 100%.
+    /// Renders 5 distance labels along the axis: 0%, 25%, 50%, 75%, 100% of total distance.
     /// Uses `formatDistance(meters:)` (km, not compact) per spec.
+    /// ZStack + .position(x:) mirrors `WorkoutGraphView.timeAxisView` to anchor each label's
+    /// center at its true axis x-position, preventing drift with variable-width labels.
     private func distanceAxisView(totalDistance: Double) -> some View {
-        HStack {
-            ForEach([0.0, 0.25, 0.50, 0.75, 1.0], id: \.self) { fraction in
-                Text(ActivityFormatters.formatDistance(meters: totalDistance * fraction))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .fixedSize()
-                if fraction < 1.0 {
-                    Spacer()
+        let fractions: [Double] = [0.0, 0.25, 0.50, 0.75, 1.0]
+        let labels: [String] = fractions.map { ActivityFormatters.formatDistance(meters: totalDistance * $0) }
+        return GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                ForEach(labels.indices, id: \.self) { i in
+                    let frac = fractions[i]
+                    Text(labels[i])
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize()
+                        .position(
+                            x: CGFloat(frac) * geo.size.width,
+                            y: axisHeight / 2
+                        )
                 }
             }
         }
+        .frame(height: axisHeight)
+    }
+
+    /// Fixed height for the distance-axis label row.
+    private let axisHeight: CGFloat = 20
+
+    // MARK: - Bar Center Helper
+
+    /// Computes bar center x-positions in O(n) via a single forward scan.
+    ///
+    /// Extracted from the GeometryReader closure so the imperative for-loop doesn't
+    /// conflict with the surrounding @ViewBuilder result builder.
+    private func barCenters(for laps: [StravaLap], totalDistance: Double, usableWidth: CGFloat) -> [CGFloat] {
+        let barWidths: [CGFloat] = laps.map { lap in
+            max(CGFloat((lap.distance ?? 0) / totalDistance) * usableWidth, 2)
+        }
+        var centers: [CGFloat] = []
+        var cursor: CGFloat = 0
+        for (i, w) in barWidths.enumerated() {
+            centers.append(cursor + w / 2)
+            cursor += w
+            if i < barWidths.count - 1 { cursor += 2 } // inter-bar spacing
+        }
+        return centers
     }
 
     // MARK: - Height Bucket Helper
