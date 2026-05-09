@@ -4,12 +4,17 @@
 //
 //  Created by Mamma Aiuto Gang on 22/02/2026.
 //
+//  DRO-268: adaptive grid, .title3 typography, ActivityFormatters delegation.
+//
 
 import SwiftUI
 
-/// Compact 2-column metric grid showing actual Strava performance data for a completed session.
+/// Compact adaptive metric grid showing actual Strava performance data for a completed session.
 /// Displays sport-specific metrics (duration, distance, pace, power, HR) derived from the matched activity.
 /// Nil metrics are omitted entirely — the grid collapses gracefully to avoid empty cells.
+///
+/// Layout: `GridItem(.adaptive(minimum: 90))` so the grid handles 4-cell (Run/Swim, Bike-no-power)
+/// and 5-cell (Bike-with-power) cases without conditional layouts.
 struct ActualMetricsView: View {
 
     let activity: StravaActivity
@@ -26,54 +31,87 @@ struct ActualMetricsView: View {
     // MARK: - Computed Metrics
 
     /// Builds the ordered list of metric cells appropriate for this activity's sport.
+    ///
+    /// Ordering per spec:
+    /// - Run / Swim: Duration → Distance → Avg Pace → Avg HR
+    /// - Bike (with power): Duration → Distance → Avg Power → Avg HR → Avg Speed
+    /// - Bike (no power):   Duration → Distance → Avg HR → Avg Speed
+    ///
     /// Common metrics (duration, distance) always appear first, followed by sport-specific ones.
+    /// All formatting is delegated to `ActivityFormatters`; callers nil-guard before appending.
     private var cells: [MetricCell] {
         var result: [MetricCell] = []
 
         // Duration — always present (movingTime is non-optional)
-        result.append(MetricCell(label: "Duration", value: formatDuration(activity.movingTime)))
+        result.append(MetricCell(
+            label: "Duration",
+            value: ActivityFormatters.formatDuration(seconds: activity.movingTime)
+        ))
 
         // Distance — present when available
         if let distanceMeters = activity.distance {
-            result.append(MetricCell(label: "Distance", value: formatDistance(distanceMeters)))
+            result.append(MetricCell(
+                label: "Distance",
+                value: ActivityFormatters.formatDistance(meters: distanceMeters)
+            ))
         }
 
         // Sport-specific metrics
         switch activity.normalizedSport?.lowercased() {
 
         case "bike":
-            // Average Power (W)
+            // Average Power (W) — only when power data is present
             if let watts = activity.averageWatts {
-                result.append(MetricCell(label: "Avg Power", value: "\(Int(watts)) W"))
+                result.append(MetricCell(
+                    label: "Avg Power",
+                    value: ActivityFormatters.formatPower(watts: watts)
+                ))
             }
             // Average Heart Rate (bpm)
             if let hr = activity.averageHeartrate {
-                result.append(MetricCell(label: "Avg HR", value: "\(Int(hr)) bpm"))
+                result.append(MetricCell(
+                    label: "Avg HR",
+                    value: ActivityFormatters.formatHR(bpm: hr)
+                ))
             }
             // Average Speed (km/h) — converted from m/s
             if let speedMs = activity.averageSpeed, speedMs > 0 {
-                let kmh = speedMs * 3.6
-                result.append(MetricCell(label: "Avg Speed", value: String(format: "%.1f km/h", kmh)))
+                result.append(MetricCell(
+                    label: "Avg Speed",
+                    value: ActivityFormatters.formatSpeedKmh(speedMps: speedMs)
+                ))
             }
 
         case "run":
             // Average Pace (/km) — converted from m/s to min:sec per km
             if let speedMs = activity.averageSpeed, speedMs > 0 {
-                result.append(MetricCell(label: "Avg Pace", value: formatRunPace(speedMs: speedMs)))
+                result.append(MetricCell(
+                    label: "Avg Pace",
+                    value: ActivityFormatters.formatPaceRunPerKm(speedMps: speedMs)
+                ))
             }
             // Average Heart Rate (bpm)
             if let hr = activity.averageHeartrate {
-                result.append(MetricCell(label: "Avg HR", value: "\(Int(hr)) bpm"))
+                result.append(MetricCell(
+                    label: "Avg HR",
+                    value: ActivityFormatters.formatHR(bpm: hr)
+                ))
             }
 
         case "swim":
             // Average Pace (/100m) — converted from m/s to min:sec per 100m
             if let speedMs = activity.averageSpeed, speedMs > 0 {
-                result.append(MetricCell(label: "Avg Pace", value: formatSwimPace(speedMs: speedMs)))
+                result.append(MetricCell(
+                    label: "Avg Pace",
+                    value: ActivityFormatters.formatPaceSwimPer100m(speedMps: speedMs)
+                ))
             }
             // Average Heart Rate (bpm)
             if let hr = activity.averageHeartrate {
-                result.append(MetricCell(label: "Avg HR", value: "\(Int(hr)) bpm"))
+                result.append(MetricCell(
+                    label: "Avg HR",
+                    value: ActivityFormatters.formatHR(bpm: hr)
+                ))
             }
 
         default:
@@ -88,7 +126,7 @@ struct ActualMetricsView: View {
 
     var body: some View {
         LazyVGrid(
-            columns: [GridItem(.flexible()), GridItem(.flexible())],
+            columns: [GridItem(.adaptive(minimum: 90))],
             alignment: .leading,
             spacing: 12
         ) {
@@ -98,57 +136,11 @@ struct ActualMetricsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text(cell.value)
-                        .font(.subheadline)
+                        .font(.title3)
                         .fontWeight(.bold)
+                        .monospacedDigit()
                 }
             }
         }
-    }
-
-    // MARK: - Formatting Helpers
-
-    /// Formats a duration in seconds into a human-readable string.
-    /// Examples: "<1 min", "45 min", "1h 30min", "2h 5min"
-    private func formatDuration(_ seconds: Int) -> String {
-        let totalMinutes = seconds / 60
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-
-        if hours > 0 {
-            return minutes > 0 ? "\(hours)h \(minutes)min" : "\(hours)h"
-        } else if totalMinutes > 0 {
-            return "\(totalMinutes) min"
-        } else {
-            return "<1 min"
-        }
-    }
-
-    /// Formats a distance in meters.
-    /// Uses km for distances >= 1000m, meters otherwise.
-    /// Examples: "42.2 km", "800 m"
-    private func formatDistance(_ meters: Double) -> String {
-        if meters >= 1000 {
-            return String(format: "%.1f km", meters / 1000)
-        } else {
-            return "\(Int(meters)) m"
-        }
-    }
-
-    /// Formats a speed in m/s as a running pace (min:sec per km).
-    /// Example: 3.33 m/s → "5:00 /km"
-    private func formatRunPace(speedMs: Double) -> String {
-        let secondsPerKm = 1000.0 / speedMs
-        let minutes = Int(secondsPerKm) / 60
-        let seconds = Int(secondsPerKm) % 60
-        return String(format: "%d:%02d /km", minutes, seconds)
-    }
-
-    /// Formats a speed in m/s as a swim pace (min:sec per 100m).
-    /// Example: 1.5 m/s → "1:06 /100m"
-    private func formatSwimPace(speedMs: Double) -> String {
-        let secondsPer100m = 100.0 / speedMs
-        let minutes = Int(secondsPer100m) / 60
-        let seconds = Int(secondsPer100m) % 60
-        return String(format: "%d:%02d /100m", minutes, seconds)
     }
 }
