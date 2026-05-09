@@ -23,7 +23,7 @@ Dromos/Dromos/
 │   │   ├── WorkoutTemplate.swift     # WorkoutTemplate, WorkoutSegment, WorkoutLibrary, FlatSegment, StepSummary
 │   │   ├── StravaModels.swift        # StravaActivity, SyncResult (Equatable), SyncResponse
 │   │   ├── SessionCompletionStatus.swift # SessionCompletionStatus enum + SessionMatcher (client-side matching engine)
-│   │   ├── StravaLap.swift          # Codable/Identifiable model mapping `strava_activity_laps` rows (DRO-223)
+│   │   ├── StravaLap.swift           # Codable/Identifiable model mapping `strava_activity_laps` rows (DRO-223)
 │   │   ├── OnboardingData.swift      # Per-screen onboarding structs
 │   │   └── ChatMessage.swift          # ChatMessage (Codable, Identifiable) + ChatResponse edge function DTO
 │   └── Services/
