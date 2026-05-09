@@ -13,7 +13,8 @@
 //  - Bike HR fallback session-normalized (maxHr nil)
 //  - Swim CSS reference path
 //  - Swim session-normalized fallback (CSS nil)
-//  - Equal-value double-fallback (all laps same metric, no reference → all 100)
+//  - Equal-value double-fallback (all laps same metric, no reference → all nil)
+//  - All-nil metric (every lap missing the required metric → all nil)
 //  - Lap missing required metric → nil for that index, others still compute
 //
 
@@ -72,7 +73,7 @@ final class LapIntensityCalculator_RunTests: XCTestCase {
 
     /// Three run laps at varying speeds with VMA = nil.
     /// Fastest lap should return ~100, slowest ~0.
-    func test_run_sessionNormalizedFallback_fastestIs100SlowedIs0() {
+    func test_run_sessionNormalizedFallback_fastestIs100SlowestIs0() {
         // Speeds: 3.0, 4.0, 5.0 m/s → min=3.0, max=5.0
         let laps = [
             makeLap(speed: 3.0, lapIndex: 0),
@@ -233,10 +234,11 @@ final class LapIntensityCalculator_EdgeCaseTests: XCTestCase {
 
     // MARK: Equal-value double-fallback
 
-    /// Three run laps at the same averageSpeed with VMA = nil.
-    /// All three must return 100 per the tech spec resolved decision (DRO-223):
-    /// "equal-value fallback communicates 'uniform session with no reference'".
-    func test_equalValueDoubleFallback_allLapsSameSpeed_allReturn100() {
+    /// Run equal-value: 3 laps at the same averageSpeed with VMA = nil → all return nil.
+    /// The calculator cannot differentiate effort when every lap reports the same metric
+    /// AND no reference is set. Returning all-nil signals the Phase 4 renderer to apply
+    /// "100% height + green/easy color" rendering per the tech spec Resolved Decisions (DRO-223).
+    func test_equalValueDoubleFallback_allLapsSameSpeed_allReturnNil() {
         let laps = [
             makeLap(speed: 4.0, lapIndex: 0),
             makeLap(speed: 4.0, lapIndex: 1),
@@ -245,10 +247,36 @@ final class LapIntensityCalculator_EdgeCaseTests: XCTestCase {
         let result = LapIntensityCalculator.intensities(
             for: laps, sport: "run", vma: nil, ftp: nil, css: nil, maxHr: nil
         )
-        XCTAssertEqual(result[0], 100)
-        XCTAssertEqual(result[1], 100)
-        XCTAssertEqual(result[2], 100)
-        XCTAssertEqual(result.count, 3)
+        XCTAssertEqual(result, [nil, nil, nil])
+    }
+
+    /// Swim equal-value: 3 laps at the same speed with `css = nil` → all return nil
+    /// (calculator can't differentiate; renderer handles the visual via all-nil detection).
+    func test_equalValueDoubleFallback_swim_allLapsSameSpeed_allReturnNil() {
+        let laps = [
+            makeLap(speed: 1.5, distance: 100, lapIndex: 0),
+            makeLap(speed: 1.5, distance: 100, lapIndex: 1),
+            makeLap(speed: 1.5, distance: 100, lapIndex: 2),
+        ]
+        let result = LapIntensityCalculator.intensities(
+            for: laps, sport: "swim", vma: nil, ftp: nil, css: nil, maxHr: nil
+        )
+        XCTAssertEqual(result, [nil, nil, nil])
+    }
+
+    // MARK: All-nil metric
+
+    /// All-nil metric: when every lap is missing the required metric for its sport,
+    /// every result is nil (calculator yields no information at all).
+    func test_allLapsMissingMetric_swim_allReturnNil() {
+        let laps = [
+            makeLap(speed: nil, distance: 100, lapIndex: 0),
+            makeLap(speed: nil, distance: 100, lapIndex: 1),
+        ]
+        let result = LapIntensityCalculator.intensities(
+            for: laps, sport: "swim", vma: nil, ftp: nil, css: nil, maxHr: nil
+        )
+        XCTAssertEqual(result, [nil, nil])
     }
 
     // MARK: Lap missing required metric

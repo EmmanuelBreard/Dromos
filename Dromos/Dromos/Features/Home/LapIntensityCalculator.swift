@@ -7,10 +7,11 @@
 //  Design decisions:
 //  - Pure functions, no SwiftUI / UIKit imports. Independently testable.
 //  - Bike fallback is per-activity: if any lap lacks valid watts, the whole activity uses HR.
-//  - Equal-value double-fallback: when every non-nil lap reports the same metric value AND
-//    no reference (VMA/FTP/CSS) is set, all bars return 100. Rationale: we have no basis to
-//    differentiate effort; 100 with default green color communicates "uniform session" without
-//    a blank chart. See tech spec resolved decisions (DRO-223).
+//  - Equal-value double-fallback returns all-nil: when every non-nil lap reports the same metric
+//    value AND no reference (VMA/FTP/CSS) is set, the calculator cannot differentiate effort and
+//    returns nil for every entry. The Phase 4 renderer detects an all-nil array and applies
+//    special "render at 100% height with default green/easy color" rendering per the tech spec's
+//    Resolved Decisions (DRO-223).
 //
 
 import Foundation
@@ -155,29 +156,29 @@ enum LapIntensityCalculator {
     ///
     /// **Equal-value double-fallback** (tech spec DRO-223 resolved decisions):
     /// When `min == max` for all non-nil values — meaning every lap reports the same metric
-    /// AND the caller already determined no reference (VMA/FTP/CSS) is available — return 100
-    /// for every non-nil entry. This communicates "uniform session with no reference" without
-    /// producing a blank chart. Color rendering via `Color.intensity(for: 100)` produces the
-    /// orange/tempo tone, but callers may override via `Color.intensity(for: nil)` for a
-    /// greener "easy" default if product decides to differentiate in Phase 4.
+    /// AND the caller already determined no reference (VMA/FTP/CSS) is available — the
+    /// calculator cannot differentiate effort and returns `nil` for every entry. The Phase 4
+    /// renderer detects an all-nil array and applies special "render at 100% height with default
+    /// green/easy color" rendering. This keeps the calculator pure: `nil` means
+    /// "no information, can't normalize."
     ///
     /// - Parameter values: Parallel array of optional metric values. Nil entries remain nil.
     /// - Returns: Normalized intensities (Int), same length and order. Nil for nil inputs.
     private static func sessionNormalized(values: [Double?]) -> [Int?] {
         let nonNilValues = values.compactMap { $0 }
-        guard !nonNilValues.isEmpty else {
+        guard let sessionMin = nonNilValues.min(),
+              let sessionMax = nonNilValues.max()
+        else {
             // All laps missing the required metric — nothing to normalize.
             return values.map { _ in nil }
         }
 
-        let sessionMin = nonNilValues.min()!
-        let sessionMax = nonNilValues.max()!
-
         // Equal-value double-fallback: all non-nil values are identical AND no reference is set
-        // (this function is only called when the reference is absent). Return 100 for all.
+        // (this function is only called when the reference is absent). Return nil for all so
+        // the Phase 4 renderer can apply its all-nil visual treatment.
         // See: tech-specs/DRO-223-completed-segments-graph.md → "Resolved Decisions".
         if sessionMin == sessionMax {
-            return values.map { $0 == nil ? nil : 100 }
+            return values.map { _ in nil }
         }
 
         let range = sessionMax - sessionMin
