@@ -189,11 +189,6 @@ struct CompletedSegmentGraphView: View {
                 // X-axis distance labels: 0%, 25%, 50%, 75%, 100% of total distance.
                 // Uses formatDistance (km) per spec — not compact.
                 distanceAxisView(totalDistance: totalDistance)
-
-                // Footnote
-                Text("Touch and drag across the chart to inspect each segment's pace, duration and average HR.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
         } // end if validLaps.count >= 2
     }
