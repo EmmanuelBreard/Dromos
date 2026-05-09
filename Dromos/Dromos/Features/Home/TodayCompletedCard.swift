@@ -32,6 +32,13 @@ struct TodayCompletedCard: View {
 
     @State private var showPlannedWorkout = false
 
+    /// Strava lap data for the completed activity, fetched asynchronously via `.task(id: activity.id)`.
+    /// Empty until the fetch resolves; empty on error (StravaService swallows errors defensively).
+    @State private var laps: [StravaLap] = []
+
+    /// Owned by this view — `fetchLaps` is a stateless read query; no shared ownership needed.
+    @StateObject private var stravaService = StravaService()
+
     private let workoutLibrary = WorkoutLibraryService.shared
 
     // MARK: - Derived data
@@ -46,6 +53,16 @@ struct TodayCompletedCard: View {
         workoutLibrary.stepSummaries(
             for: session, ftp: ftp, vma: vma, css: css, maxHr: maxHr
         )
+    }
+
+    /// Whether to render the segment graph between `ActualMetricsView` and the optional map.
+    ///
+    /// Hidden when:
+    /// - Fewer than 2 laps (no laps fetched yet, error, or single-lap activity).
+    /// - Brick sessions — V1 intentionally skips multi-sport activities (DRO-223 spec).
+    private var shouldShowSegmentGraph: Bool {
+        guard laps.count >= 2 else { return false }
+        return session.sport.caseInsensitiveCompare("brick") != .orderedSame
     }
 
     /// Heuristic that tells `CoachFeedbackBlock` whether to render the silent skeleton.
@@ -77,6 +94,19 @@ struct TodayCompletedCard: View {
 
             ActualMetricsView(activity: activity)
 
+            // Segment graph — rendered only when laps are available and sport is not brick.
+            // Laps are fetched asynchronously; the view is simply absent while the array is empty.
+            if shouldShowSegmentGraph {
+                CompletedSegmentGraphView(
+                    laps: laps,
+                    sport: session.sport,
+                    vma: vma,
+                    ftp: ftp,
+                    css: css,
+                    maxHr: maxHr
+                )
+            }
+
             if let polyline = activity.summaryPolyline, !polyline.isEmpty {
                 mapBlock(polyline: polyline)
             }
@@ -101,6 +131,11 @@ struct TodayCompletedCard: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color.cardSurface)
         )
+        // Re-fires whenever the matched activity changes (e.g. day swipe updates the card).
+        // fetchLaps returns [] on error — no error UI needed at this layer per DRO-275 spec.
+        .task(id: activity.id) {
+            laps = await stravaService.fetchLaps(activityId: activity.id)
+        }
     }
 
     // MARK: - Header
