@@ -166,6 +166,27 @@ final class StravaService: ObservableObject {
         }
     }
 
+    // MARK: - Fetch Laps from DB
+
+    /// Fetches lap-level data for a Strava activity from `strava_activity_laps`.
+    /// Results are ordered by `lap_index` ascending.
+    /// - Parameter activityId: The `strava_activities.id` UUID (NOT the Strava integer ID).
+    /// - Returns: Array of `StravaLap`, empty on error (error set in `errorMessage`).
+    func fetchLaps(activityId: UUID) async -> [StravaLap] {
+        do {
+            let laps: [StravaLap] = try await client
+                .from("strava_activity_laps")
+                .select()
+                .eq("activity_id", value: activityId.uuidString)
+                .order("lap_index", ascending: true)
+                .execute().value
+            return laps
+        } catch {
+            errorMessage = "Failed to fetch laps: \(error.localizedDescription)"
+            return []
+        }
+    }
+
     // MARK: - Fetch Activities from DB
 
     /// Fetches Strava activities from the `strava_activities` table.
