@@ -33,17 +33,23 @@ struct CoachFeedbackBlock: View {
     /// on day swipe / card re-render, matching the calendar's `SessionCardView` toggle.
     @State private var showFeedback: Bool = false
 
-    /// Cached clamped (visible, 2-line) text height — captured via `GeometryReader` background.
-    /// Defaults to 0; first measurement settles within the first frame.
+    /// Always-clamped (2-line) reference height — captured from a hidden ghost `Text` that
+    /// is *independent* of the visible text's expansion state. This is the height a 2-line
+    /// clamp of `text` would render at in the current width context.
     @State private var clampedHeight: CGFloat = 0
 
-    /// Cached full intrinsic text height — captured via the hidden ghost-text overlay.
-    /// Compared to `clampedHeight` to decide whether the toggle is needed.
+    /// Always-unclamped (full intrinsic) reference height — captured from a separate hidden
+    /// ghost `Text` rendered with `lineLimit(nil)`. Independent of `showFeedback` so it does
+    /// not flip back and forth when the user toggles the visible text's expansion.
     @State private var fullHeight: CGFloat = 0
 
-    /// True when the body actually overflows 2 lines. Recomputed on either height change.
-    /// `+0.5` epsilon avoids float jitter producing a false-positive on exactly-2-line text.
-    @State private var isTruncated: Bool = false
+    /// True iff the body would actually overflow 2 lines.
+    /// `+0.5` epsilon avoids float jitter producing a false positive on exactly-2-line text
+    /// (sub-pixel layout deltas can otherwise tip an "exactly-fits" body into "overflows").
+    // Stable across showFeedback transitions because both heights derive from independent ghosts, not the visible Text.
+    private var isTruncated: Bool {
+        fullHeight > clampedHeight + 0.5
+    }
 
     var body: some View {
         if let feedback = feedback {
@@ -80,36 +86,47 @@ struct CoachFeedbackBlock: View {
     // MARK: - Filled body
 
     /// Renders the feedback body with a 2-line clamp + a Show more / Show less toggle that
-    /// appears **only when the text actually overflows**. Truncation detection uses a hidden
-    /// ghost-text sibling: the visible `Text` is clamped (or unclamped when expanded) and its
-    /// height is captured via `ClampedTextHeightKey`; the ghost renders the same text fully
-    /// expanded (`lineLimit(nil)`) and emits its height via `FullTextHeightKey`. Both keys
-    /// flow through `.onPreferenceChange` to local state, which recomputes `isTruncated`.
+    /// appears **only when the text actually overflows**. Truncation detection uses two
+    /// independent hidden ghost `Text` siblings stacked as `.background(...)` of the visible
+    /// text (so they share its width context): one always clamped to 2 lines, one always
+    /// unclamped. Their heights flow through `ClampedTextHeightKey` / `FullTextHeightKey`
+    /// preferences to local state, and `isTruncated` is a pure function of the two.
     ///
-    /// First-render path: `isTruncated` defaults to `false`, so the button stays hidden until
+    /// Why two ghosts (not one + the visible text): if the visible `Text` itself emits the
+    /// clamped height, expanding via `showFeedback` causes that height to grow to match the
+    /// full height, `isTruncated` flips to false, and the "Show less" button unmounts —
+    /// stranding the user in the expanded state. Decoupling both measurements from the
+    /// visible text keeps `isTruncated` stable across the toggle.
+    ///
+    /// First-render path: heights default to 0 → `isTruncated` is false → no button until
     /// measurement settles. On overflowing text the button fades in within the first layout
     /// pass — acceptable jitter for this surface (per tech spec risk note).
     private func filledBody(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) { // tighter than container's 10pt — toggle reads as part of body, not a separate row
+            // Two stacked hidden ghosts measure the 2-line and full intrinsic heights independently of the visible Text's state — see `isTruncated` for why.
             Text(text)
                 .font(.body)
                 .foregroundColor(.primary)
                 .lineLimit(showFeedback ? nil : 2)
-                // NOTE: deliberately NOT applying `.fixedSize(vertical: true)` here —
-                // doing so forces intrinsic height and overrides `lineLimit(2)`, which
-                // would render the full body even in the collapsed state. The expanded
-                // state already gets its full height from `lineLimit(nil)`.
+                .accessibilityLabel("Coach feedback: \(text)")
                 .background(
-                    // Capture the rendered (clamped or expanded) height of the visible text.
-                    GeometryReader { geo in
-                        Color.clear
-                            .preference(key: ClampedTextHeightKey.self, value: geo.size.height)
-                    }
+                    // Ghost A — always-clamped reference. Independent of `showFeedback`.
+                    Text(text)
+                        .font(.body)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .hidden()
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .preference(key: ClampedTextHeightKey.self, value: geo.size.height)
+                            }
+                        )
                 )
                 .background(
-                    // Hidden ghost copy of the same text in the same width context, rendered
-                    // fully expanded. Its intrinsic height is the "true" height of the body
-                    // and lets us decide whether the visible (clamped) height is truncating.
+                    // Ghost B — full intrinsic height reference. Also independent of `showFeedback`.
                     Text(text)
                         .font(.body)
                         .lineLimit(nil)
@@ -124,7 +141,6 @@ struct CoachFeedbackBlock: View {
                             }
                         )
                 )
-                .accessibilityLabel("Coach feedback: \(text)")
 
             // Toggle is gated on actual overflow — short feedback never gets a dead affordance.
             if isTruncated {
@@ -141,14 +157,8 @@ struct CoachFeedbackBlock: View {
                 .accessibilityLabel(showFeedback ? "Show less feedback" : "Show full feedback")
             }
         }
-        .onPreferenceChange(ClampedTextHeightKey.self) { newValue in
-            clampedHeight = newValue
-            isTruncated = fullHeight > clampedHeight + 0.5
-        }
-        .onPreferenceChange(FullTextHeightKey.self) { newValue in
-            fullHeight = newValue
-            isTruncated = fullHeight > clampedHeight + 0.5
-        }
+        .onPreferenceChange(ClampedTextHeightKey.self) { clampedHeight = $0 }
+        .onPreferenceChange(FullTextHeightKey.self)    { fullHeight    = $0 }
     }
 
     // MARK: - Loading body
@@ -165,7 +175,7 @@ struct CoachFeedbackBlock: View {
 /// `reduce` keeps the larger value because heights only ever grow as layout settles —
 /// e.g. width changes or font scaling can extend a clamped 2-line block to its final size.
 private struct ClampedTextHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
     }
@@ -174,7 +184,7 @@ private struct ClampedTextHeightKey: PreferenceKey {
 /// Carries the intrinsic height of the hidden ghost `Text` (rendered with `lineLimit(nil)`).
 /// `reduce` keeps the larger value for the same reason as `ClampedTextHeightKey`.
 private struct FullTextHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
     }

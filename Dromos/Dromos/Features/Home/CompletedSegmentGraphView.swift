@@ -84,107 +84,107 @@ struct CompletedSegmentGraphView: View {
 
         VStack(alignment: .leading, spacing: 8) {
 
-                // Graph area
-                GeometryReader { geometry in
-                    // Subtract HStack spacing from usable width for accurate bar fractions.
-                    let totalSpacing = CGFloat(max(0, validLaps.count - 1)) * 2
-                    let usableWidth = max(0, geometry.size.width - totalSpacing)
+            // Graph area
+            GeometryReader { geometry in
+                // Subtract HStack spacing from usable width for accurate bar fractions.
+                let totalSpacing = CGFloat(max(0, validLaps.count - 1)) * 2
+                let usableWidth = max(0, geometry.size.width - totalSpacing)
 
-                    // Precompute bar center x-positions in O(n) via a single forward scan.
-                    // X-axis is distance-based (divergence from WorkoutGraphView which uses duration).
-                    // The for-loop lives in a helper to avoid a @ViewBuilder control-flow conflict.
-                    let barCenterXs: [CGFloat] = barCenters(for: validLaps, totalDistance: totalDistance, usableWidth: usableWidth)
+                // Precompute bar center x-positions in O(n) via a single forward scan.
+                // X-axis is distance-based (divergence from WorkoutGraphView which uses duration).
+                // The for-loop lives in a helper to avoid a @ViewBuilder control-flow conflict.
+                let barCenterXs: [CGFloat] = barCenters(for: validLaps, totalDistance: totalDistance, usableWidth: usableWidth)
 
-                    HStack(spacing: 2) {
-                        ForEach(Array(validLaps.enumerated()), id: \.element.id) { idx, lap in
-                            let distanceFrac = (lap.distance ?? 0) / totalDistance
-                            let barWidth = max(distanceFrac * usableWidth, 2)
+                HStack(spacing: 2) {
+                    ForEach(Array(validLaps.enumerated()), id: \.element.id) { idx, lap in
+                        let distanceFrac = (lap.distance ?? 0) / totalDistance
+                        let barWidth = max(distanceFrac * usableWidth, 2)
 
-                            // Equal-value double-fallback: when all intensities are nil,
-                            // override to nil (→ green) and full height.
-                            let intensityForRender: Int? = isAllNil ? nil : intensities[idx]
-                            let heightFrac: CGFloat = isAllNil ? 1.0 : heightFractionFor(pct: intensities[idx])
-                            let barHeight = max(heightFrac * graphHeight, 4)
+                        // Equal-value double-fallback: when all intensities are nil,
+                        // override to nil (→ green) and full height.
+                        let intensityForRender: Int? = isAllNil ? nil : intensities[idx]
+                        let heightFrac: CGFloat = isAllNil ? 1.0 : heightFractionFor(pct: intensities[idx])
+                        let barHeight = max(heightFrac * graphHeight, 4)
 
-                            ZStack {
-                                // Bar fill
+                        ZStack {
+                            // Bar fill
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.intensity(for: intensityForRender, isRecovery: false))
+                                .frame(width: barWidth, height: barHeight)
+
+                            // Selected-bar outline (divergence from WorkoutGraphView)
+                            if idx == selectedLapIndex {
                                 RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.intensity(for: intensityForRender, isRecovery: false))
+                                    .stroke(Color.primary, lineWidth: 1.5)
                                     .frame(width: barWidth, height: barHeight)
-
-                                // Selected-bar outline (divergence from WorkoutGraphView)
-                                if idx == selectedLapIndex {
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .stroke(Color.primary, lineWidth: 1.5)
-                                        .frame(width: barWidth, height: barHeight)
-                                }
                             }
-                            .frame(width: barWidth, height: graphHeight, alignment: .bottom)
-                            // Dim all other bars when a selection is active
-                            .opacity(selectedLapIndex.map { $0 == idx ? 1.0 : 0.45 } ?? 1.0)
                         }
+                        .frame(width: barWidth, height: graphHeight, alignment: .bottom)
+                        // Dim all other bars when a selection is active
+                        .opacity(selectedLapIndex.map { $0 == idx ? 1.0 : 0.45 } ?? 1.0)
                     }
-                    .frame(height: graphHeight)
-                    // Drag gesture — mirrors WorkoutGraphView.swift pattern (lines 77-110).
-                    // Nearest-bar lookup uses precomputed barCenterXs (no O(n) in handler).
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                let x = value.location.x
-                                if let index = barCenterXs.indices.min(by: {
-                                    abs(barCenterXs[$0] - x) < abs(barCenterXs[$1] - x)
-                                }) {
-                                    withAnimation(.easeInOut(duration: 0.1)) {
-                                        tooltipXOffset = barCenterXs[index]
-                                        selectedLapIndex = index
-                                    }
-                                }
-                            }
-                            .onEnded { _ in
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    selectedLapIndex = nil
-                                    tooltipXOffset = 0
-                                }
-                            }
-                    )
-
-                    // Capture geometry width so the VStack-level overlay can clamp the tooltip.
-                    Color.clear
-                        .frame(width: 0, height: 0)
-                        .onAppear { graphWidth = geometry.size.width }
-                        .onChange(of: geometry.size.width) { _, newValue in graphWidth = newValue }
                 }
                 .frame(height: graphHeight)
-                // Floating tooltip overlay at VStack level — not clipped by graph frame.
-                // `.overlay(alignment: .topLeading)` so `.position(x:y:)` is relative to this view.
-                .overlay(alignment: .topLeading) {
-                    if let index = selectedLapIndex, index < validLaps.count {
-                        lapTooltipView(
-                            for: validLaps[index],
-                            lapNumber: index + 1,
-                            intensity: isAllNil ? nil : intensities[index]
-                        )
-                        .fixedSize()
-                        .allowsHitTesting(false)
-                        .transition(.opacity)
-                        // Center on the selected bar, clamp x to keep bubble inside graph bounds.
-                        // y: -60 places the bottom edge of the 4-line bubble (~80–100pt tall) ~10pt
-                        // above the chart top — avoids the overlap that y: -28 caused.
-                        .position(
-                            x: min(max(tooltipXOffset, tooltipHalfWidth), graphWidth - tooltipHalfWidth),
-                            y: -60
-                        )
-                    }
-                }
-                .onDisappear {
-                    selectedLapIndex = nil
-                    tooltipXOffset = 0
-                }
+                // Drag gesture — mirrors WorkoutGraphView.swift pattern (lines 77-110).
+                // Nearest-bar lookup uses precomputed barCenterXs (no O(n) in handler).
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            let x = value.location.x
+                            if let index = barCenterXs.indices.min(by: {
+                                abs(barCenterXs[$0] - x) < abs(barCenterXs[$1] - x)
+                            }) {
+                                withAnimation(.easeInOut(duration: 0.1)) {
+                                    tooltipXOffset = barCenterXs[index]
+                                    selectedLapIndex = index
+                                }
+                            }
+                        }
+                        .onEnded { _ in
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                selectedLapIndex = nil
+                                tooltipXOffset = 0
+                            }
+                        }
+                )
 
-                // X-axis distance labels: 0%, 25%, 50%, 75%, 100% of total distance.
-                // Uses formatDistance (km) per spec — not compact.
-                distanceAxisView(totalDistance: totalDistance)
+                // Capture geometry width so the VStack-level overlay can clamp the tooltip.
+                Color.clear
+                    .frame(width: 0, height: 0)
+                    .onAppear { graphWidth = geometry.size.width }
+                    .onChange(of: geometry.size.width) { _, newValue in graphWidth = newValue }
             }
+            .frame(height: graphHeight)
+            // Floating tooltip overlay at VStack level — not clipped by graph frame.
+            // `.overlay(alignment: .topLeading)` so `.position(x:y:)` is relative to this view.
+            .overlay(alignment: .topLeading) {
+                if let index = selectedLapIndex, index < validLaps.count {
+                    lapTooltipView(
+                        for: validLaps[index],
+                        lapNumber: index + 1,
+                        intensity: isAllNil ? nil : intensities[index]
+                    )
+                    .fixedSize()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+                    // Center on the selected bar, clamp x to keep bubble inside graph bounds.
+                    // y: -60 places the bottom edge of the 4-line bubble (~80–100pt tall) ~10pt
+                    // above the chart top — avoids the overlap that y: -28 caused.
+                    .position(
+                        x: min(max(tooltipXOffset, tooltipHalfWidth), graphWidth - tooltipHalfWidth),
+                        y: -60
+                    )
+                }
+            }
+            .onDisappear {
+                selectedLapIndex = nil
+                tooltipXOffset = 0
+            }
+
+            // X-axis distance labels: 0%, 25%, 50%, 75%, 100% of total distance.
+            // Uses formatDistance (km) per spec — not compact.
+            distanceAxisView(totalDistance: totalDistance)
+        }
         } // end if validLaps.count >= 2
     }
 
