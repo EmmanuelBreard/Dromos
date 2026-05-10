@@ -159,6 +159,10 @@ struct CoachFeedbackBlock: View {
         }
         .onPreferenceChange(ClampedTextHeightKey.self) { clampedHeight = $0 }
         .onPreferenceChange(FullTextHeightKey.self)    { fullHeight    = $0 }
+        // Animate the toggle's appearance/disappearance when the async ghost-text
+        // measurement settles, so it rides the parent's day-swipe transition instead
+        // of popping in after the card finishes sliding (DRO-279 QA follow-up).
+        .animation(.easeInOut(duration: 0.2), value: isTruncated)
     }
 
     // MARK: - Loading body
