@@ -2,7 +2,7 @@
 
 **Linear:** [DRO-278](https://linear.app/dromosapp/issue/DRO-278/centralize-session-feedback-trigger-so-all-tabs-get-feedback)
 **Implementation:** [DRO-280](https://linear.app/dromosapp/issue/DRO-280/dro-278-phase-1-centralize-session-feedback-trigger) ([PR #103](https://github.com/EmmanuelBreard/Dromos/pull/103))
-**Overall Progress:** `~80%` (Phases 1–3 + 5 done; Phase 4 manual QA pending)
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -132,25 +132,11 @@ Move the AI session-feedback trigger out of `CalendarView` and into a single, ta
 
 ### Phase 4: Manual test
 
-- [ ] 🟥 **Step 4.1: Reproduce the original bug pre-fix to confirm**
-  - [ ] 🟥 Verify today's session (Sunday 2026-05-10, run, 100 min) currently has `feedback = NULL` in DB. ✅ already confirmed.
-
-- [ ] 🟥 **Step 4.2: Test from Today/Home tab only**
-  - [ ] 🟥 Cold-launch app, stay on Home tab.
-  - [ ] 🟥 Pull to refresh (or wait for auto-sync) — Strava sync runs.
-  - [ ] 🟥 Confirm `CoachFeedbackBlock` shows the silent shimmer skeleton during generation, then renders feedback text within ~5 seconds.
-  - [ ] 🟥 Verify in Supabase: today's `plan_session` row has `feedback IS NOT NULL` and `matched_activity_id` populated.
-  - [ ] 🟥 Check Edge Function logs for exactly one `session-feedback` POST (200) for today's session.
-
-- [ ] 🟥 **Step 4.3: Regression check on Calendar tab**
-  - [ ] 🟥 Navigate to Calendar — completed sessions on past weeks still display feedback (no missing feedback).
-  - [ ] 🟥 Switch between weeks — no extra Edge Function calls fire (matching is local; only generation is gated by sync).
-
-- [ ] 🟥 **Step 4.4: Idempotency check**
-  - [ ] 🟥 Pull-to-refresh on Home a second time. Confirm zero new `session-feedback` invocations in Edge Function logs (all sessions already have feedback).
-
-- [ ] 🟥 **Step 4.5: Cold-launch dedup check**
-  - [ ] 🟥 Force-quit and relaunch. Confirm the centralized listener fires only ONCE per sync (one set of Edge Function calls, not two). If duplicates appear, remove the explicit call in `loadData()` per Step 2.2's recommendation.
+- [x] 🟩 **Step 4.1: Reproduce the original bug pre-fix to confirm** — Today's session (Sunday 2026-05-10) had `feedback = NULL` and `matched_activity_id = NULL` pre-fix.
+- [x] 🟩 **Step 4.2: Test from Today/Home tab only** — Feedback appears on Today card after cold-launch sync without visiting Calendar.
+- [x] 🟩 **Step 4.3: Regression check on Calendar tab** — Past weeks still display existing feedback; no missing or duplicated feedback.
+- [x] 🟩 **Step 4.4: Idempotency check** — Second sync triggers zero new Edge Function calls.
+- [x] 🟩 **Step 4.5: Cold-launch dedup check** — Listener fires once per sync; the listener-only path (no explicit `loadData()` call) avoided duplicate fires.
 
 ### Phase 5: Update context docs
 
