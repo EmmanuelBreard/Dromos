@@ -1,7 +1,8 @@
 # DRO-278: Centralize Session-Feedback Trigger
 
 **Linear:** [DRO-278](https://linear.app/dromosapp/issue/DRO-278/centralize-session-feedback-trigger-so-all-tabs-get-feedback)
-**Overall Progress:** `0%`
+**Implementation:** [DRO-280](https://linear.app/dromosapp/issue/DRO-280/dro-278-phase-1-centralize-session-feedback-trigger) ([PR #103](https://github.com/EmmanuelBreard/Dromos/pull/103))
+**Overall Progress:** `~80%` (Phases 1–3 + 5 done; Phase 4 manual QA pending)
 
 ## TLDR
 
@@ -34,8 +35,8 @@ Move the AI session-feedback trigger out of `CalendarView` and into a single, ta
 
 ### Phase 1: Centralize logic in `PlanService`
 
-- [ ] 🟥 **Step 1.1: Add `generatePendingFeedback` to `PlanService`**
-  - [ ] 🟥 In [`Dromos/Dromos/Core/Services/PlanService.swift`](Dromos/Dromos/Core/Services/PlanService.swift) (after `refreshPlan`, around line 311), add:
+- [x] 🟩 **Step 1.1: Add `generatePendingFeedback` to `PlanService`**
+  - [x] 🟩 In [`Dromos/Dromos/Core/Services/PlanService.swift`](Dromos/Dromos/Core/Services/PlanService.swift) (after `refreshPlan`, around line 311), add:
     ```swift
     /// Generates AI coach feedback for every completed session in the plan that
     /// currently has `feedback == nil`. Idempotent — sessions with feedback are
@@ -91,12 +92,12 @@ Move the AI session-feedback trigger out of `CalendarView` and into a single, ta
         }
     }
     ```
-  - [ ] 🟥 Verify the file imports / type references compile (`SessionMatcher`, `Weekday`, `StravaService`, `ProfileService` are all already in scope via `Core/Models` and `Core/Services`).
+  - [x] 🟩 Verify the file imports / type references compile (`SessionMatcher`, `Weekday`, `StravaService`, `ProfileService` are all already in scope via `Core/Models` and `Core/Services`).
 
 ### Phase 2: Wire the trigger in `MainTabView`
 
-- [ ] 🟥 **Step 2.1: Add post-sync `.onChange` listener**
-  - [ ] 🟥 In [`Dromos/Dromos/App/MainTabView.swift`](Dromos/Dromos/App/MainTabView.swift), add a new `.onChange` modifier alongside the existing `.onChange(of: scenePhase)` (after line 112):
+- [x] 🟩 **Step 2.1: Add post-sync `.onChange` listener**
+  - [x] 🟩 In [`Dromos/Dromos/App/MainTabView.swift`](Dromos/Dromos/App/MainTabView.swift), add a new `.onChange` modifier alongside the existing `.onChange(of: scenePhase)` (after line 112):
     ```swift
     .onChange(of: stravaService.isSyncing) { oldValue, newValue in
         // Centralized feedback trigger — fires on every sync completion regardless
@@ -112,32 +113,22 @@ Move the AI session-feedback trigger out of `CalendarView` and into a single, ta
     }
     ```
 
-- [ ] 🟥 **Step 2.2: Backfill on cold launch**
-  - [ ] 🟥 In `loadData()` (around line 130, after `stravaService.syncActivities()`), append:
-    ```swift
-    if profileService.user?.isStravaConnected == true {
-        await stravaService.syncActivities()
-        await planService.generatePendingFeedback(
-            stravaService: stravaService,
-            profileService: profileService
-        )
-    }
-    ```
-  - [ ] 🟥 Note: the `.onChange(isSyncing)` listener will also fire when `syncActivities()` flips `isSyncing` back to false — that's a duplicate fire on cold launch. Keep one path and remove the other. **Recommendation:** rely on `.onChange(isSyncing)` only (delete the explicit call from `loadData()`). The listener already covers cold-launch syncs because `isSyncing` flips during `loadData`. Verify by adding a `print` during manual test.
+- [x] 🟩 **Step 2.2: Cold-launch coverage**
+  - [x] 🟩 Confirmed the `.onChange(isSyncing)` listener already covers cold launch — `isSyncing` flips during `loadData`'s `await stravaService.syncActivities()`. **No explicit call added to `loadData()`** to avoid duplicating the cold-launch fire.
 
 ### Phase 3: Remove duplicated logic from `CalendarView`
 
-- [ ] 🟥 **Step 3.1: Remove the three `generatePendingFeedback` call sites**
-  - [ ] 🟥 In [`Dromos/Dromos/Features/Calendar/CalendarView.swift`](Dromos/Dromos/Features/Calendar/CalendarView.swift):
+- [x] 🟩 **Step 3.1: Remove the three `generatePendingFeedback` call sites**
+  - [x] 🟩 In [`Dromos/Dromos/Features/Calendar/CalendarView.swift`](Dromos/Dromos/Features/Calendar/CalendarView.swift):
     - Line 165 (inside `.onChange(of: currentWeekIndex)`): remove `await generatePendingFeedback(plan: plan, weekIndex: newIdx)`.
     - Line 181 (inside `.onChange(of: calendarReset)` same-week branch): remove `await generatePendingFeedback(plan: plan, weekIndex: target)`.
     - Line 199 (inside `.onChange(of: stravaService.isSyncing)`): remove `await generatePendingFeedback(plan: plan, weekIndex: currentWeekIndex)`.
 
-- [ ] 🟥 **Step 3.2: Delete the helper**
-  - [ ] 🟥 Remove the entire `generatePendingFeedback(plan:weekIndex:)` method (lines 483-512) including its `// MARK: - Session Feedback` comment block.
+- [x] 🟩 **Step 3.2: Delete the helper**
+  - [x] 🟩 Remove the entire `generatePendingFeedback(plan:weekIndex:)` method (lines 483-512) including its `// MARK: - Session Feedback` comment block.
 
-- [ ] 🟥 **Step 3.3: Verify CalendarView still compiles + matches**
-  - [ ] 🟥 `loadIfNeeded(weekIndex:plan:)` and `completionCacheByWeek` remain — they drive the green/red border UI and are independent of the feedback trigger.
+- [x] 🟩 **Step 3.3: Verify CalendarView still compiles + matches**
+  - [x] 🟩 `loadIfNeeded(weekIndex:plan:)` and `completionCacheByWeek` remain — they drive the green/red border UI and are independent of the feedback trigger.
 
 ### Phase 4: Manual test
 
@@ -163,10 +154,10 @@ Move the AI session-feedback trigger out of `CalendarView` and into a single, ta
 
 ### Phase 5: Update context docs
 
-- [ ] 🟥 **Step 5.1: Update `architecture.md`**
-  - [ ] 🟥 In the `MainTabView.swift` line of the folder structure (around line 12), append: `+ centralized session-feedback trigger via .onChange(stravaService.isSyncing) (DRO-278)`.
-  - [ ] 🟥 In the `CalendarView.swift` line (around line 64), remove any mention of feedback generation responsibility.
-  - [ ] 🟥 In the `Service Layer Pattern` section, add a one-line note: "PlanService also owns post-sync coach-feedback generation across all plan weeks (`generatePendingFeedback` — DRO-278)."
+- [x] 🟩 **Step 5.1: Update `architecture.md`**
+  - [x] 🟩 In the `MainTabView.swift` line of the folder structure (around line 12), append: `+ centralized session-feedback trigger via .onChange(stravaService.isSyncing) (DRO-278)`.
+  - [x] 🟩 In the `CalendarView.swift` line (around line 64), remove any mention of feedback generation responsibility.
+  - [x] 🟩 In the `Service Layer Pattern` section, add a one-line note: "PlanService also owns post-sync coach-feedback generation across all plan weeks (`generatePendingFeedback` — DRO-278)."
 
 ## Rollback Plan
 

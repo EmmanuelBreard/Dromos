@@ -31,6 +31,10 @@ final class PlanService: ObservableObject {
     /// Whether a session move is in flight (prevents concurrent move races).
     @Published private(set) var isMovingSession: Bool = false
 
+    /// True while `generatePendingFeedback` is in flight. Guards against concurrent
+    /// runs when multiple sync completions overlap (DRO-278).
+    @Published private(set) var isGeneratingFeedback: Bool = false
+
     // MARK: - Private Properties
 
     private let client = SupabaseClientProvider.client
@@ -325,6 +329,81 @@ final class PlanService: ObservableObject {
         } catch {
             // Silent failure — don't set errorMessage for background refreshes
             print("Background plan refresh failed: \(error)")
+        }
+    }
+
+    /// Generates AI coach feedback for every completed session in the plan that
+    /// currently has `feedback == nil`. Idempotent — sessions with feedback are
+    /// skipped (Edge Function double-checks). Calls fire sequentially to avoid
+    /// OpenAI rate limits. After the loop, the plan is refreshed once so the UI
+    /// reflects the new feedback values.
+    ///
+    /// No-op when Strava is not connected, the plan is not loaded, the plan has
+    /// no sessions missing feedback, or another generation pass is already in flight.
+    ///
+    /// Intentionally crosses the service-layer boundary (takes both `StravaService`
+    /// and `ProfileService` as parameters) because feedback orchestration spans
+    /// plan + activity + profile state; no other service is the natural home.
+    func generatePendingFeedback(
+        stravaService: StravaService,
+        profileService: ProfileService
+    ) async {
+        guard profileService.user?.isStravaConnected == true else { return }
+        guard let plan = trainingPlan else { return }
+        guard !isGeneratingFeedback else { return }
+        isGeneratingFeedback = true
+        defer { isGeneratingFeedback = false }
+
+        let hasPending = plan.planWeeks.contains { week in
+            week.planSessions.contains { $0.feedback == nil }
+        }
+        guard hasPending else { return }
+
+        // Build (session, date) tuples across the entire plan.
+        let sessionsWithDates: [(session: PlanSession, date: Date)] = plan.planWeeks
+            .flatMap { week -> [(session: PlanSession, date: Date)] in
+                guard let weekStart = week.startDateAsDate else { return [] }
+                return week.planSessions.compactMap { session in
+                    guard let weekday = Weekday(fullName: session.day) else { return nil }
+                    return (session, weekday.date(relativeTo: weekStart))
+                }
+            }
+
+        // Pad fetch range ±1 day to handle UTC ↔ local timezone boundaries (Strava start_date is UTC; matcher uses start_date_local).
+        let dates = sessionsWithDates.map(\.date)
+        guard let minDate = dates.min(), let maxDate = dates.max() else { return }
+        let startDate = Calendar.current.date(byAdding: .day, value: -1, to: minDate) ?? minDate
+        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: maxDate) ?? maxDate
+
+        let activities = await stravaService.fetchActivities(from: startDate, to: endDate)
+        let statuses = SessionMatcher.match(sessions: sessionsWithDates, activities: activities)
+
+        // Build a sessionId → (session, date) lookup once so we can sort + skip the
+        // linear scan inside the loop.
+        let sessionsById: [UUID: (session: PlanSession, date: Date)] = Dictionary(
+            sessionsWithDates.map { ($0.session.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        // Most-recent-first so newly completed sessions get feedback before older backfill.
+        let pending: [(sessionId: UUID, activityId: UUID, date: Date)] = statuses.compactMap { (sessionId, status) in
+            guard case .completed(let activity) = status else { return nil }
+            guard let pair = sessionsById[sessionId], pair.session.feedback == nil else { return nil }
+            return (sessionId, activity.id, pair.date)
+        }
+        .sorted { $0.date > $1.date }
+
+        var didGenerate = false
+        for item in pending {
+            let feedback = await stravaService.generateSessionFeedback(
+                sessionId: item.sessionId,
+                activityId: item.activityId
+            )
+            if feedback != nil { didGenerate = true }
+        }
+
+        if didGenerate {
+            await refreshPlan(userId: plan.userId)
         }
     }
 
