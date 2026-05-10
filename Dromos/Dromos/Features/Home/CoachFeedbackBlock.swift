@@ -29,6 +29,28 @@ struct CoachFeedbackBlock: View {
     /// know about Strava state.
     let isLoading: Bool
 
+    /// Whether the feedback body is expanded beyond its 2-line clamp. Local state — resets
+    /// on day swipe / card re-render, matching the calendar's `SessionCardView` toggle.
+    @State private var showFeedback: Bool = false
+
+    /// Always-clamped (2-line) reference height — captured from a hidden ghost `Text` that
+    /// is *independent* of the visible text's expansion state. This is the height a 2-line
+    /// clamp of `text` would render at in the current width context.
+    @State private var clampedHeight: CGFloat = 0
+
+    /// Always-unclamped (full intrinsic) reference height — captured from a separate hidden
+    /// ghost `Text` rendered with `lineLimit(nil)`. Independent of `showFeedback` so it does
+    /// not flip back and forth when the user toggles the visible text's expansion.
+    @State private var fullHeight: CGFloat = 0
+
+    /// True iff the body would actually overflow 2 lines.
+    /// `+0.5` epsilon avoids float jitter producing a false positive on exactly-2-line text
+    /// (sub-pixel layout deltas can otherwise tip an "exactly-fits" body into "overflows").
+    // Stable across showFeedback transitions because both heights derive from independent ghosts, not the visible Text.
+    private var isTruncated: Bool {
+        fullHeight > clampedHeight + 0.5
+    }
+
     var body: some View {
         if let feedback = feedback {
             container { filledBody(feedback) }
@@ -63,12 +85,80 @@ struct CoachFeedbackBlock: View {
 
     // MARK: - Filled body
 
+    /// Renders the feedback body with a 2-line clamp + a Show more / Show less toggle that
+    /// appears **only when the text actually overflows**. Truncation detection uses two
+    /// independent hidden ghost `Text` siblings stacked as `.background(...)` of the visible
+    /// text (so they share its width context): one always clamped to 2 lines, one always
+    /// unclamped. Their heights flow through `ClampedTextHeightKey` / `FullTextHeightKey`
+    /// preferences to local state, and `isTruncated` is a pure function of the two.
+    ///
+    /// Why two ghosts (not one + the visible text): if the visible `Text` itself emits the
+    /// clamped height, expanding via `showFeedback` causes that height to grow to match the
+    /// full height, `isTruncated` flips to false, and the "Show less" button unmounts —
+    /// stranding the user in the expanded state. Decoupling both measurements from the
+    /// visible text keeps `isTruncated` stable across the toggle.
+    ///
+    /// First-render path: heights default to 0 → `isTruncated` is false → no button until
+    /// measurement settles. On overflowing text the button fades in within the first layout
+    /// pass — acceptable jitter for this surface (per tech spec risk note).
     private func filledBody(_ text: String) -> some View {
-        Text(text)
-            .font(.body)
-            .foregroundColor(.primary)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityLabel("Coach feedback: \(text)")
+        VStack(alignment: .leading, spacing: 6) { // tighter than container's 10pt — toggle reads as part of body, not a separate row
+            // Two stacked hidden ghosts measure the 2-line and full intrinsic heights independently of the visible Text's state — see `isTruncated` for why.
+            Text(text)
+                .font(.body)
+                .foregroundColor(.primary)
+                .lineLimit(showFeedback ? nil : 2)
+                .accessibilityLabel("Coach feedback: \(text)")
+                .background(
+                    // Ghost A — always-clamped reference. Independent of `showFeedback`.
+                    Text(text)
+                        .font(.body)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .hidden()
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .preference(key: ClampedTextHeightKey.self, value: geo.size.height)
+                            }
+                        )
+                )
+                .background(
+                    // Ghost B — full intrinsic height reference. Also independent of `showFeedback`.
+                    Text(text)
+                        .font(.body)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .hidden()
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .preference(key: FullTextHeightKey.self, value: geo.size.height)
+                            }
+                        )
+                )
+
+            // Toggle is gated on actual overflow — short feedback never gets a dead affordance.
+            if isTruncated {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showFeedback.toggle()
+                    }
+                } label: {
+                    Text(showFeedback ? "Show less" : "Show more")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(showFeedback ? "Show less feedback" : "Show full feedback")
+            }
+        }
+        .onPreferenceChange(ClampedTextHeightKey.self) { clampedHeight = $0 }
+        .onPreferenceChange(FullTextHeightKey.self)    { fullHeight    = $0 }
     }
 
     // MARK: - Loading body
@@ -76,6 +166,27 @@ struct CoachFeedbackBlock: View {
     private var loadingBody: some View {
         SkeletonStack()
             .accessibilityLabel("Coach feedback loading")
+    }
+}
+
+// MARK: - Preference keys (truncation detection)
+
+/// Carries the rendered height of the visible (clamped) feedback `Text`.
+/// `reduce` keeps the larger value because heights only ever grow as layout settles —
+/// e.g. width changes or font scaling can extend a clamped 2-line block to its final size.
+private struct ClampedTextHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// Carries the intrinsic height of the hidden ghost `Text` (rendered with `lineLimit(nil)`).
+/// `reduce` keeps the larger value for the same reason as `ClampedTextHeightKey`.
+private struct FullTextHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -186,9 +297,17 @@ private struct SkeletonBar: View {
     ScrollView {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Filled").font(.caption).foregroundColor(.secondary)
+                Text("Filled — long (truncated, Show more visible)").font(.caption).foregroundColor(.secondary)
                 CoachFeedbackBlock(
                     feedback: "Solid VO2 effort — your final two intervals held the same pace as the first, which is the hard part. Recovery jogs stayed honest. Tomorrow: easy spin only.",
+                    isLoading: false
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Filled — short (no Show more button)").font(.caption).foregroundColor(.secondary)
+                CoachFeedbackBlock(
+                    feedback: "Nice easy spin. Recovery on point.",
                     isLoading: false
                 )
             }
