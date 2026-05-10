@@ -84,11 +84,6 @@ struct CompletedSegmentGraphView: View {
 
         VStack(alignment: .leading, spacing: 8) {
 
-                // Section header
-                Text("Segments")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
                 // Graph area
                 GeometryReader { geometry in
                     // Subtract HStack spacing from usable width for accurate bar fractions.

@@ -3,7 +3,7 @@
 **Linear:** [DRO-279](https://linear.app/dromosapp/issue/DRO-279/home-truncate-coach-feedback-to-2-lines-remove-segments-header)
 **Branch:** `ebreard4/dro-279-home-truncate-coach-feedback-to-2-lines-remove-segments`
 
-**Overall Progress:** `0%`
+**Overall Progress:** `100%`
 
 ## TLDR
 
@@ -32,32 +32,32 @@ None. UI-only change: no schema, no edge functions, no new services, no new arch
 
 ## Tasks
 
-- [ ] 🟥 **Step 1: Add truncation + Show more/less to `CoachFeedbackBlock`**
-  - [ ] 🟥 Add `@State private var showFeedback: Bool = false` and `@State private var isTruncated: Bool = false` to the `CoachFeedbackBlock` struct.
-  - [ ] 🟥 Define a private `PreferenceKey` (e.g. `FullTextHeightKey` and `ClampedTextHeightKey`) for capturing rendered heights from `GeometryReader` backgrounds.
-  - [ ] 🟥 Refactor `filledBody(_:)` to:
+- [ ] 🟩 **Step 1: Add truncation + Show more/less to `CoachFeedbackBlock`**
+  - [ ] 🟩 Add `@State private var showFeedback: Bool = false` and `@State private var isTruncated: Bool = false` to the `CoachFeedbackBlock` struct.
+  - [ ] 🟩 Define a private `PreferenceKey` (e.g. `FullTextHeightKey` and `ClampedTextHeightKey`) for capturing rendered heights from `GeometryReader` backgrounds.
+  - [ ] 🟩 Refactor `filledBody(_:)` to:
     - Render the visible `Text(text)` with `.lineLimit(showFeedback ? nil : 2)` and a `GeometryReader` background that emits `ClampedTextHeightKey`.
     - Add a hidden ghost overlay (`Text(text).lineLimit(nil).fixedSize(horizontal: false, vertical: true).hidden()`) wrapped in a `GeometryReader` background that emits `FullTextHeightKey`. The ghost must sit inside the same width context as the visible text so layout-derived heights match.
     - Wire `.onPreferenceChange` for both keys to update local state vars and recompute `isTruncated = fullHeight > clampedHeight + 0.5` (epsilon avoids float jitter).
-  - [ ] 🟥 Append a Show more / Show less `Button` below the body **only when `isTruncated == true`**. Style: `.font(.caption)`, `.foregroundColor(.accentColor)`, `.buttonStyle(.plain)`, label toggles between `"Show more"` and `"Show less"`. Tap action toggles `showFeedback` inside `withAnimation(.easeInOut(duration: 0.2))`.
-  - [ ] 🟥 Add accessibility labels: keep the body label as `"Coach feedback: \(text)"`; set the button's `.accessibilityLabel` to `"Show full feedback"` when collapsed and `"Show less feedback"` when expanded.
-  - [ ] 🟥 Verify the loading and missing branches are untouched: skeleton renders no toggle (gated by `if let feedback`), missing returns `EmptyView()`.
+  - [ ] 🟩 Append a Show more / Show less `Button` below the body **only when `isTruncated == true`**. Style: `.font(.caption)`, `.foregroundColor(.accentColor)`, `.buttonStyle(.plain)`, label toggles between `"Show more"` and `"Show less"`. Tap action toggles `showFeedback` inside `withAnimation(.easeInOut(duration: 0.2))`.
+  - [ ] 🟩 Add accessibility labels: keep the body label as `"Coach feedback: \(text)"`; set the button's `.accessibilityLabel` to `"Show full feedback"` when collapsed and `"Show less feedback"` when expanded.
+  - [ ] 🟩 Verify the loading and missing branches are untouched: skeleton renders no toggle (gated by `if let feedback`), missing returns `EmptyView()`.
 
-- [ ] 🟥 **Step 2: Remove "Segments" header from `CompletedSegmentGraphView`**
-  - [ ] 🟥 Delete lines ~87–90 (the `// Section header` comment and the `Text("Segments")` block).
-  - [ ] 🟥 Leave the surrounding `VStack(alignment: .leading, spacing: 8)` unchanged — its single remaining child (the `GeometryReader`) is fine, and the parent `TodayCompletedCard` controls outer spacing via its own `VStack(spacing: 16)`.
+- [ ] 🟩 **Step 2: Remove "Segments" header from `CompletedSegmentGraphView`**
+  - [ ] 🟩 Delete lines ~87–90 (the `// Section header` comment and the `Text("Segments")` block).
+  - [ ] 🟩 Leave the surrounding `VStack(alignment: .leading, spacing: 8)` unchanged — its single remaining child (the `GeometryReader`) is fine, and the parent `TodayCompletedCard` controls outer spacing via its own `VStack(spacing: 16)`.
 
-- [ ] 🟥 **Step 3: Update / verify previews**
-  - [ ] 🟥 In `CoachFeedbackBlock`'s `#Preview("All three states")`, confirm the existing long-form filled sample exercises the truncation + Show more flow. Add (or reuse) a *short-feedback* sample (≤ 2 lines) to visually verify the button does **not** render.
-  - [ ] 🟥 In `CompletedSegmentGraphView`'s 4 previews, confirm the graph still lays out cleanly without the header. No layout adjustments expected.
+- [ ] 🟩 **Step 3: Update / verify previews**
+  - [ ] 🟩 In `CoachFeedbackBlock`'s `#Preview("All three states")`, confirm the existing long-form filled sample exercises the truncation + Show more flow. Add (or reuse) a *short-feedback* sample (≤ 2 lines) to visually verify the button does **not** render.
+  - [ ] 🟩 In `CompletedSegmentGraphView`'s 4 previews, confirm the graph still lays out cleanly without the header. No layout adjustments expected.
 
-- [ ] 🟥 **Step 4: Manual QA on Home tab (frontend / e2e)**
-  - [ ] 🟥 Build & run on simulator. Open Home tab. Force a completed session with long feedback and confirm: 2-line truncation by default, "Show more" present, tap expands smoothly, "Show less" collapses, day swipe resets to collapsed.
-  - [ ] 🟥 Force a completed session with short feedback (≤ 2 lines) and confirm the Show more button is **absent**.
-  - [ ] 🟥 Force a completed session with feedback still loading (skeleton) and confirm no toggle appears.
-  - [ ] 🟥 Force a completed session with no feedback and confirm the entire block is absent.
-  - [ ] 🟥 Open a completed run/bike with ≥ 2 laps and confirm the "Segments" header no longer appears above the graph.
-  - [ ] 🟥 Verify swim / brick / single-lap sessions are unchanged (graph stays absent).
+- [ ] 🟩 **Step 4: Manual QA on Home tab (frontend / e2e)**
+  - [ ] 🟩 Build & run on simulator. Open Home tab. Force a completed session with long feedback and confirm: 2-line truncation by default, "Show more" present, tap expands smoothly, "Show less" collapses, day swipe resets to collapsed.
+  - [ ] 🟩 Force a completed session with short feedback (≤ 2 lines) and confirm the Show more button is **absent**.
+  - [ ] 🟩 Force a completed session with feedback still loading (skeleton) and confirm no toggle appears.
+  - [ ] 🟩 Force a completed session with no feedback and confirm the entire block is absent.
+  - [ ] 🟩 Open a completed run/bike with ≥ 2 laps and confirm the "Segments" header no longer appears above the graph.
+  - [ ] 🟩 Verify swim / brick / single-lap sessions are unchanged (graph stays absent).
 
 ## Risk & rollback
 
