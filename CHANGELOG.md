@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+- **Coach feedback now appears on the Today tab** — Previously, AI coach feedback only generated when you opened the Calendar tab after a Strava sync. If your day's run synced but you stayed on the Today tab, the segments graph showed but the feedback block stayed empty. The trigger has been centralized so every Strava sync — from any tab, foreground resume, or pull-to-refresh — generates feedback for any completed session in the plan that lacks it. Idempotent (won't regenerate existing feedback) and re-entrancy-guarded so overlapping syncs can't double-charge OpenAI (DRO-278).
+
 ### Added
 - **Segments graph on completed-session cards** — Below the metrics row on every completed session, a new horizontal bar chart shows what actually happened in the activity, lap by lap. One bar per Strava lap; bar **width** flexes by the lap's share of total distance; bar **height** encodes effort intensity using the same color gradient as the planned-workout view (green → yellow → orange → red). Touch-and-hold on any bar to inspect that segment — the tooltip shows lap number, primary metric (run pace / bike speed / swim pace per 100m), duration, distance, and average HR. Sliding your finger across the chart updates the tooltip live. Bars dim and the selected one highlights. Bar height normalizes to your VMA / FTP / CSS when those are set; falls back to session-relative scaling when they aren't. Hidden for brick sessions, single-lap activities, and activities with no lap data (DRO-223).
 
