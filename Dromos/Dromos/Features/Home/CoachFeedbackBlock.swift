@@ -41,7 +41,24 @@ struct CoachFeedbackBlock: View {
     /// Always-unclamped (full intrinsic) reference height — captured from a separate hidden
     /// ghost `Text` rendered with `lineLimit(nil)`. Independent of `showFeedback` so it does
     /// not flip back and forth when the user toggles the visible text's expansion.
-    @State private var fullHeight: CGFloat = 0
+    ///
+    /// Initial value is seeded from a `text.count > 120` heuristic in `init` so the toggle is
+    /// present from frame 1 for long feedback (rides the parent's day-swipe slide). Real value
+    /// settles via `FullTextHeightKey` on the first layout pass.
+    @State private var fullHeight: CGFloat
+
+    init(feedback: String?, isLoading: Bool) {
+        self.feedback = feedback
+        self.isLoading = isLoading
+        // Heuristic seed so the toggle is rendered from frame 1 of the parent's
+        // horizontal-slide transition for long feedback. Without this seed, the
+        // button is absent during the day-swipe slide and pops in after — measurement
+        // settles asynchronously after the new card's first layout. 120 chars is the
+        // typical 2-line capacity at .body font on iPhone widths; long feedback
+        // safely overflows. After measurement settles, real heights replace the seed.
+        let seedsTruncated = (feedback?.count ?? 0) > 120
+        self._fullHeight = State(initialValue: seedsTruncated ? 10_000 : 0)
+    }
 
     /// True iff the body would actually overflow 2 lines.
     /// `+0.5` epsilon avoids float jitter producing a false positive on exactly-2-line text
@@ -143,6 +160,8 @@ struct CoachFeedbackBlock: View {
                 )
 
             // Toggle is gated on actual overflow — short feedback never gets a dead affordance.
+            // `isTruncated` is seeded by a length heuristic in `init` so the button is present
+            // from frame 1 on day-swipe (rides the parent's slide instead of popping in late).
             if isTruncated {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -155,6 +174,7 @@ struct CoachFeedbackBlock: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(showFeedback ? "Show less feedback" : "Show full feedback")
+                .transition(.opacity)  // smooth fade when isTruncated flips post-measurement
             }
         }
         .onPreferenceChange(ClampedTextHeightKey.self) { clampedHeight = $0 }
