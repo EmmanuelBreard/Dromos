@@ -381,7 +381,8 @@ final class PlanService: ObservableObject {
         // Build a sessionId → (session, date) lookup once so we can sort + skip the
         // linear scan inside the loop.
         let sessionsById: [UUID: (session: PlanSession, date: Date)] = Dictionary(
-            uniqueKeysWithValues: sessionsWithDates.map { ($0.session.id, $0) }
+            sessionsWithDates.map { ($0.session.id, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
 
         // Most-recent-first so newly completed sessions get feedback before older backfill.

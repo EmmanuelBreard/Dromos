@@ -1,6 +1,7 @@
 # DRO-278: Centralize Session-Feedback Trigger
 
 **Linear:** [DRO-278](https://linear.app/dromosapp/issue/DRO-278/centralize-session-feedback-trigger-so-all-tabs-get-feedback)
+**Implementation:** [DRO-280](https://linear.app/dromosapp/issue/DRO-280/dro-278-phase-1-centralize-session-feedback-trigger) ([PR #103](https://github.com/EmmanuelBreard/Dromos/pull/103))
 **Overall Progress:** `~80%` (Phases 1–3 + 5 done; Phase 4 manual QA pending)
 
 ## TLDR
