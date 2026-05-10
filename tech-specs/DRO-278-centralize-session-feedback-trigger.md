@@ -112,18 +112,8 @@ Move the AI session-feedback trigger out of `CalendarView` and into a single, ta
     }
     ```
 
-- [x] 🟩 **Step 2.2: Backfill on cold launch**
-  - [x] 🟩 In `loadData()` (around line 130, after `stravaService.syncActivities()`), append:
-    ```swift
-    if profileService.user?.isStravaConnected == true {
-        await stravaService.syncActivities()
-        await planService.generatePendingFeedback(
-            stravaService: stravaService,
-            profileService: profileService
-        )
-    }
-    ```
-  - [x] 🟩 Note: the `.onChange(isSyncing)` listener will also fire when `syncActivities()` flips `isSyncing` back to false — that's a duplicate fire on cold launch. Keep one path and remove the other. **Recommendation:** rely on `.onChange(isSyncing)` only (delete the explicit call from `loadData()`). The listener already covers cold-launch syncs because `isSyncing` flips during `loadData`. Verify by adding a `print` during manual test.
+- [x] 🟩 **Step 2.2: Cold-launch coverage**
+  - [x] 🟩 Confirmed the `.onChange(isSyncing)` listener already covers cold launch — `isSyncing` flips during `loadData`'s `await stravaService.syncActivities()`. **No explicit call added to `loadData()`** to avoid duplicating the cold-launch fire.
 
 ### Phase 3: Remove duplicated logic from `CalendarView`
 

@@ -159,7 +159,7 @@ All services follow:
 }
 ```
 
-**PlanService** also owns post-sync coach-feedback generation across all plan weeks (`generatePendingFeedback(stravaService:profileService:)` — DRO-278). Triggered centrally from `MainTabView` on every sync completion, covering all tabs.
+**PlanService** also owns post-sync coach-feedback generation across all plan weeks (`generatePendingFeedback(stravaService:profileService:)` — DRO-278). Triggered centrally from `MainTabView` on every sync completion, regardless of which tab is active.
 
 **Supabase client** (`SupabaseClient.swift`): Singleton enum `SupabaseClientProvider` with:
 - Custom JSON encoder/decoder (snake_case <-> camelCase)
