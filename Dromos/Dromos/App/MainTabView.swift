@@ -110,6 +110,18 @@ struct MainTabView: View {
                 Task { await stravaService.syncActivities() }
             }
         }
+        .onChange(of: stravaService.isSyncing) { oldValue, newValue in
+            // Centralized feedback trigger — fires on every sync completion regardless
+            // of which tab is active. Replaces the per-tab triggers that caused DRO-278.
+            if oldValue && !newValue {
+                Task {
+                    await planService.generatePendingFeedback(
+                        stravaService: stravaService,
+                        profileService: profileService
+                    )
+                }
+            }
+        }
     }
 
     // MARK: - Private Methods

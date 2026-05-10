@@ -328,6 +328,60 @@ final class PlanService: ObservableObject {
         }
     }
 
+    /// Generates AI coach feedback for every completed session in the plan that
+    /// currently has `feedback == nil`. Idempotent — sessions with feedback are
+    /// skipped (Edge Function double-checks). Calls fire sequentially to avoid
+    /// OpenAI rate limits. After the loop, the plan is refreshed once so the UI
+    /// reflects the new feedback values.
+    ///
+    /// No-op if Strava is not connected or the plan is not loaded.
+    func generatePendingFeedback(
+        stravaService: StravaService,
+        profileService: ProfileService
+    ) async {
+        guard profileService.user?.isStravaConnected == true else { return }
+        guard let plan = trainingPlan else { return }
+
+        // Build (session, date) tuples across the entire plan.
+        let sessionsWithDates: [(session: PlanSession, date: Date)] = plan.planWeeks
+            .compactMap { week -> [(session: PlanSession, date: Date)]? in
+                guard let weekStart = week.startDateAsDate else { return nil }
+                return week.planSessions.compactMap { session in
+                    guard let weekday = Weekday(fullName: session.day) else { return nil }
+                    return (session, weekday.date(relativeTo: weekStart))
+                }
+            }
+            .flatMap { $0 }
+
+        // Bound activity fetch to the plan's date range.
+        let dates = sessionsWithDates.map(\.date)
+        guard let minDate = dates.min(), let maxDate = dates.max() else { return }
+        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: maxDate) ?? maxDate
+
+        let activities = await stravaService.fetchActivities(from: minDate, to: endDate)
+        let statuses = SessionMatcher.match(sessions: sessionsWithDates, activities: activities)
+
+        // Generate feedback only for matched sessions that don't already have it.
+        var didGenerate = false
+        for (sessionId, status) in statuses {
+            guard case .completed(let activity) = status else { continue }
+            let session = plan.planWeeks
+                .flatMap(\.planSessions)
+                .first { $0.id == sessionId }
+            guard let session, session.feedback == nil else { continue }
+
+            let feedback = await stravaService.generateSessionFeedback(
+                sessionId: sessionId,
+                activityId: activity.id
+            )
+            if feedback != nil { didGenerate = true }
+        }
+
+        if didGenerate {
+            await refreshPlan(userId: plan.userId)
+        }
+    }
+
     // MARK: - Private Methods
 
     /// Polls the DB every 3 seconds until the latest plan for the user reaches status='active' or 'failed'.

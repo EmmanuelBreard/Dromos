@@ -9,7 +9,7 @@ Dromos/Dromos/
 ├── App/                              # App entry + root navigation
 │   ├── DromosApp.swift               # @main entry point
 │   ├── RootView.swift                # Auth → Onboarding → Plan → MainTab routing
-│   └── MainTabView.swift             # TabView (Home/Calendar/Profile) + PlanService/ProfileService/StravaService owner
+│   └── MainTabView.swift             # TabView (Home/Calendar/Profile) + PlanService/ProfileService/StravaService owner + centralized session-feedback trigger via .onChange(stravaService.isSyncing) (DRO-278)
 │
 ├── Core/
 │   ├── Configuration.swift           # Reads from Secrets.swift (git-ignored)
@@ -61,7 +61,7 @@ Dromos/Dromos/
 │   │   ├── WorkoutGraphView.swift    # Legacy interactive intensity bar chart with tap-to-reveal popovers (Calendar uses this; Home uses the new WorkoutShape)
 │   │   └── IntensityColorHelper.swift # Color extensions: Color.intensity(for:isRecovery:), Color.phaseColor(for:), Color.errorStrong (auto-synthesized from ErrorStrong.colorset)
 │   ├── Calendar/                     # Single-week paged plan view (formerly Home content)
-│   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering)
+│   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering); computes per-week completion status for UI (border colors, edit-mode gating) — feedback generation removed (DRO-278)
 │   │   └── CalendarWeekHeader.swift  # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
 │   ├── Plan/                         # Plan generation flow
 │   │   └── PlanGenerationView.swift  # Triggered from RootView when user has no plan yet
@@ -158,6 +158,8 @@ All services follow:
     func doSomething() async { ... }
 }
 ```
+
+**PlanService** also owns post-sync coach-feedback generation across all plan weeks (`generatePendingFeedback(stravaService:profileService:)` — DRO-278). Triggered centrally from `MainTabView` on every sync completion, covering all tabs.
 
 **Supabase client** (`SupabaseClient.swift`): Singleton enum `SupabaseClientProvider` with:
 - Custom JSON encoder/decoder (snake_case <-> camelCase)

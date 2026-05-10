@@ -162,7 +162,6 @@ struct CalendarView: View {
         .onChange(of: currentWeekIndex) { _, newIdx in
             Task {
                 await loadIfNeeded(weekIndex: newIdx, plan: plan)
-                await generatePendingFeedback(plan: plan, weekIndex: newIdx)
             }
         }
         // Snap-back on Calendar tab re-tap: intentionally instant (no animation).
@@ -178,7 +177,6 @@ struct CalendarView: View {
                 // so trigger the refetch explicitly.
                 Task {
                     await loadIfNeeded(weekIndex: target, plan: plan)
-                    await generatePendingFeedback(plan: plan, weekIndex: target)
                 }
             } else {
                 // Different week — snap instantly (no slide across many weeks).
@@ -196,7 +194,6 @@ struct CalendarView: View {
                 completionCacheByWeek.removeAll()
                 Task {
                     await loadIfNeeded(weekIndex: currentWeekIndex, plan: plan)
-                    await generatePendingFeedback(plan: plan, weekIndex: currentWeekIndex)
                 }
             }
         }
@@ -473,37 +470,6 @@ struct CalendarView: View {
             sessions: sessionTuples,
             activities: activities
         )
-    }
-
-    // MARK: - Session Feedback
-
-    /// For each completed session in the displayed week that lacks feedback,
-    /// triggers AI feedback generation. Fires sequentially to avoid rate limits.
-    /// Scoped to the displayed week only — avoids silent fan-out as user paginates.
-    private func generatePendingFeedback(plan: TrainingPlan, weekIndex: Int) async {
-        guard profileService.user?.isStravaConnected == true else { return }
-        guard let statuses = completionCacheByWeek[weekIndex] else { return }
-
-        let weekSessionIds = Set(plan.planWeeks[weekIndex].planSessions.map(\.id))
-        var didGenerate = false
-
-        for (sessionId, status) in statuses {
-            guard weekSessionIds.contains(sessionId) else { continue }
-            guard case .completed(let activity) = status else { continue }
-            let session = plan.planWeeks[weekIndex].planSessions.first { $0.id == sessionId }
-            guard let session, session.feedback == nil else { continue }
-
-            let feedback = await stravaService.generateSessionFeedback(
-                sessionId: sessionId,
-                activityId: activity.id
-            )
-            if feedback != nil { didGenerate = true }
-        }
-
-        // Refresh plan once at the end to pick up all new feedback without showing a spinner.
-        if didGenerate {
-            await planService.refreshPlan(userId: plan.userId)
-        }
     }
 
     // MARK: - Edit Mode Actions
