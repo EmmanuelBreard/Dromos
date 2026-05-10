@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Today tab — coach feedback truncates cleanly + Segments graph header removed** — Long coach feedback on the Today tab's completed-session card now collapses to 2 lines by default with a "Show more" / "Show less" toggle. The toggle only appears when the feedback would actually overflow — short feedback shows no dead button. The redundant "Segments" text header above the per-lap bar graph has been removed; the graph reads as self-evident next to the metrics row above it (DRO-279).
+
 ### Fixed
 - **Coach feedback now appears on the Today tab** — Previously, AI coach feedback only generated when you opened the Calendar tab after a Strava sync. If your day's run synced but you stayed on the Today tab, the segments graph showed but the feedback block stayed empty. The trigger has been centralized so every Strava sync — from any tab, foreground resume, or pull-to-refresh — generates feedback for any completed session in the plan that lacks it. Idempotent (won't regenerate existing feedback) and re-entrancy-guarded so overlapping syncs can't double-charge OpenAI (DRO-278).
 
