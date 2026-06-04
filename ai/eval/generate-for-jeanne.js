@@ -72,10 +72,8 @@ function mapExperienceLevel(years) {
 
 function expandRaceObjective(obj) {
   const map = {
-    Sprint: "Sprint (750m swim / 20km bike / 5km run)",
     Olympic: "Olympic (1.5km swim / 40km bike / 10km run)",
     "Ironman 70.3": "Half-Ironman (1.9km swim / 90km bike / 21.1km run)",
-    Ironman: "Ironman (3.8km swim / 180km bike / 42.2km run)",
   };
   return map[obj] || obj;
 }
