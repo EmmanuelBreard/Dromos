@@ -61,10 +61,8 @@ Bike receives the most volume because it has the highest time cost in racing and
 
 | Distance | Swim | Bike | Run |
 |----------|------|------|-----|
-| Sprint | 20% | 40% | 40% |
 | Olympic | 20% | 45% | 35% |
 | 70.3 | 15% | 50% | 35% |
-| Ironman | 15% | 55% | 30% |
 
 ### Adjustments Based on Athlete Strengths
 
@@ -118,13 +116,6 @@ Bike receives the most volume because it has the highest time cost in racing and
 
 Training emphasis shifts significantly based on target race distance.
 
-### Sprint Triathlon (750m / 20km / 5km)
-
-- **Emphasis:** Speed and power. Higher proportion of Z4-5 work.
-- **Base phase:** Shorter (6-8 weeks). Athletes need less aerobic volume.
-- **Key sessions:** Short, high-intensity intervals. Race-pace efforts in all 3 sports.
-- **Plan length:** 8-12 weeks typical.
-
 ### Olympic Triathlon (1.5km / 40km / 10km)
 
 - **Emphasis:** Balanced threshold and aerobic capacity.
@@ -138,14 +129,6 @@ Training emphasis shifts significantly based on target race distance.
 - **Base phase:** Extended (10-12 weeks).
 - **Key sessions:** Long rides with race-pace blocks, tempo runs, steady-state swims. Brick sessions essential.
 - **Plan length:** 16-20 weeks typical.
-
-### Ironman (3.8km / 180km / 42.2km)
-
-- **Emphasis:** Massive aerobic base. Efficiency and durability over raw speed.
-- **Base phase:** Longest (12-14 weeks). The race is won in base training.
-- **Key sessions:** Long rides (4-6 hrs), long runs (2-2.5 hrs), race-nutrition practice. Less VO2max work, more sustained Z2-low Z3.
-- **Peak phase:** Shorter. Race simulation weekends rather than sharpening intervals.
-- **Plan length:** 20-24 weeks typical.
 
 ---
 
