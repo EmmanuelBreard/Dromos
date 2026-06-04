@@ -21,6 +21,11 @@ struct OnboardingScreen2View: View {
     @State private var selectedMinutes: Int = 0
     @State private var timeObjectiveManuallyEdited = false
 
+    /// Raised while the distance-change handler is programmatically resetting the
+    /// hour/minute wheels, so the wheel `.onChange` handlers know not to flip the
+    /// `timeObjectiveManuallyEdited` latch in response to those programmatic writes.
+    @State private var isApplyingDistanceDefault = false
+
     // MARK: - Validation
 
     /// Validates that race objective has been selected
@@ -127,7 +132,9 @@ struct OnboardingScreen2View: View {
                             .pickerStyle(.wheel)
                             .frame(height: 120)
                             .onChange(of: selectedHours) { _, _ in
-                                timeObjectiveManuallyEdited = true
+                                if !isApplyingDistanceDefault {
+                                    timeObjectiveManuallyEdited = true
+                                }
                                 data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
                             }
 
@@ -139,7 +146,9 @@ struct OnboardingScreen2View: View {
                             .pickerStyle(.wheel)
                             .frame(height: 120)
                             .onChange(of: selectedMinutes) { _, _ in
-                                timeObjectiveManuallyEdited = true
+                                if !isApplyingDistanceDefault {
+                                    timeObjectiveManuallyEdited = true
+                                }
                                 data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
                             }
                         }
@@ -180,6 +189,8 @@ struct OnboardingScreen2View: View {
         .padding()
         .onChange(of: data.raceObjective) { _, newValue in
             guard !timeObjectiveManuallyEdited else { return }
+            isApplyingDistanceDefault = true
+            defer { isApplyingDistanceDefault = false }
             switch newValue {
             case .olympic:
                 selectedHours = 2
