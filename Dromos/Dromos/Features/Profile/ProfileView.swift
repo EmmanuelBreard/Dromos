@@ -40,7 +40,7 @@ struct ProfileView: View {
 
     @State private var showDeleteAccountAlert = false
     @State private var editName: String = ""
-    @State private var editRaceObjective: RaceObjective = .sprint
+    @State private var editRaceObjective: RaceObjective = .ironman703
     @State private var editRaceDate: Date = Date()
     @State private var editTimeHours: String = ""
     @State private var editTimeMinutes: String = ""
@@ -619,7 +619,7 @@ struct ProfileView: View {
     private func loadEditState() {
         guard let user = user else { return }
         editName = user.name ?? ""
-        editRaceObjective = user.raceObjective ?? .sprint
+        editRaceObjective = user.raceObjective ?? .ironman703
         editRaceDate = user.raceDate ?? Date()
         // Decompose total minutes into hours:minutes for display
         if let totalMinutes = user.timeObjectiveMinutes {

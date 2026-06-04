@@ -100,7 +100,6 @@ extension Discipline {
                     DistanceEntry(name: "1 km",              km: 1.0),
                     DistanceEntry(name: "40 km · Olympic",   km: 40.0),
                     DistanceEntry(name: "90 km · Half-Iron", km: 90.0),
-                    DistanceEntry(name: "180 km · Ironman",  km: 180.0),
                 ]
             )
 
@@ -117,7 +116,6 @@ extension Discipline {
                 distances: [
                     DistanceEntry(name: "1500 m · Olympic",   km: 1.5),
                     DistanceEntry(name: "1900 m · Half-Iron", km: 1.9),
-                    DistanceEntry(name: "3800 m · Ironman",   km: 3.8),
                 ]
             )
         }

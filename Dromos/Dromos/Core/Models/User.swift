@@ -9,13 +9,11 @@ import Foundation
 
 // MARK: - Race Objective Enum
 
-/// Represents the triathlon race distance objective.
+/// Represents the triathlon race distance objective. Currently supports Olympic and Ironman 70.3.
 /// Maps directly to the CHECK constraint in the database.
 enum RaceObjective: String, Codable, CaseIterable {
-    case sprint = "Sprint"
     case olympic = "Olympic"
     case ironman703 = "Ironman 70.3"
-    case ironman = "Ironman"
 }
 
 // MARK: - User Model
