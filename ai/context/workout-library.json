@@ -5114,14 +5114,38 @@
     },
     {
       "template_id": "RACE_Race_02",
-      "duration_minutes": 220,
+      "duration_minutes": 150,
       "segments": [
         {
           "label": "work",
-          "distance_meters": 42195,
-          "duration_minutes": 220,
-          "vma_pct": 63,
-          "cue": "Marathon \u2014 5:20-5:40/km Z2, HR <145. Walk aid stations if needed. Practice 60g carbs/h."
+          "distance_meters": 1500,
+          "duration_minutes": 28,
+          "pace": "medium",
+          "cue": "Swim 1.5km \u2014 settle quick, find feet, sight every 4-6 strokes. First 200m race-effort, then lock into sustainable rhythm."
+        },
+        {
+          "label": "recovery",
+          "duration_minutes": 3,
+          "cue": "T1 \u2014 wetsuit stripped fast, helmet on before bike off the rack, mount past the line."
+        },
+        {
+          "label": "work",
+          "distance_meters": 40000,
+          "duration_minutes": 70,
+          "ftp_pct": 82,
+          "cue": "Bike 40km \u2014 sit at upper-Z3 / sweetspot (82% FTP avg). Aero on the flats, controlled on climbs, no surges. 30-50g carbs/h."
+        },
+        {
+          "label": "recovery",
+          "duration_minutes": 2,
+          "cue": "T2 \u2014 rack bike, helmet off, run shoes on, caffeine gel out the gate."
+        },
+        {
+          "label": "work",
+          "distance_meters": 10000,
+          "duration_minutes": 47,
+          "vma_pct": 82,
+          "cue": "Run 10km \u2014 first 1km off the bike at 80% (legs find rhythm), then build to 85% VMA. Negative split \u2014 last 3km should be the fastest."
         }
       ]
     }
