@@ -83,43 +83,6 @@
     constraints: "none"
 
 - vars:
-    athlete_name: "Sam - Time-Crunched Sprint"
-    experience_level: "intermediate (runner transitioning to triathlon)"
-    race_distance: "Sprint (750m swim / 20km bike / 5km run)"
-    race_date: "2026-05-17"
-    plan_start_date: "2026-03-02"
-    total_weeks: "11"
-    # Availability per day (minutes)
-    mon_duration: "60"
-    tue_duration: "45"
-    wed_duration: "60"
-    thu_duration: "45"
-    fri_duration: "0"
-    sat_duration: "90"
-    sun_duration: "75"
-    # Derived from daily durations
-    weekly_hours: "6.25"
-    max_weekday_minutes: "60"
-    max_weekend_minutes: "90"
-    current_weekly_hours: "5"
-    # Sport-day availability
-    swim_days: "Tuesday, Thursday, Saturday"
-    bike_days: "Monday, Wednesday, Saturday"
-    run_days: "Monday, Wednesday, Thursday, Sunday"
-    swim_weekday_count: "2"
-    swim_weekend_count: "1"
-    bike_weekday_count: "2"
-    bike_weekend_count: "1"
-    run_weekday_count: "3"
-    run_weekend_count: "1"
-    # Performance metrics
-    ftp_watts: "200"
-    mas_kmh: "17"
-    swim_css: "2:00"
-    limiters: "none"
-    constraints: "none"
-
-- vars:
     athlete_name: "Emmanuel - Half-Ironman"
     experience_level: "intermediate (experienced runner, 9h/week current training)"
     race_distance: "Half-Ironman (1.9km swim / 90km bike / 21.1km run)"

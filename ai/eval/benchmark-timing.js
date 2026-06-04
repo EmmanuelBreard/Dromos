@@ -21,7 +21,7 @@ const TEMPERATURE = 0.7;
 // Minimal realistic user profile (triathlete, ~16-week plan)
 // ---------------------------------------------------------------------------
 const USER_PROFILE = {
-  race_objective: "olympic",
+  race_objective: "Olympic",
   race_date: "2026-09-15",
   vma: 14.5,
   css_seconds_per100m: 105,
