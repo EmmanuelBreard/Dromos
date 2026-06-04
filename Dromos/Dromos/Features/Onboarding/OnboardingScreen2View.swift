@@ -17,8 +17,14 @@ struct OnboardingScreen2View: View {
     @State private var showErrors = false
 
     // Time objective picker state
-    @State private var selectedHours: Int = 2
+    @State private var selectedHours: Int = 6
     @State private var selectedMinutes: Int = 0
+    @State private var timeObjectiveManuallyEdited = false
+
+    /// Raised while the distance-change handler is programmatically resetting the
+    /// hour/minute wheels, so the wheel `.onChange` handlers know not to flip the
+    /// `timeObjectiveManuallyEdited` latch in response to those programmatic writes.
+    @State private var isApplyingDistanceDefault = false
 
     // MARK: - Validation
 
@@ -67,7 +73,7 @@ struct OnboardingScreen2View: View {
                             .font(.headline)
 
                         Picker("Race Type", selection: Binding(
-                            get: { data.raceObjective ?? .sprint },
+                            get: { data.raceObjective ?? .ironman703 },
                             set: { data.raceObjective = $0 }
                         )) {
                             ForEach(RaceObjective.allCases, id: \.self) { objective in
@@ -77,7 +83,7 @@ struct OnboardingScreen2View: View {
                         .pickerStyle(.segmented)
                         .onAppear {
                             if data.raceObjective == nil {
-                                data.raceObjective = .sprint
+                                data.raceObjective = .ironman703
                             }
                         }
 
@@ -126,6 +132,9 @@ struct OnboardingScreen2View: View {
                             .pickerStyle(.wheel)
                             .frame(height: 120)
                             .onChange(of: selectedHours) { _, _ in
+                                if !isApplyingDistanceDefault {
+                                    timeObjectiveManuallyEdited = true
+                                }
                                 data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
                             }
 
@@ -137,6 +146,9 @@ struct OnboardingScreen2View: View {
                             .pickerStyle(.wheel)
                             .frame(height: 120)
                             .onChange(of: selectedMinutes) { _, _ in
+                                if !isApplyingDistanceDefault {
+                                    timeObjectiveManuallyEdited = true
+                                }
                                 data.timeObjectiveMinutes = selectedHours * 60 + selectedMinutes
                             }
                         }
@@ -175,6 +187,23 @@ struct OnboardingScreen2View: View {
             }
         }
         .padding()
+        .onChange(of: data.raceObjective) { _, newValue in
+            guard !timeObjectiveManuallyEdited else { return }
+            isApplyingDistanceDefault = true
+            defer { isApplyingDistanceDefault = false }
+            switch newValue {
+            case .olympic:
+                selectedHours = 2
+                selectedMinutes = 30
+                data.timeObjectiveMinutes = 150
+            case .ironman703:
+                selectedHours = 6
+                selectedMinutes = 0
+                data.timeObjectiveMinutes = 360
+            case .none:
+                break
+            }
+        }
         .onAppear {
             if let totalMinutes = data.timeObjectiveMinutes {
                 selectedHours = totalMinutes / 60

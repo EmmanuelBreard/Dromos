@@ -12,7 +12,7 @@ import Foundation
 /// Data collected on the first onboarding screen.
 /// Contains the user's race objectives and target times.
 struct RaceGoalsData: Codable {
-    /// Target triathlon race distance (Sprint, Olympic, 70.3, Ironman)
+    /// Target triathlon race distance (Olympic, Ironman 70.3)
     var raceObjective: RaceObjective?
 
     /// Target race date
