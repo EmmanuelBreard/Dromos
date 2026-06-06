@@ -1,0 +1,1809 @@
+{
+  "plan": {
+    "race_objective": "Olympic",
+    "race_date": "2026-09-19",
+    "start_date": "2026-06-08",
+    "total_weeks": 15
+  },
+  "replace": true,
+  "profile_updates": {
+    "max_hr": 193,
+    "ftp": 275,
+    "vma": 18.00,
+    "css_seconds_per100m": 110,
+    "race_objective": "Olympic",
+    "race_date": "2026-09-19"
+  },
+  "weeks": [
+    {
+      "week_number": 1,
+      "phase": "Recovery",
+      "is_recovery": true,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-06-08",
+      "notes": "Block 1 recovery. 100% LIT. No HIT. Goal: restore aerobic capacity, reintroduce strength.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2000m easy + technique. Aerobic @2:00-2:10/100m."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_DRILLS_1800m",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "1800m: 200wu, 6×50 drill/25 swim, 4×200 easy, 200cd. Focus technique."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 35min Z1-Z2, HR <140."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Z2_endurance_90min",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 75min Z2, HR <145, power 150-180W."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength A — bodyweight, movement quality (30min): Goblet squat 3×10 (BW or DB 12kg), Single-leg RDL 3×8/side, Glute bridge 3×12, Side plank 3×30s/side, Dead bug 3×8/side, Calf raise 3×15."
+        },
+        {
+          "day": "Friday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy run 45min Z2 + 4×30s strides (not max)."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Z2_endurance_90min",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 90min Z2, HR <145, power 160-190W."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength A — bodyweight, movement quality (30min): Goblet squat 3×10 (BW or DB 12kg), Single-leg RDL 3×8/side, Glute bridge 3×12, Side plank 3×30s/side, Dead bug 3×8/side, Calf raise 3×15."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 60min Z2 + 4×30s strides."
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "phase": "Recovery",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-06-15",
+      "notes": "Block 1 re-engagement. 95/5/0. First quality session: Wed bike 2×8min sweet-spot. Stay disciplined.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Tempo",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2500m: wu + 4×200 @ tempo (~2:00/100m) + cd."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 40,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 40min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Tempo",
+          "template_id": "SWIM_THR_6x150_1_50",
+          "duration_minutes": 48,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2400m: wu + 6×100 @ tempo 2:00/100m on 30s rest + cd. (Adapted from 6×150 template to 6×100 per plan.)"
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 45min Z2 + 6×30s strides."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_SS_4x6min_245W",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "75min: 15wu / 2×8min sweet-spot @ 240W (HR ~158) / 6min rec / cd. (Plan has 2×8min; template is 4×6min — use only 2 reps at ~240W.)"
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength A (30min): Goblet squat 3×10 (BW or DB 12kg), Single-leg RDL 3×8/side, Glute bridge 3×12, Side plank 3×30s/side, Dead bug 3×8/side, Calf raise 3×15."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_03",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 60min Z2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_07",
+          "duration_minutes": 105,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long bike 1h45min Z2 (180-200W, HR <150) + 4×30s standing efforts late."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength A (30min): Goblet squat 3×10 (BW or DB 12kg), Single-leg RDL 3×8/side, Glute bridge 3×12, Side plank 3×30s/side, Dead bug 3×8/side, Calf raise 3×15."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 70,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 70min Z2 + 5×30s strides."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min recovery."
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "phase": "Base",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-06-22",
+      "notes": "Block 2: aerobic base + intensity introduction. 88/7/5. First run interval block Sat: 4×4min threshold. Total HIT 16min.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2500m endurance + 8×50 fast."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 40,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 40min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Intervals",
+          "template_id": "SWIM_THR_6x150_1_50",
+          "duration_minutes": 52,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2800m: wu + 6×150 @ threshold 1:50/100m on 30s rest + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 50min Z2 + 6×30s strides."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_SS_4x6min_245W",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "90min: 15wu / 3×8min sweet-spot @ 240-250W / 5min rec / cd. (Plan has 3×8min; use 3 reps of template's sweet-spot blocks.)"
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength B — light load (30min): Goblet/DB squat 3×8 @16-20kg, DB RDL 3×8 @16kg, Walking lunge 3×8/side, Push-up 3×10, Plank 3×45s, Single-leg calf raise 3×12."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_03",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 60min Z2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_TEMPO_4x4min_4_15km",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "60min run quality: 15wu / 4×4min @ threshold (4:15/km) / 2min walk rec / cd. First threshold run block."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength B — light load (30min): Goblet/DB squat 3×8 @16-20kg, DB RDL 3×8 @16kg, Walking lunge 3×8/side, Push-up 3×10, Plank 3×45s, Single-leg calf raise 3×12."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 75min Z2 + 4×1min @ tempo at end (~4:30-4:59/km)."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min recovery."
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "phase": "Base",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-06-29",
+      "notes": "Block 2 build. 85/8/7. Build threshold tolerance. Polarization: LIT ~8h, MIT ~45min, HIT ~40min.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2800m endurance."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 45min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Intervals",
+          "template_id": "SWIM_CSS_8x100_1_45",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3000m: wu + 2×400 + 4×200 @ threshold + cd. (Mapped to CSS 8×100 template as closest threshold swim; note actual plan has 2×400+4×200 vs template's 8×100.)"
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_TEMPO_4x4min_4_15km",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 55min: 10wu / 5×3min @ Z4 (4:15/km) / 2min rec / cd. (5×3min vs template's 4×4min; same effort zone.)"
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_SS_4x6min_245W",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "90min: 15wu / 4×6min sweet-spot @ 245-255W / 4min rec / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength B (30min): Goblet/DB squat 3×8 @16-20kg, DB RDL 3×8 @16kg, Walking lunge 3×8/side, Push-up 3×10, Plank 3×45s, Single-leg calf raise 3×12."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_THR_2x15min_260W",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "75min: 15wu / 2×15min sweet-spot @ 240W / 8min rec / cd. (Plan @240W vs template @260W — note target is 240W not 260W.)"
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_06",
+          "duration_minutes": 120,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long bike 2h00min Z2 (HR <150, power 180-200W)."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength B (30min): Goblet/DB squat 3×8 @16-20kg, DB RDL 3×8 @16kg, Walking lunge 3×8/side, Push-up 3×10, Plank 3×45s, Single-leg calf raise 3×12."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 80,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 80min Z2 + 5×1min tempo (4:35/km) at end."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min recovery."
+        }
+      ]
+    },
+    {
+      "week_number": 5,
+      "phase": "Base",
+      "is_recovery": true,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-07-06",
+      "notes": "Block 2 deload. 90/6/4. 7h volume. All quality sessions checked vs prescription before Block 3.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 48,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2400m endurance."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_03",
+          "duration_minutes": 43,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2200m easy + 4×100 smooth."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 40,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 40min Z2 + 4×30s strides."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_SS_4x6min_245W",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "60min: 15wu / 2×10min sweet-spot @ 240W / 5min rec / cd. Deload load."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength A deload (30min): Goblet squat 3×10 (BW or DB 12kg), Single-leg RDL 3×8/side, Glute bridge 3×12, Side plank 3×30s/side, Dead bug 3×8/side, Calf raise 3×15."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_13",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 50min Z2 + 5×30s standing efforts."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Z2_endurance_90min",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Bike 1h30min Z2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength A deload (30min): Goblet squat 3×10 (BW or DB 12kg), Single-leg RDL 3×8/side, Glute bridge 3×12, Side plank 3×30s/side, Dead bug 3×8/side, Calf raise 3×15."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 60min Z2 + 5×30s strides."
+        }
+      ]
+    },
+    {
+      "week_number": 6,
+      "phase": "Build",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-07-13",
+      "notes": "Block 3: Olympic-specific build. 82/8/10. VO2 intro + first brick. Key sessions: Tue run 5×400m, Wed bike VO2+SS, Sat brick.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3000m endurance + 8×50 fast."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 45min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Intervals",
+          "template_id": "SWIM_THR_6x150_1_50",
+          "duration_minutes": 58,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3200m: wu + 3×400 @ threshold (1:50/100m) + 6×50 fast + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_VO2_5x400m_3_35km",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 55min: 15wu / 5×400m @ 3:35/km (Z5) / 400m walk rec / cd. First VO2 work. Total HIT 8min."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_VO2_5x3min_295W",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "90min: 15wu / 4×2min @ Z5 (290-300W) / 2min rec / 8min easy / 2×8min SS @ 245W / cd. (Plan 4×2min VO2 + SS combo; template is 5×3min — use 4 reps and abbreviate to 2min each per plan.)"
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength C — moderate load (35min): Goblet squat or DB front squat 3×6 @24-30kg, DB RDL 3×6 @24-30kg, Reverse lunge 3×6/side @12-16kg per hand, Renegade row 3×10 (5/side) @12kg, Plank 3×60s, Eccentric calf raise 3×12."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_03",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 60min Z2 + 6×30s standing."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Z2_endurance_90min",
+          "duration_minutes": 75,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "BRICK 1 bike: 75min Z2. Immediate transition to run. Focus cadence and form."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Tempo",
+          "template_id": "RUN_BRICK_25min_15rp_10z2",
+          "duration_minutes": 15,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "BRICK 1 run: 15min @ tempo (4:30/km) off the bike. First brick — focus on cadence and form, not pace."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 2,
+          "notes": "Strength C (35min): Goblet squat or DB front squat 3×6 @24-30kg, DB RDL 3×6 @24-30kg, Reverse lunge 3×6/side @12-16kg per hand, Renegade row 3×10 (5/side) @12kg, Plank 3×60s, Eccentric calf raise 3×12."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 75min Z2 + 4×1min @ 4:00/km at end."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min."
+        }
+      ]
+    },
+    {
+      "week_number": 7,
+      "phase": "Build",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-07-20",
+      "notes": "Block 3 build. 80/8/12. Add brick volume. LIT ~8.4h, MIT ~50min, HIT ~75min.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 58,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3200m endurance + 10×50 fast."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 50min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Intervals",
+          "template_id": "SWIM_CSS_8x100_1_45",
+          "duration_minutes": 62,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3400m: wu + 8×100 @ CSS-5 (1:45/100m) / 20s rest + 4×200 endurance + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_VO2_5x600m_3_45km",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 60min: 15wu / 5×600m @ Z5 (3:45/km) / 90s jog rec / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_VO2_5x3min_295W",
+          "duration_minutes": 100,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "100min: 15wu / 5×3min @ Z5 (295W) / 3min rec / 10min easy / 2×10min SS @ 245W / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength C (35min): Goblet squat or DB front squat 3×6 @24-30kg, DB RDL 3×6 @24-30kg, Reverse lunge 3×6/side @12-16kg per hand, Renegade row 3×10 (5/side) @12kg, Plank 3×60s, Eccentric calf raise 3×12."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_THR_2x15min_260W",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "75min: 15wu / 3×10min @ Z4 (260-270W) / 5min rec / cd. (Plan 3×10min vs template 2×15min — 3 reps at 260W.)"
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Z2_endurance_90min",
+          "duration_minutes": 90,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "BRICK 2 bike: 90min Z2 steady 180-200W."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Tempo",
+          "template_id": "RUN_BRICK_25min_15rp_10z2",
+          "duration_minutes": 20,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "BRICK 2 run: 20min @ tempo (4:30/km) off the bike."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 2,
+          "notes": "Strength C (35min): Goblet squat or DB front squat 3×6 @24-30kg, DB RDL 3×6 @24-30kg, Reverse lunge 3×6/side @12-16kg per hand, Renegade row 3×10 (5/side) @12kg, Plank 3×60s, Eccentric calf raise 3×12."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 85,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 85min Z2 + 6×1min @ Z5 pace at end (~3:40/km)."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min."
+        }
+      ]
+    },
+    {
+      "week_number": 8,
+      "phase": "Build",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-07-27",
+      "notes": "Block 3 peak. 78/8/14. 11h. LIT ~8.6h, MIT ~55min, HIT ~90min.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 62,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3400m endurance."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 50min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Intervals",
+          "template_id": "SWIM_THR_6x150_1_50",
+          "duration_minutes": 65,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3600m: wu + 5×200 @ threshold + 8×50 fast on 15s rest + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_VO2_4x800m_3_40km",
+          "duration_minutes": 65,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 65min: 15wu / 4×800m @ 3:40/km / 400m jog rec / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_VO2_5x4min_290W",
+          "duration_minutes": 110,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "110min: 15wu / 5×4min @ Z5 (290W) / 3min rec / 10min easy / 2×12min SS @ 245W / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength C (35min): Goblet squat or DB front squat 3×6 @24-30kg, DB RDL 3×6 @24-30kg, Reverse lunge 3×6/side @12-16kg per hand, Renegade row 3×10 (5/side) @12kg, Plank 3×60s, Eccentric calf raise 3×12."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_THR_2x15min_260W",
+          "duration_minutes": 80,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "80min: 15wu / 2×15min @ Z4 (260W) / 8min rec / cd."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_06",
+          "duration_minutes": 120,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "BRICK 3 bike: 2h Z2 steady 200-210W."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Tempo",
+          "template_id": "RUN_BRICK_25min_15rp_10z2",
+          "duration_minutes": 25,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "BRICK 3 run: 25min @ tempo (4:30/km) off the bike."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 2,
+          "notes": "Strength C (35min): Goblet squat or DB front squat 3×6 @24-30kg, DB RDL 3×6 @24-30kg, Reverse lunge 3×6/side @12-16kg per hand, Renegade row 3×10 (5/side) @12kg, Plank 3×60s, Eccentric calf raise 3×12."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 90min Z2 + 3×2min @ 4:00/km at end."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min."
+        }
+      ]
+    },
+    {
+      "week_number": 9,
+      "phase": "Build",
+      "is_recovery": true,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-08-03",
+      "notes": "Block 3 deload. 88/7/5. 7.5h. Mini-brick on Sat to maintain pattern.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2600m endurance."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_VO2_8x50_fast",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2400m easy + 6×50 fast."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 40,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 40min Z2 + 5×30s strides."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_VO2_5x3min_295W",
+          "duration_minutes": 70,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "70min: 15wu / 3×3min @ Z5 (295W) / 3min rec / cd. Deload load."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength B deload (30min): Goblet/DB squat 3×8 @16-20kg, DB RDL 3×8 @16kg, Walking lunge 3×8/side, Push-up 3×10, Plank 3×45s, Single-leg calf raise 3×12."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_03",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 60min Z2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Z2_endurance_90min",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Bike 1h30min Z2 + 10min @ tempo off bike (mini-brick)."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength B deload (30min): Goblet/DB squat 3×8 @16-20kg, DB RDL 3×8 @16kg, Walking lunge 3×8/side, Push-up 3×10, Plank 3×45s, Single-leg calf raise 3×12."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 65,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 65min Z2 + 5×30s strides."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min."
+        }
+      ]
+    },
+    {
+      "week_number": 10,
+      "phase": "Peak",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-08-10",
+      "notes": "Block 4: race-specific peak. 80/6/14. Race-pace bike+run. Key Sat brick: first race-effort brick — bellwether for sub-2:20.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3000m endurance + OW practice (if pool option, sight every 6-8 strokes)."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 50min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Intervals",
+          "template_id": "SWIM_RACE_2x750_1_48",
+          "duration_minutes": 62,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3400m: wu + race-pace 8×100 @ 1:45 / 15s rest + 4×200 endurance + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_VO2_5x800m_3_40km",
+          "duration_minutes": 65,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 65min: 15wu / 5×800m @ 3:40/km / 400m jog rec / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_VO2_3x6min_295W",
+          "duration_minutes": 100,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "100min: 15wu / 3×6min @ Z5 (295W) / 4min rec / 12min easy / 2×15min @ Z4 (265W) / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength C maintenance (30min, 2×6): Goblet squat 2×6 @24-30kg, DB RDL 2×6, Reverse lunge 2×6/side, Renegade row 2×8, Plank 2×60s, Eccentric calf raise 2×10."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Tempo",
+          "template_id": "BIKE_RACE_40min_IF85",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "75min: 15wu / 20min race-pace @ IF 0.85 (235W) / cd."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_BRICK_75min_IF85",
+          "duration_minutes": 75,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "BRICK 4 race-effort bike: 75min (15wu + 40min @ race effort IF 0.85 / 235W + cd). First race-effort brick."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Race",
+          "template_id": "RUN_RACE_4x1km_4_00km",
+          "duration_minutes": 25,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "BRICK 4 race-effort run: 25min off the bike — first 15min @ race pace (4:00/km), last 10min Z2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 2,
+          "notes": "Strength C maintenance (30min): Goblet squat 2×6, DB RDL 2×6, Reverse lunge 2×6/side, Renegade row 2×8, Plank 2×60s, Eccentric calf raise 2×10."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 85,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 85min Z2 + 4×1min @ race pace at end (4:00/km)."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_14",
+          "duration_minutes": 25,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "OW swim 1500m if available (sight every 6 strokes), else easy pool 1500m."
+        }
+      ]
+    },
+    {
+      "week_number": 11,
+      "phase": "Peak",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-08-17",
+      "notes": "Block 4 race-specific. 78/6/16. Sat brick = mini-Olympic simulation. HIT ~110min. Over-under Wed.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 58,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3200m + 12×50 fast."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 50min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_RACE_2x750_1_48",
+          "duration_minutes": 65,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3600m: wu + OW-style 2×750m @ race effort (1:48-1:50/100m) + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_RACE_4x1km_4_00km",
+          "duration_minutes": 70,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 70min: 15wu / 2×1km @ 3:50/km (R 2min) + 4×400m @ 3:30/km (R 90s) / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_OU_2x12min_95_110",
+          "duration_minutes": 110,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "110min: 15wu / over-under 2×10min as 1min @ 110% FTP / 3min @ 95% FTP (rec 6min) / cd. Plan 2×10min over-under."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength C maintenance (30min): Goblet squat 2×6, DB RDL 2×6, Reverse lunge 2×6/side, Renegade row 2×8, Plank 2×60s, Eccentric calf raise 2×10."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_RACE_40min_IF85",
+          "duration_minutes": 80,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "80min: 15wu / 30min race-pace IF 0.85 + 4×30s sprints / cd."
+        },
+        {
+          "day": "Saturday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_TT_1500m",
+          "duration_minutes": 40,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "BRICK 5 — Olympic simulation: 1500m OW swim @ race pace (1:48-1:50/100m). Goal: lock in pacing rhythm, transition discipline, fuel timing."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_BRICK_75min_IF85",
+          "duration_minutes": 60,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "BRICK 5 bike: 60min @ race effort (IF 0.85). Practice T1 to T2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Race",
+          "template_id": "RUN_RACE_4x1km_4_00km",
+          "duration_minutes": 25,
+          "is_brick": true,
+          "order_in_day": 2,
+          "notes": "BRICK 5 run: 25min off the bike — 15min @ race pace (4:00/km) + 10min Z2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 3,
+          "notes": "Strength C maintenance (30min): Goblet squat 2×6, DB RDL 2×6, Reverse lunge 2×6/side, Renegade row 2×8, Plank 2×60s, Eccentric calf raise 2×10."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 90min Z2 + 6×1min @ 3:40/km at end."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min."
+        }
+      ]
+    },
+    {
+      "week_number": 12,
+      "phase": "Peak",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-08-24",
+      "notes": "Peak week. 76/6/18. 11.5h. Sat = full race simulation (1500m TT + 40km bike + 8km run). Result calibrates Sep 19 target.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_RACE_2x750_1_48",
+          "duration_minutes": 62,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3400m + race-pace 8×100 @ 1:45."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 50,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 50min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_RACE_2x750_1_48",
+          "duration_minutes": 68,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3800m: wu + race-pace 4×400 @ 1:48/100m + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Race",
+          "template_id": "RUN_RACE_4x1km_4_00km",
+          "duration_minutes": 70,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 70min: 15wu / 4×1km @ 4:00/km race-pace (R 90s) + 4×200m @ 3:20/km / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_VO2_3x6min_295W",
+          "duration_minutes": 110,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "110min: 15wu / 3×8min @ Z5 (290W) / 4min rec / 10min easy / 2×15min @ Z4 (265-270W) / cd. (Plan 3×8min VO2 vs template 3×6min — extend reps to 8min per plan.)"
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength C maintenance (30min): Goblet squat 2×6, DB RDL 2×6, Reverse lunge 2×6/side, Renegade row 2×8, Plank 2×60s, Eccentric calf raise 2×10."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_RACE_40min_IF85",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "75min: 15wu / race-pace 40min @ IF 0.85 (235W) / cd."
+        },
+        {
+          "day": "Saturday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_TT_1500m",
+          "duration_minutes": 40,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "RACE SIMULATION: 1500m TT in OW at race effort. Log swim split."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_RACE_40min_IF85",
+          "duration_minutes": 75,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "RACE SIMULATION bike: 40km @ race effort NP 230-235W. Log NP/avg/IF per km. Target ~2:25-2:30 total sim."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Race",
+          "template_id": "RUN_RACE_4x1km_4_00km",
+          "duration_minutes": 40,
+          "is_brick": true,
+          "order_in_day": 2,
+          "notes": "RACE SIMULATION run: 8km @ race pace (4:00-4:05/km). Log pace per km. This is your race plan rehearsal."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 20,
+          "is_brick": false,
+          "order_in_day": 3,
+          "notes": "Strength C maintenance light (20min): Goblet squat 2×6, DB RDL 2×6, Plank 2×60s."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 75,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 75min Z2 + 6×1min @ 3:40/km at end."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min recovery."
+        }
+      ]
+    },
+    {
+      "week_number": 13,
+      "phase": "Taper",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-08-31",
+      "notes": "Block 5 sharpen. 78/4/18. 8.5h. Vol -25%, quality intact. Tune-up race Sep 12 looming.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Z2_endurance_2500m",
+          "duration_minutes": 52,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2800m + 8×50 fast."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 45min Z2."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Intervals",
+          "template_id": "SWIM_THR_6x150_1_50",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "3000m: wu + 5×200 @ threshold + 4×100 @ Z5 + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_VO2_5x600m_3_45km",
+          "duration_minutes": 55,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 55min: 15wu / 6×600m @ 3:40/km / 90s rec / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_RACE_40min_IF85",
+          "duration_minutes": 90,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "90min: 15wu / race-pace 2×15min @ IF 0.85 / 8min rec / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 25,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Strength maintenance taper (25min, light): Goblet squat 2×8 BW, RDL 2×8, Plank 2×45s, Calf raise 2×12."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_VO2_5x3min_295W",
+          "duration_minutes": 70,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "70min: 15wu / 3×5min @ Z5 (295W) / 3min rec / cd."
+        },
+        {
+          "day": "Saturday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_03",
+          "duration_minutes": 60,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "Mini-brick bike: 60min Z2."
+        },
+        {
+          "day": "Saturday",
+          "sport": "run",
+          "type": "Race",
+          "template_id": "RUN_RACE_4x1km_4_00km",
+          "duration_minutes": 15,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "Mini-brick run: 15min @ race pace (4:00/km) off the bike."
+        },
+        {
+          "day": "Saturday",
+          "sport": "strength",
+          "type": "Easy",
+          "template_id": "STRENGTH_NOTES_ONLY",
+          "duration_minutes": 25,
+          "is_brick": false,
+          "order_in_day": 2,
+          "notes": "Strength maintenance taper (25min, light): Goblet squat 2×8 BW, RDL 2×8, Plank 2×45s, Calf raise 2×12."
+        },
+        {
+          "day": "Sunday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_long_cap150bpm",
+          "duration_minutes": 65,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Long run 65min Z2 (last long run before races) + 5×30s strides."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy swim 30min."
+        }
+      ]
+    },
+    {
+      "week_number": 14,
+      "phase": "Taper",
+      "is_recovery": false,
+      "rest_days": ["Thursday"],
+      "start_date": "2026-09-07",
+      "notes": "Taper + Race A (Sep 12). 70/10/20. 6h. Treat as dress rehearsal at high quality, not peak-or-die. Bike NP 230-235W, run 4:00-4:05/km. Hold back first 2km.",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_OPENER_1500m_race_pace",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2000m: wu + 8×50 fast (race-pace feel) + cd."
+        },
+        {
+          "day": "Monday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 30min Z2 + 4×30s strides."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_CSS_8x100_1_45",
+          "duration_minutes": 42,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "2400m: wu + 4×100 @ race pace (1:45/100m) + cd."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Intervals",
+          "template_id": "RUN_VO2_5x400m_3_35km",
+          "duration_minutes": 40,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Run 40min: 10wu / 4×400m @ 3:35/km + 4×100m strides / cd."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_RACE_40min_IF85",
+          "duration_minutes": 60,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "60min: 15wu / race-pace 15min @ IF 0.85 / 4×30s sprints / cd."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_15",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy bike 35min Z2 + 3×1min @ race pace."
+        },
+        {
+          "day": "Saturday",
+          "sport": "race",
+          "type": "Race",
+          "template_id": "RACE_OLYMPIC",
+          "duration_minutes": 150,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "RACE A — Olympic distance, ~95% effort. Swim 1:48-1:52/100m. Bike NP 230-235W (IF 0.84-0.85). Run 4:00-4:05/km, hold back first 2km. 60-80g carbs/hr on bike. If HR >180 in first half of run, slow down — this is not A-race."
+        },
+        {
+          "day": "Sunday",
+          "sport": "bike",
+          "type": "Easy",
+          "template_id": "BIKE_Easy_01",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Recovery: easy spin 30min OR walk only. Full recovery after Race A."
+        }
+      ]
+    },
+    {
+      "week_number": 15,
+      "phase": "Taper",
+      "is_recovery": false,
+      "rest_days": ["Monday"],
+      "start_date": "2026-09-14",
+      "notes": "Race week. Goal: sub-2:25 primary, sub-2:20 stretch. Recover from Race A, sharpen, race Sep 19 full effort. Swim: draft if possible. Bike NP 230-240W, hold cadence 85-90. Run: open 4:10/km first km, settle to 4:00-4:05/km. Push back half of run.",
+      "sessions": [
+        {
+          "day": "Tuesday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_03",
+          "duration_minutes": 35,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Easy swim 1800m + 4×50 fast."
+        },
+        {
+          "day": "Tuesday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 30min Z2."
+        },
+        {
+          "day": "Wednesday",
+          "sport": "bike",
+          "type": "Intervals",
+          "template_id": "BIKE_OPENER_45min_3x3min",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Bike 45min: 15wu / 3×3min @ Z5 (300W) / 2min rec / cd. Open the engine."
+        },
+        {
+          "day": "Thursday",
+          "sport": "swim",
+          "type": "Race",
+          "template_id": "SWIM_OPENER_1500m_race_pace",
+          "duration_minutes": 30,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Swim 1500m: wu + 6×50 race pace + cd. Pool only."
+        },
+        {
+          "day": "Thursday",
+          "sport": "run",
+          "type": "Easy",
+          "template_id": "RUN_Z2_easy_cap140bpm",
+          "duration_minutes": 25,
+          "is_brick": false,
+          "order_in_day": 1,
+          "notes": "Easy run 25min Z2 + 4×30s strides."
+        },
+        {
+          "day": "Friday",
+          "sport": "bike",
+          "type": "Race",
+          "template_id": "BIKE_OPENER_45min_3x3min",
+          "duration_minutes": 25,
+          "is_brick": true,
+          "order_in_day": 0,
+          "notes": "Race opener brick bike: 25min (5wu / 3×1min @ race effort / 5cd). Wake the system."
+        },
+        {
+          "day": "Friday",
+          "sport": "run",
+          "type": "Race",
+          "template_id": "RUN_RACE_4x1km_4_00km",
+          "duration_minutes": 10,
+          "is_brick": true,
+          "order_in_day": 1,
+          "notes": "Race opener brick run: 10min (4×30s @ race pace). Wake the legs."
+        },
+        {
+          "day": "Saturday",
+          "sport": "race",
+          "type": "Race",
+          "template_id": "RACE_OLYMPIC",
+          "duration_minutes": 145,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "RACE B — Olympic distance A-RACE. Full effort. Swim 1500m 27-28min. Bike 40km NP 230-240W. Run 10K open 4:10/km then 4:00-4:05/km. 60-80g carbs/hr on bike. Push km 5-9 of run. Don't fade."
+        },
+        {
+          "day": "Sunday",
+          "sport": "swim",
+          "type": "Easy",
+          "template_id": "SWIM_Easy_06",
+          "duration_minutes": 20,
+          "is_brick": false,
+          "order_in_day": 0,
+          "notes": "Recovery: gentle walk + easy swim 20min. No effort."
+        }
+      ]
+    }
+  ]
+}
