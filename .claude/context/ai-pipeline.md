@@ -96,6 +96,8 @@ Pure conversion, no transformation.
 
 **DRO-216 (Phase 2):** `generate-plan/index.ts` now writes `structure` (JSONB) alongside `template_id` at the single insert site. The shared materializer (`_shared/materialize-structure.ts`) is invoked once per session at insert time using a `templateMap` hoisted out of the per-week loop. Post-processing fixers do **not** re-materialize — they swap `template_id` upstream of the insert site. Unknown `template_id` values are accumulated and emit a single per-plan summary log instead of per-session warnings. Sessions with missing `template_id` log defensively and proceed with `structure: null` (renderer falls back to template lookup). `VALID_SPORTS` validation rejects `strength` upstream so no strength sessions are ever generated. Deployed to production at version 35.
 
+**DRO-298 (Workout Library Phase 2):** Added 30 high-fidelity templates to `ai/context/workout-library.json` (bike×10, run×10, swim×8, race×1 `RACE_OLYMPIC`, strength×1 `STRENGTH_NOTES_ONLY` placeholder). Extended `materialize-structure.ts` with new target vocabulary: `power_watts` (single + range), `pace_per_km` (absolute run pace string), `pace_per_100m` (absolute swim pace string), range forms for `ftp_pct_min/max` and `hr_pct_max_min/max`. **NOTE:** `buildSimplifiedLibrary()` in `generate-plan/index.ts` currently iterates only `["swim", "bike", "run"]` — it does NOT surface the new `power_watts`, `pace_per_km`, `pace_per_100m`, or `hr_pct_max` range fields to the LLM in Step 3. The new vocabulary is only used by the materializer at plan-write time (DRO-298 scope). Surfacing these new fields to Step 3 for LLM-aware template selection is a TODO for a future ticket.
+
 ---
 
 ## Post-Processing Fixers
@@ -161,7 +163,7 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 - **Canonical file:** `ai/context/workout-library.json`
 - **iOS:** Symlink at `Dromos/Dromos/Resources/workout-library.json` → canonical file. Loaded by `WorkoutLibraryService`.
 - **Edge Function:** Fetched at runtime from Supabase Storage (`static-assets/workout-library.json`). Upload via `scripts/upload-static-assets.sh`.
-- **Race templates (`race[]`):** 2 curated templates — `RACE_Race_01` (Ironman 70.3, 1.9/90/21.1) and `RACE_Race_02` (Olympic, 1.5/40/10). The previous full-IM marathon stub was removed in DRO-288.
+- **Race templates (`race[]`):** 3 curated templates — `RACE_Race_01` (Ironman 70.3, 1.9/90/21.1), `RACE_Race_02` (Olympic race sim, 1.5/40/10 with FTP/VMA targets), and `RACE_OLYMPIC` (full Olympic triathlon with distance-only work segments: swim 1500m, bike 40km, run 10km + T1/T2 transitions — added DRO-298). The previous full-IM marathon stub was removed in DRO-288.
 - **Easy intensity varies by duration:** Easy templates are NOT flat — shorter sessions use higher % (run: 65% MAS, bike: 70% FTP) while long sessions use lower % (run: 62% MAS, bike: 65% FTP). Brick runs (`RUN_Easy_01`) use the lowest (60% MAS).
 
 ---

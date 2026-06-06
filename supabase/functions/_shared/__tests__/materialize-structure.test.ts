@@ -361,3 +361,294 @@ Deno.test("repeat container: intensity field does not produce a top-level target
   assertEquals(container.segments![0].target, { type: "ftp_pct", value: 90 });
   assertEquals(container.segments![1].target, { type: "ftp_pct", value: 55 });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2 — New Target types (DRO-298)
+// ---------------------------------------------------------------------------
+
+// --- hr_pct_max ---
+
+Deno.test("hr_pct_max: single value produces hr_pct_max target", () => {
+  const tpl = simpleTemplate("RUN_HR_CAP_01", [
+    { label: "work", duration_minutes: 45, hr_pct_max: 78 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "hr_pct_max", value: 78 },
+  );
+});
+
+Deno.test("hr_pct_max: min+max range form produces { type, min, max }", () => {
+  const tpl = simpleTemplate("RUN_HR_RANGE_01", [
+    { label: "work", duration_minutes: 30, hr_pct_max_min: 65, hr_pct_max_max: 78 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "hr_pct_max", min: 65, max: 78 },
+  );
+});
+
+// --- hr_zone clamping ---
+
+Deno.test("hr_zone: value 1 (lower boundary) resolves to zone 1", () => {
+  const tpl = simpleTemplate("RUN_HR_Z1", [
+    { label: "work", duration_minutes: 30, hr_zone: 1 },
+  ]);
+  assertEquals(materialize(tpl).segments[0].target, { type: "hr_zone", value: 1 });
+});
+
+Deno.test("hr_zone: value 5 (upper boundary) resolves to zone 5", () => {
+  const tpl = simpleTemplate("RUN_HR_Z5", [
+    { label: "work", duration_minutes: 10, hr_zone: 5 },
+  ]);
+  assertEquals(materialize(tpl).segments[0].target, { type: "hr_zone", value: 5 });
+});
+
+Deno.test("hr_zone: input 0 clamps to zone 1", () => {
+  const tpl = simpleTemplate("RUN_HR_CLAMP_LOW", [
+    { label: "work", duration_minutes: 10, hr_zone: 0 },
+  ]);
+  assertEquals(materialize(tpl).segments[0].target, { type: "hr_zone", value: 1 });
+});
+
+Deno.test("hr_zone: input 6 clamps to zone 5", () => {
+  const tpl = simpleTemplate("RUN_HR_CLAMP_HIGH", [
+    { label: "work", duration_minutes: 10, hr_zone: 6 },
+  ]);
+  assertEquals(materialize(tpl).segments[0].target, { type: "hr_zone", value: 5 });
+});
+
+// --- power_watts ---
+
+Deno.test("power_watts: single value produces power_watts target", () => {
+  const tpl = simpleTemplate("BIKE_POWER_01", [
+    { label: "work", duration_minutes: 15, power_watts: 260 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "power_watts", value: 260 },
+  );
+});
+
+Deno.test("power_watts: min+max range form produces { type, min, max }", () => {
+  const tpl = simpleTemplate("BIKE_POWER_RANGE_01", [
+    { label: "work", duration_minutes: 40, power_watts_min: 230, power_watts_max: 235 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "power_watts", min: 230, max: 235 },
+  );
+});
+
+// --- pace_per_km ---
+
+Deno.test("pace_per_km: string passthrough produces pace_per_km target", () => {
+  const tpl = simpleTemplate("RUN_PACE_01", [
+    { label: "work", distance_meters: 400, pace_per_km: "4:15" },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "pace_per_km", value: "4:15" },
+  );
+});
+
+// --- pace_per_100m ---
+
+Deno.test("pace_per_100m: string passthrough produces pace_per_100m target", () => {
+  const tpl = simpleTemplate("SWIM_PACE100_01", [
+    { label: "work", distance_meters: 150, pace_per_100m: "1:50" },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "pace_per_100m", value: "1:50" },
+  );
+});
+
+// --- Distance-based interval with distance-based recovery ---
+
+Deno.test("distance interval: work 400m + distance recovery 400m both materialise correctly", () => {
+  const tpl = simpleTemplate("RUN_400M_INTERVALS", [
+    {
+      label: "repeat",
+      repeats: 5,
+      segments: [
+        { label: "work", distance_meters: 400, pace_per_km: "3:35" },
+      ],
+      recovery: { label: "recovery", distance_meters: 400, pace_per_km: "6:00" },
+    },
+  ]);
+
+  const result = materialize(tpl);
+  const repeat = result.segments[0];
+  assertEquals(repeat.repeats, 5);
+
+  const work = repeat.segments![0];
+  assertEquals(work.distance_meters, 400);
+  assertEquals(work.target, { type: "pace_per_km", value: "3:35" });
+
+  const rec = repeat.recovery!;
+  assertEquals(rec.label, "recovery");
+  assertEquals(rec.distance_meters, 400);
+  assertEquals(rec.target, { type: "pace_per_km", value: "6:00" });
+});
+
+// --- Nested repeats with HR-based children (over-under bike pattern) ---
+
+Deno.test("nested repeats with HR children: BIKE_OU over-under structure materialises correctly", () => {
+  const tpl: WorkoutTemplate = {
+    template_id: "BIKE_OU_TEST",
+    duration_minutes: 67,
+    segments: [
+      { label: "warmup", duration_minutes: 15, ftp_pct: 65, cadence_rpm: 90 },
+      {
+        label: "repeat",
+        repeats: 2,
+        segments: [
+          {
+            label: "repeat",
+            repeats: 3,
+            segments: [
+              { label: "work", duration_minutes: 1, ftp_pct: 110, cadence_rpm: 100 },
+              { label: "work", duration_minutes: 3, ftp_pct: 95, cadence_rpm: 90 },  // Fixed: 95% FTP is high tempo, not recovery
+            ],
+          },
+        ],
+        recovery: { label: "recovery", duration_minutes: 6, ftp_pct: 55, cadence_rpm: 85 },
+      },
+      { label: "cooldown", duration_minutes: 10, ftp_pct: 55, cadence_rpm: 85 },
+    ],
+  };
+
+  const result = materialize(tpl);
+  assertEquals(result.segments.length, 3);
+
+  const outerRepeat = result.segments[1];
+  assertEquals(outerRepeat.repeats, 2);
+  assertExists(outerRepeat.recovery);
+  assertEquals(outerRepeat.recovery!.target, { type: "ftp_pct", value: 55 });
+
+  const innerRepeat = outerRepeat.segments![0];
+  assertEquals(innerRepeat.repeats, 3);
+
+  const overSeg = innerRepeat.segments![0];
+  assertEquals(overSeg.label, "work");
+  assertEquals(overSeg.target, { type: "ftp_pct", value: 110 });
+
+  const underSeg = innerRepeat.segments![1];
+  // After DRO-298 fix1: "under" block is label="work" (95% FTP is high tempo, not recovery)
+  assertEquals(underSeg.label, "work");
+  assertEquals(underSeg.target, { type: "ftp_pct", value: 95 });
+});
+
+// --- STRENGTH_NOTES_ONLY ---
+
+Deno.test("STRENGTH_NOTES_ONLY: materialises to { segments: [] } without throwing", () => {
+  const tpl: WorkoutTemplate = {
+    template_id: "STRENGTH_NOTES_ONLY",
+    duration_minutes: 30,
+    segments: [],
+  };
+  const result = materialize(tpl);
+  assertEquals(result.segments.length, 0, "segments must be empty");
+});
+
+// --- ftp_pct range form ---
+
+Deno.test("ftp_pct: min+max range form produces { type, min, max }", () => {
+  const tpl = simpleTemplate("BIKE_SS_RANGE_01", [
+    { label: "work", duration_minutes: 6, ftp_pct_min: 88, ftp_pct_max: 93, cadence_rpm: 90 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "ftp_pct", min: 88, max: 93 },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Unpaired min/max negative tests — pins the silent-drop contract (DRO-298 fix1)
+//
+// IMPORTANT: When only ONE side of a range pair is set (_min without _max, or
+// vice versa), the range branch is skipped entirely. If no other intensity field
+// is present the target is undefined. This is intentional — an unpaired field
+// indicates a data error in the template, and the materializer deliberately
+// ignores it rather than emitting a malformed Target.
+// ---------------------------------------------------------------------------
+
+Deno.test("hr_pct_max: only _max set (no _min) → target is undefined (silent drop)", () => {
+  // This was the original bug in 5 Phase 2 templates before fix1.
+  const tpl = simpleTemplate("RUN_BAD_HR_01", [
+    { label: "work", duration_minutes: 45, hr_pct_max_max: 78 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired hr_pct_max_max alone must produce undefined target",
+  );
+});
+
+Deno.test("hr_pct_max: only _min set (no _max) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("RUN_BAD_HR_02", [
+    { label: "work", duration_minutes: 45, hr_pct_max_min: 65 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired hr_pct_max_min alone must produce undefined target",
+  );
+});
+
+Deno.test("ftp_pct: only _min set (no _max) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_FTP_01", [
+    { label: "work", duration_minutes: 10, ftp_pct_min: 88 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired ftp_pct_min alone must produce undefined target",
+  );
+});
+
+Deno.test("ftp_pct: only _max set (no _min) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_FTP_02", [
+    { label: "work", duration_minutes: 10, ftp_pct_max: 93 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired ftp_pct_max alone must produce undefined target",
+  );
+});
+
+Deno.test("power_watts: only _min set (no _max) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_POWER_01", [
+    { label: "work", duration_minutes: 3, power_watts_min: 290 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired power_watts_min alone must produce undefined target",
+  );
+});
+
+Deno.test("power_watts: only _max set (no _min) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_POWER_02", [
+    { label: "work", duration_minutes: 3, power_watts_max: 300 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired power_watts_max alone must produce undefined target",
+  );
+});
+
+// Legacy single-value hr_pct_max still works (positive regression guard)
+Deno.test("hr_pct_max: legacy single-value field produces { type, value } (positive regression)", () => {
+  const tpl = simpleTemplate("RUN_HR_LEGACY_01", [
+    { label: "work", duration_minutes: 30, hr_pct_max: 73 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "hr_pct_max", value: 73 },
+    "legacy hr_pct_max single value must still produce a valid target",
+  );
+});
