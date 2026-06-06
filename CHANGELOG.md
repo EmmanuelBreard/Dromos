@@ -7,6 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Changed
+- **Narrowed race-distance support to Olympic + Ironman 70.3** — Onboarding and Profile pickers now offer two distances instead of four; Sprint and full Ironman have been removed. The time-objective default adapts to the chosen distance (2h30 for Olympic, 6h00 for 70.3) and respects any manual edit you've made — switching distances after typing a time won't overwrite it. AI plan generation only models these two distances. The workout library now ships a dedicated Olympic race-day template (1.5km swim / 40km bike / 10km run with T1/T2 transitions) alongside the existing 70.3 one, so Olympic athletes get an actual triathlon race-week session instead of inheriting a half-ironman split. Pace calculator drops the 180km bike and 3800m swim entries; run reference distances are unchanged. Existing users on the removed distances are not migrated — their plans stay as-is, and their Profile loads cleanly via a lossy decoder that silently falls back to the 70.3 picker default for unknown race-distance strings (DRO-288).
+
+### Changed
 - **Today tab — coach feedback truncates cleanly + Segments graph header removed** — Long coach feedback on the Today tab's completed-session card now collapses to 2 lines by default with a "Show more" / "Show less" toggle. The toggle only appears when the feedback would actually overflow — short feedback shows no dead button. The redundant "Segments" text header above the per-lap bar graph has been removed; the graph reads as self-evident next to the metrics row above it (DRO-279).
 
 ### Fixed
