@@ -149,6 +149,12 @@ struct FlatSegment: Identifiable {
     /// Nil for legacy template path — graph view falls back to its own per-sport formatter.
     let tooltipMetric: String?
 
+    /// HR % of max value used for HR-based bar coloring (DRO-297).
+    /// Set when the segment target is `hr_pct_max` or `hr_zone` (converted to zone midpoint %).
+    /// When non-nil, graph components use `Color.intensity(forHRPctMax:)` instead of the
+    /// FTP/VMA percentage path.
+    let hrPctMaxForColor: Double?
+
     init(
         label: String,
         durationMinutes: Double,
@@ -156,7 +162,8 @@ struct FlatSegment: Identifiable {
         distanceMeters: Int?,
         pace: String?,
         isRecovery: Bool,
-        tooltipMetric: String? = nil
+        tooltipMetric: String? = nil,
+        hrPctMaxForColor: Double? = nil
     ) {
         self.label = label
         self.durationMinutes = durationMinutes
@@ -165,6 +172,7 @@ struct FlatSegment: Identifiable {
         self.pace = pace
         self.isRecovery = isRecovery
         self.tooltipMetric = tooltipMetric
+        self.hrPctMaxForColor = hrPctMaxForColor
     }
 }
 

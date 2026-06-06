@@ -116,12 +116,16 @@ struct TodayCompletedCard: View {
             // TODO: WorkoutLibraryService.flattenedSegments/stepSummaries are not memoized.
             // For ≤30-segment workouts this is sub-ms; revisit if profiling shows render cost on disclosure toggle.
             if showPlannedWorkout {
-                if !segments.isEmpty {
-                    WorkoutShape(segments: segments)
-                }
-                if !steps.isEmpty {
-                    Divider()
-                    WorkoutStepList(steps: steps)
+                // Strength sessions: no graph or step list when planned workout is disclosed (DRO-297).
+                // Mirrors the planned-state convention in TodayPlannedCard.
+                if session.sport.lowercased() != "strength" {
+                    if !segments.isEmpty {
+                        WorkoutShape(segments: segments)
+                    }
+                    if !steps.isEmpty {
+                        Divider()
+                        WorkoutStepList(steps: steps)
+                    }
                 }
             }
         }

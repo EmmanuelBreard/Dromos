@@ -200,6 +200,8 @@ struct SessionCardView: View {
     /// Shared planned workout rendering used by both the completed-card disclosure and
     /// the always-visible planned/missed layout. Contains coaching notes, workout steps,
     /// intensity graph, and swim distance (swim-only, simple sessions).
+    ///
+    /// Strength sessions show notes only — no graph, no step list (DRO-297).
     @ViewBuilder
     private var plannedWorkoutContent: some View {
         // Coaching notes from plan (displayed above workout steps when present).
@@ -211,33 +213,36 @@ struct SessionCardView: View {
                 .padding(.bottom, 4)
         }
 
-        // DRO-213 Phase 5: dual-path renderer reads session.structure first; falls back to template lookup.
-        // Steps + graph share the same `shouldShow` predicate so simple swims hide both consistently.
-        let canRender = session.structure != nil || template != nil
-        if canRender, workoutLibrary.shouldShowWorkoutSteps(for: session) {
-            let steps = workoutLibrary.stepSummaries(
-                for: session,
-                ftp: ftp, vma: vma, css: css, maxHr: maxHr
-            )
-            if !steps.isEmpty {
-                WorkoutStepsView(steps: steps)
-            }
-
-            let segments = workoutLibrary.flattenedSegments(
-                for: session,
-                ftp: ftp, vma: vma, css: css, maxHr: maxHr
-            )
-            if !segments.isEmpty {
-                let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
-                WorkoutGraphView(
-                    segments: segments,
-                    totalDurationMinutes: totalDuration,
-                    sport: session.sport,
-                    ftp: ftp,
-                    vma: vma,
-                    css: css,
-                    maxHr: maxHr
+        // Strength sessions: notes are the only content — no graph, no steps (DRO-297).
+        if session.sport.lowercased() != "strength" {
+            // DRO-213 Phase 5: dual-path renderer reads session.structure first; falls back to template lookup.
+            // Steps + graph share the same `shouldShow` predicate so simple swims hide both consistently.
+            let canRender = session.structure != nil || template != nil
+            if canRender, workoutLibrary.shouldShowWorkoutSteps(for: session) {
+                let steps = workoutLibrary.stepSummaries(
+                    for: session,
+                    ftp: ftp, vma: vma, css: css, maxHr: maxHr
                 )
+                if !steps.isEmpty {
+                    WorkoutStepsView(steps: steps)
+                }
+
+                let segments = workoutLibrary.flattenedSegments(
+                    for: session,
+                    ftp: ftp, vma: vma, css: css, maxHr: maxHr
+                )
+                if !segments.isEmpty {
+                    let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
+                    WorkoutGraphView(
+                        segments: segments,
+                        totalDurationMinutes: totalDuration,
+                        sport: session.sport,
+                        ftp: ftp,
+                        vma: vma,
+                        css: css,
+                        maxHr: maxHr
+                    )
+                }
             }
         }
     }
@@ -749,6 +754,35 @@ struct RaceDayCardView: View {
         ftp: nil, // No FTP set
         vma: nil,
         css: nil
+    )
+    .padding()
+    .background(Color(.systemGroupedBackground))
+}
+
+// DRO-297: Strength session — header + notes block only, no graph, no steps.
+#Preview("Session Card - Strength (notes only)") {
+    let session = PlanSession(
+        id: UUID(),
+        weekId: UUID(),
+        day: "Thursday",
+        sport: "strength",
+        type: "Easy",
+        templateId: "STRENGTH_Core_01",
+        durationMinutes: 40,
+        isBrick: false,
+        notes: "3 sets: 10 squats, 10 lunges, 20 crunches, 30s plank. Rest 90s between sets.",
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
+    )
+    SessionCardView(
+        session: session,
+        swimDistance: nil,
+        template: nil,
+        ftp: nil,
+        vma: nil,
+        css: nil,
+        maxHr: nil
     )
     .padding()
     .background(Color(.systemGroupedBackground))
