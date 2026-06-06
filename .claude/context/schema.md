@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-04-25 | Migrations: 001-016 + summary_polyline + 20260405_align-swim-templates + 20260425_session_structure_and_max_hr
+> Last updated: 2026-06-06 | Migrations: 001-016 + summary_polyline + 20260405_align-swim-templates + 20260425_session_structure_and_max_hr + 017_plan_snapshots + 018_revoke_import_plan_atomic_from_public
 
 ## Tables Overview
 
@@ -236,7 +236,7 @@ Point-in-time snapshots of training plans, written before destructive import/rep
 | `handle_new_user()` | TRIGGER (AFTER INSERT on `auth.users`) | Auto-inserts `users` row with id/email/name |
 | `update_updated_at()` | TRIGGER (BEFORE UPDATE) | Sets `updated_at = now()` on `users` and `training_plans` |
 | `reorder_sessions(JSONB)` | RPC (SECURITY DEFINER) | Batch-updates `day`, `week_id`, `order_in_day` on `plan_sessions`. Validates per-row ownership via `auth.uid()`. GRANT EXECUTE TO authenticated. |
-| `import_plan_atomic(p_user_id, p_plan, p_weeks, p_profile_updates)` | RPC (SECURITY DEFINER) | Atomically: snapshots existing plan → plan_snapshots, DELETEs old plan (CASCADE), INSERTs new plan/weeks/sessions (with pre-materialised `structure` JSONB), optionally updates `users` profile fields. Returns `{plan_id, snapshot_id, weeks_inserted, sessions_inserted}`. GRANT EXECUTE TO service_role. Called by `import-plan` Edge Function. |
+| `import_plan_atomic(p_user_id, p_plan, p_weeks, p_profile_updates)` | RPC (SECURITY DEFINER) | Atomically: snapshots existing plan → plan_snapshots, DELETEs old plan (CASCADE), INSERTs new plan/weeks/sessions (with pre-materialised `structure` JSONB), optionally updates `users` profile fields. Returns `{plan_id, snapshot_id, weeks_inserted, sessions_inserted}`. GRANT EXECUTE TO service_role only — PUBLIC/anon/authenticated revoked (migration 018). `race_date` profile update cast via `::date::timestamptz` for UTC-safe writes (migration 018). Called by `import-plan` Edge Function. |
 
 ---
 

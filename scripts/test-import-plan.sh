@@ -4,17 +4,18 @@
 # Usage:
 #   SUPABASE_URL=https://cumbrfnguykvxhvdelru.supabase.co \
 #   ALLOWED_JWT=<ebreard4@gmail.com JWT> \
-#   SERVICE_ROLE_JWT=<service-role JWT for non-allowlisted test> \
+#   SERVICE_ROLE_JWT=<JWT for a non-allowlisted user> \
 #   ./scripts/test-import-plan.sh
 #
-# ALLOWED_JWT   — a valid JWT for ebreard4@gmail.com (from Supabase Auth)
-# SERVICE_ROLE_JWT — a JWT for a different user (or the service-role anonymous bearer
-#                    for a non-allowlisted account), used to test the 403 path.
+# ALLOWED_JWT       — a valid JWT for ebreard4@gmail.com (from Supabase Auth)
+# SERVICE_ROLE_JWT  — a JWT for a different (non-allowlisted) user; used to
+#                     test the 403 path. If not set, Test 5b is skipped.
 #
-# Note: The happy-path test (Test 1) does NOT run against the real ebreard4 plan.
-#       It uses the test user flow: it will 409 if ebreard4 already has a plan and
-#       `replace` is not set — which is the expected behavior (Test 4 covers this).
-#       To run the full happy-path (with replace), export REPLACE_EXISTING=true.
+# REPLACE_EXISTING  — set to "true" to run the happy-path replace test (Test 2).
+#                     WARNING: this overwrites the real ebreard4 plan.
+#                     Restore from plan_snapshots after running.
+#
+# Dependencies: curl, jq (replaces python3 for JSON construction)
 
 set -euo pipefail
 
@@ -112,12 +113,8 @@ echo "         If user has NO plan, expect 200 (first import)."
 # ── Test 2: Happy path — replace: true ───────────────────────────────────────
 echo ""
 echo "── Test 2: Happy path (replace: true, 1 week 3 sessions) → expect 200 ──"
-HAPPY_PAYLOAD=$(echo "$MINIMAL_PAYLOAD" | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-d['replace'] = True
-print(json.dumps(d))
-")
+# Use jq to add replace:true — no python3 dependency
+HAPPY_PAYLOAD=$(echo "$MINIMAL_PAYLOAD" | jq '. + {replace: true}')
 if [ "$REPLACE_EXISTING" = "true" ]; then
   RESP=$(curl -s -o /tmp/import_plan_t2.json -w "%{http_code}" \
     -X POST "$FN_URL" \
@@ -210,26 +207,102 @@ RESP=$(curl -s -o /tmp/import_plan_t4.json -w "%{http_code}" \
 check "mismatch-total-weeks" "400" "$RESP" "$(cat /tmp/import_plan_t4.json)"
 echo "   Body: $(cat /tmp/import_plan_t4.json)"
 
-# ── Test 5: Non-allowlisted user → 403 ───────────────────────────────────────
+# ── Test 5a: No auth header → 401 ────────────────────────────────────────────
+# This and 5b are deliberately split: missing header = 401 (not authenticated),
+# wrong user = 403 (authenticated but not allowlisted).
 echo ""
-echo "── Test 5: Non-allowlisted user → expect 403 ──"
+echo "── Test 5a: No auth header → expect 401 ──"
+RESP=$(curl -s -o /tmp/import_plan_t5a.json -w "%{http_code}" \
+  -X POST "$FN_URL" \
+  -H "Content-Type: application/json" \
+  -d '{}')
+check "no-auth-header" "401" "$RESP" "$(cat /tmp/import_plan_t5a.json)"
+echo "   Body: $(cat /tmp/import_plan_t5a.json)"
+
+# ── Test 5b: Auth as non-allowlisted user → 403 ───────────────────────────────
+echo ""
+echo "── Test 5b: Non-allowlisted user → expect 403 ──"
 if [ -n "$SERVICE_ROLE_JWT" ]; then
-  RESP=$(curl -s -o /tmp/import_plan_t5.json -w "%{http_code}" \
+  RESP=$(curl -s -o /tmp/import_plan_t5b.json -w "%{http_code}" \
     -X POST "$FN_URL" \
     -H "Authorization: Bearer $SERVICE_ROLE_JWT" \
     -H "Content-Type: application/json" \
-    -d '{"plan":{"race_objective":"Olympic","race_date":"2026-09-13","start_date":"2026-07-07","total_weeks":1},"weeks":[]}')
-  check "non-allowlisted-user" "403" "$RESP" "$(cat /tmp/import_plan_t5.json)"
-  echo "   Body: $(cat /tmp/import_plan_t5.json)"
+    -d "$MINIMAL_PAYLOAD")
+  check "non-allowlisted-user" "403" "$RESP" "$(cat /tmp/import_plan_t5b.json)"
+  echo "   Body: $(cat /tmp/import_plan_t5b.json)"
 else
-  # No-auth request should return 401 (missing JWT)
-  RESP=$(curl -s -o /tmp/import_plan_t5.json -w "%{http_code}" \
-    -X POST "$FN_URL" \
-    -H "Content-Type: application/json" \
-    -d '{}')
-  check "no-auth-header" "401" "$RESP" "$(cat /tmp/import_plan_t5.json)"
-  echo "   Note: SERVICE_ROLE_JWT not set — tested 401 (no auth) instead of 403 (wrong user)."
+  echo "   SKIPPED — SERVICE_ROLE_JWT is not set."
+  echo "   To test the 403 path, export SERVICE_ROLE_JWT with a JWT for a non-ebreard4 account."
 fi
+
+# ── Test 6: Invalid sport value → 400 ────────────────────────────────────────
+echo ""
+echo "── Test 6: Invalid sport value → expect 400 ──"
+BAD_SPORT_PAYLOAD=$(cat <<EOF
+{
+  "plan": {
+    "race_objective": "Olympic",
+    "race_date": "$PLAN_RACE_DATE",
+    "start_date": "$WEEK_START",
+    "total_weeks": 1
+  },
+  "replace": true,
+  "weeks": [
+    {
+      "week_number": 1,
+      "phase": "Base",
+      "is_recovery": false,
+      "rest_days": [],
+      "start_date": "$WEEK_START",
+      "sessions": [
+        {
+          "day": "Monday",
+          "sport": "yoga",
+          "type": "Easy",
+          "template_id": "SWIM_Tempo_01",
+          "duration_minutes": 45,
+          "is_brick": false,
+          "order_in_day": 0
+        }
+      ]
+    }
+  ]
+}
+EOF
+)
+RESP=$(curl -s -o /tmp/import_plan_t6.json -w "%{http_code}" \
+  -X POST "$FN_URL" \
+  -H "Authorization: Bearer $ALLOWED_JWT" \
+  -H "Content-Type: application/json" \
+  -d "$BAD_SPORT_PAYLOAD")
+check "invalid-sport" "400" "$RESP" "$(cat /tmp/import_plan_t6.json)"
+echo "   Body: $(cat /tmp/import_plan_t6.json)"
+
+# ── Test 7: Oversized Content-Length → 413 ────────────────────────────────────
+echo ""
+echo "── Test 7: Oversized Content-Length header → expect 413 ──"
+# Send a 1-byte body but lie about Content-Length (600 KB) to exercise the
+# header-based guard without actually uploading a large payload.
+RESP=$(curl -s -o /tmp/import_plan_t7.json -w "%{http_code}" \
+  -X POST "$FN_URL" \
+  -H "Authorization: Bearer $ALLOWED_JWT" \
+  -H "Content-Type: application/json" \
+  -H "Content-Length: 614400" \
+  -d '{}')
+check "oversized-payload" "413" "$RESP" "$(cat /tmp/import_plan_t7.json)"
+echo "   Body: $(cat /tmp/import_plan_t7.json)"
+
+# ── Test 8: Bad profile_updates → 400 ────────────────────────────────────────
+echo ""
+echo "── Test 8: Invalid profile_updates.max_hr → expect 400 ──"
+BAD_PROFILE_PAYLOAD=$(echo "$MINIMAL_PAYLOAD" | jq '. + {replace: true, profile_updates: {max_hr: 50}}')
+RESP=$(curl -s -o /tmp/import_plan_t8.json -w "%{http_code}" \
+  -X POST "$FN_URL" \
+  -H "Authorization: Bearer $ALLOWED_JWT" \
+  -H "Content-Type: application/json" \
+  -d "$BAD_PROFILE_PAYLOAD")
+check "invalid-profile-updates-max-hr" "400" "$RESP" "$(cat /tmp/import_plan_t8.json)"
+echo "   Body: $(cat /tmp/import_plan_t8.json)"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
