@@ -75,7 +75,9 @@ Test 2 response: `{"success":true,"plan_id":"11407877...","snapshot_id":"a80fcf0
 
 ### 5. PR
 
-TBD — opened after commit.
+**PR #115:** https://github.com/EmmanuelBreard/Dromos/pull/115
+**Title:** feat(DRO-299): import-plan edge function + plan_snapshots migration
+**Base:** `feature/DRO-296-import-olympic-plan`
 
 ### 6. Linear Ticket
 
