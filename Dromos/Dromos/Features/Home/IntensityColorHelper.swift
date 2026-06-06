@@ -63,13 +63,9 @@ extension Color {
 
     /// HR-based intensity color for segments whose target is `hr_pct_max` or `hr_zone`.
     ///
-    /// Maps a heart-rate percentage of max HR (0–100) to the same green→yellow→orange→red
-    /// gradient used by `Color.intensity(for:isRecovery:)`. Anchors:
-    /// - ≤65% → green (warm-up / Z1)
-    /// - 65–80% → green fading to yellow (Z2–Z3)
-    /// - 80–90% → yellow fading to orange (Z3–Z4)
-    /// - ≥90% → orange fading to red (Z4–Z5)
-    /// - Recovery → always green regardless of percentage.
+    /// HR-based intensity color: linearly maps 60–95% HRmax to a 120°→0° hue sweep
+    /// (60%→green, 78%→yellow, 95%→red). Values <60% clamp to green; >95% clamp to red.
+    /// Recovery short-circuits to solid green regardless of value.
     ///
     /// - Parameters:
     ///   - pct: Heart-rate percentage of max HR (e.g., 88.0 for 88%).

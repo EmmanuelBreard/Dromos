@@ -64,14 +64,14 @@ final class StructureRenderTests: XCTestCase {
     }
 
     func test_displayString_hrZone_resolvesToBpmRange() {
-        // maxHr 200, Z3 (70-80%) → 140–160 bpm
+        // maxHr 200, Z3 (78–85%) → lo=Int(200*0.78)=156, hi=Int(200*0.85)=170
         let out = svc.displayString(for: .hrZone(value: 3), sport: "bike", ftp: nil, vma: nil, css: nil, maxHr: 200)
-        XCTAssertEqual(out, "140–160 bpm")
+        XCTAssertEqual(out, "Z3 HR (156–170 bpm)")
     }
 
     func test_displayString_hrZone_noMaxHrShowsZoneLabel() {
         let out = svc.displayString(for: .hrZone(value: 3), sport: "bike", ftp: nil, vma: nil, css: nil, maxHr: nil)
-        XCTAssertEqual(out, "Z3 (set max HR in profile)")
+        XCTAssertEqual(out, "Z3 HR (set max HR in profile)")
     }
 
     func test_displayString_powerWatts_passesThroughRange() {
@@ -117,8 +117,9 @@ final class StructureRenderTests: XCTestCase {
     }
 
     func test_intensityPct_hrZoneFollowsTable() {
-        XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 1), sport: "run", ftp: nil, vma: nil, css: nil, maxHr: nil), 55)
-        XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 5), sport: "run", ftp: nil, vma: nil, css: nil, maxHr: nil), 95)
+        // Midpoints from hrZoneBounds: Z1=(0.50,0.65)→57.5→58, Z5=(0.92,1.00)→96.0→96
+        XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 1), sport: "run", ftp: nil, vma: nil, css: nil, maxHr: nil), 58)
+        XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 5), sport: "run", ftp: nil, vma: nil, css: nil, maxHr: nil), 96)
     }
 
     func test_intensityPct_pacePerKmInverts() {

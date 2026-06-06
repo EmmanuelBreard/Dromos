@@ -824,7 +824,10 @@ final class WorkoutLibraryService {
         case let .rpe(value):
             return clampIntensity(value * 10.0)
         case let .hrZone(value):
-            switch value { case 1: return 55; case 2: return 65; case 3: return 75; case 4: return 85; default: return 95 }
+            // Derive from hrZoneBounds midpoints so bar height and bar color share one source of truth.
+            let idx = max(0, min(value - 1, Self.hrZoneBounds.count - 1))
+            let b = Self.hrZoneBounds[idx]
+            return clampIntensity(((b.lo + b.hi) / 2.0) * 100.0)
         case let .hrPctMax(value, min, max):
             return clampIntensity(forPctMid(value: value, min: min, max: max))
         case let .powerWatts(value, min, max):
@@ -913,12 +916,22 @@ final class WorkoutLibraryService {
     //
     // These are stored as the lower bound of each zone band.  The upper bound of
     // zone N equals the lower bound of zone N+1.  Zone 5 is unbounded above.
+    // Zone thresholds aligned with Dromos training-plan conventions
+    // (source: training-plan-olympic-sept-2026.md, lines 48-52):
+    //   Z1 <65%    Recovery / very easy aerobic
+    //   Z2 65–78%  Aerobic base / fat-burning
+    //   Z3 78–85%  Aerobic power / tempo
+    //   Z4 85–92%  Sub-threshold / lactate threshold
+    //   Z5 >92%    VO2 max / neuromuscular
+    //
+    // Z1 lower bound is 0.50 (not 0.00) to avoid the nonsensical
+    // "Z1 HR (0–X bpm)" display — physiologically Z1 starts at ~50% HRmax.
     private static let hrZoneBounds: [(lo: Double, hi: Double)] = [
-        (0.00, 0.60), // Z1
-        (0.60, 0.72), // Z2
-        (0.72, 0.82), // Z3
-        (0.82, 0.92), // Z4
-        (0.92, 1.00), // Z5
+        (0.50, 0.65), // Z1: Recovery
+        (0.65, 0.78), // Z2: Aerobic base
+        (0.78, 0.85), // Z3: Tempo
+        (0.85, 0.92), // Z4: Sub-threshold
+        (0.92, 1.00), // Z5: VO2 max
     ]
 
     /// Formats an HR-zone target.

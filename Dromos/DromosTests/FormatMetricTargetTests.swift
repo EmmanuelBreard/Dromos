@@ -47,35 +47,35 @@ final class FormatMetricTargetTests: XCTestCase {
     // MARK: - hr_zone
 
     func test_hrZone_z1_withMaxHr_showsZoneNameAndBpmBand() {
-        // Z1: 0–60% of maxHR 200 → 0–120 bpm
+        // Z1: 50–65% of maxHR 200 → lo=Int(200*0.50)=100, hi=Int(200*0.65)=130
         let out = svc.displayString(for: .hrZone(value: 1), sport: "run",
                                     ftp: nil, vma: nil, css: nil, maxHr: 200)
-        XCTAssertEqual(out, "Z1 HR (0–120 bpm)", "got: \(out ?? "nil")")
+        XCTAssertEqual(out, "Z1 HR (100–130 bpm)", "got: \(out ?? "nil")")
     }
 
     func test_hrZone_z2_withMaxHr_showsZoneNameAndBpmBand() {
-        // Z2: 60–72% of maxHR 200 → 120–144 bpm
+        // Z2: 65–78% of maxHR 200 → lo=Int(200*0.65)=130, hi=Int(200*0.78)=156
         let out = svc.displayString(for: .hrZone(value: 2), sport: "run",
                                     ftp: nil, vma: nil, css: nil, maxHr: 200)
-        XCTAssertEqual(out, "Z2 HR (120–144 bpm)", "got: \(out ?? "nil")")
+        XCTAssertEqual(out, "Z2 HR (130–156 bpm)", "got: \(out ?? "nil")")
     }
 
     func test_hrZone_z3_withMaxHr_showsZoneNameAndBpmBand() {
-        // Z3: 72–82% of maxHR 200 → 144–164 bpm
+        // Z3: 78–85% of maxHR 200 → lo=Int(200*0.78)=156, hi=Int(200*0.85)=170
         let out = svc.displayString(for: .hrZone(value: 3), sport: "bike",
                                     ftp: nil, vma: nil, css: nil, maxHr: 200)
-        XCTAssertEqual(out, "Z3 HR (144–164 bpm)", "got: \(out ?? "nil")")
+        XCTAssertEqual(out, "Z3 HR (156–170 bpm)", "got: \(out ?? "nil")")
     }
 
     func test_hrZone_z4_withMaxHr() {
-        // Z4: 82–92% of maxHR 200 → 164–184 bpm
+        // Z4: 85–92% of maxHR 200 → lo=Int(200*0.85)=170, hi=Int(200*0.92)=184
         let out = svc.displayString(for: .hrZone(value: 4), sport: "bike",
                                     ftp: nil, vma: nil, css: nil, maxHr: 200)
-        XCTAssertEqual(out, "Z4 HR (164–184 bpm)", "got: \(out ?? "nil")")
+        XCTAssertEqual(out, "Z4 HR (170–184 bpm)", "got: \(out ?? "nil")")
     }
 
     func test_hrZone_z5_withMaxHr() {
-        // Z5: 92–100% of maxHR 200 → 184–200 bpm
+        // Z5: 92–100% of maxHR 200 → lo=Int(200*0.92)=184, hi=Int(200*1.00)=200
         let out = svc.displayString(for: .hrZone(value: 5), sport: "run",
                                     ftp: nil, vma: nil, css: nil, maxHr: 200)
         XCTAssertEqual(out, "Z5 HR (184–200 bpm)", "got: \(out ?? "nil")")
@@ -172,48 +172,45 @@ final class FormatMetricTargetTests: XCTestCase {
         XCTAssertEqual(pct, 85)
     }
 
-    func test_intensityPct_hrPctMax_range_returnsMidpoint() {
-        // mid = (65 + 78) / 2 = 71.5 → clamped to 72
+    func test_intensityPct_hrPctMax_range_returnsMidpoint() throws {
+        // mid = (65 + 78) / 2 = 71.5 → rounds to 72
         let t: Target = .hrPctMax(value: nil, min: 65, max: 78)
-        let pct = svc.intensityPct(for: t, sport: "bike", ftp: nil, vma: nil, css: nil, maxHr: 200)
-        XCTAssertNotNil(pct)
-        XCTAssertEqual(pct!, 72, accuracy: 2)
+        let pct = try XCTUnwrap(svc.intensityPct(for: t, sport: "bike", ftp: nil, vma: nil, css: nil, maxHr: 200))
+        XCTAssertEqual(pct, 72)
     }
 
     func test_intensityPct_hrZone_mapsToTable() {
+        // Midpoints from hrZoneBounds: Z1=57.5→58, Z2=71.5→72, Z3=81.5→82, Z4=88.5→89, Z5=96.0→96
         XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 1), sport: "run",
-                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 55)
+                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 58)
         XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 2), sport: "run",
-                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 65)
+                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 72)
         XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 3), sport: "run",
-                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 75)
+                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 82)
         XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 4), sport: "run",
-                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 85)
+                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 89)
         XCTAssertEqual(svc.intensityPct(for: .hrZone(value: 5), sport: "run",
-                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 95)
+                                         ftp: nil, vma: nil, css: nil, maxHr: nil), 96)
     }
 
-    func test_intensityPct_powerWatts_returnsReasonableValue() {
-        // 240 W with FTP 250 → 96% — check it's close
+    func test_intensityPct_powerWatts_returnsReasonableValue() throws {
+        // 240 W with FTP 250 → 96%
         let t: Target = .powerWatts(value: 240, min: nil, max: nil)
-        let pct = svc.intensityPct(for: t, sport: "bike", ftp: 250, vma: nil, css: nil, maxHr: nil)
-        XCTAssertNotNil(pct)
-        XCTAssertEqual(pct!, 96, accuracy: 2)
+        let pct = try XCTUnwrap(svc.intensityPct(for: t, sport: "bike", ftp: 250, vma: nil, css: nil, maxHr: nil))
+        XCTAssertEqual(pct, 96)
     }
 
-    func test_intensityPct_pacePerKm_returnsReasonableValue() {
+    func test_intensityPct_pacePerKm_returnsReasonableValue() throws {
         // 4:00/km = 15 km/h; VMA 18 → 83%
         let t: Target = .pacePerKm(value: "4:00")
-        let pct = svc.intensityPct(for: t, sport: "run", ftp: nil, vma: 18.0, css: nil, maxHr: nil)
-        XCTAssertNotNil(pct)
-        XCTAssertEqual(pct!, 83, accuracy: 2)
+        let pct = try XCTUnwrap(svc.intensityPct(for: t, sport: "run", ftp: nil, vma: 18.0, css: nil, maxHr: nil))
+        XCTAssertEqual(pct, 83)
     }
 
-    func test_intensityPct_pacePer100m_returnsReasonableValue() {
+    func test_intensityPct_pacePer100m_returnsReasonableValue() throws {
         // CSS 100s/100m, pace 1:40 → css/secs * 100 = 100/100 * 100 = 100%
         let t: Target = .pacePerHundredM(value: "1:40")
-        let pct = svc.intensityPct(for: t, sport: "swim", ftp: nil, vma: nil, css: 100, maxHr: nil)
-        XCTAssertNotNil(pct)
-        XCTAssertEqual(pct!, 100, accuracy: 5)
+        let pct = try XCTUnwrap(svc.intensityPct(for: t, sport: "swim", ftp: nil, vma: nil, css: 100, maxHr: nil))
+        XCTAssertEqual(pct, 100)
     }
 }

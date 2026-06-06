@@ -68,23 +68,17 @@ struct TodayPlannedCard: View {
             .kerning(-0.4)
             .foregroundColor(.primary)
 
-            // Strength sessions: show notes only — no graph, no step list (DRO-297).
-            // The shape and step list are deliberately suppressed; the notes block carries
-            // all actionable guidance for strength work.
-            if session.sport.lowercased() == "strength" {
-                if let notes = session.notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            } else {
-                if let notes = session.notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            // Notes are always shown when present, regardless of sport (DRO-297).
+            if let notes = session.notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Strength sessions: no graph or step list — notes above carry all guidance (DRO-297).
+            // For all other sports, render the workout shape and step list when available.
+            if session.sport.lowercased() != "strength" {
                 if !segments.isEmpty {
                     WorkoutShape(segments: segments)
                 }

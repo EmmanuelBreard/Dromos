@@ -177,14 +177,15 @@ All services follow:
 - Singleton service loading bundled `workout-library.json`
 - O(1) template lookup by `templateId`
 - `swimDistance(for:)` — Recursive distance calculation for swim templates
-- `flattenedSegments(for:)` — Returns `[FlatSegment]` for graph rendering (expands repeats)
-- `stepSummaries(for:sport:ftp:vma:css:)` — Returns `[StepSummary]` for text display (collapses repeats)
+- `flattenedSegments(for:sport:ftp:vma:css:maxHr:)` — Returns `[FlatSegment]` for graph rendering (expands repeats); now accepts `maxHr:` to populate `hrPctMaxForColor` on HR-targeted segments (DRO-297)
+- `stepSummaries(for:sport:ftp:vma:css:maxHr:)` — Returns `[StepSummary]` for text display (collapses repeats); now accepts `maxHr:` for HR-zone display string formatting (DRO-297)
 - Library JSON now has 4 top-level arrays: `swim`, `bike`, `run`, `race` (optional) — strength was removed (see DRO-222 for DB cleanup)
 
 **FlatSegment** (`WorkoutTemplate.swift`):
 - Identifiable struct for graph rendering
-- Fields: `label`, `durationMinutes`, `intensityPct`, `distanceMeters`, `pace`, `isRecovery`
-- Used by `WorkoutGraphView` for intensity bar chart visualization
+- Fields: `label`, `durationMinutes`, `intensityPct`, `distanceMeters`, `pace`, `isRecovery`, `tooltipMetric`, `hrPctMaxForColor`
+- `hrPctMaxForColor: Double?` — Set when segment target is `hr_pct_max` or `hr_zone` (converted to zone midpoint %); graph/shape components use `Color.intensity(forHRPctMax:)` instead of FTP/VMA path when non-nil (DRO-297)
+- Used by `WorkoutGraphView` and `WorkoutShape` for intensity bar chart visualization
 
 **StepSummary** (`WorkoutTemplate.swift`):
 - Identifiable struct for step-by-step text display
@@ -200,6 +201,7 @@ All services follow:
 - Maps intensity percentage (50-120) to HSL gradient (green→yellow→orange→red)
 - Used consistently across step dots and graph bars for visual coherence
 - Recovery segments always shown in green
+- **DRO-297 addition:** `Color.intensity(forHRPctMax:isRecovery:)` — HR-specific variant that linearly maps 60–95% HRmax onto the same 120°→0° hue sweep (60%→green, 78%→yellow, 95%→red). Called by `WorkoutShape` and `WorkoutGraphView` when `FlatSegment.hrPctMaxForColor` is non-nil.
 
 **WorkoutStepsView** (`WorkoutStepsView.swift`):
 - Compact vertical list of workout steps
@@ -231,6 +233,7 @@ All services follow:
 - Shows `WorkoutGraphView` for all sessions with a template
 - Passes sport + athlete metrics to graph for tap popover formatting
 - Swim exception: simple swims (1 segment, no repeats) → show distance only
+- **Strength convention (DRO-297):** For `sport == "strength"`, graph + step list are suppressed in both planned and completed disclosure views — notes block only. Mirrors `TodayPlannedCard` and `TodayCompletedCard`.
 - **Phase 3 additions:**
   - When `.completed`: actual Strava data (`ActualMetricsView` + `StravaRouteMapView`) is always visible as primary content
   - Planned workout (steps + intensity graph + swim distance) behind a local `@State` disclosure button ("Planned workout" with rotating chevron), default collapsed
@@ -276,6 +279,7 @@ All services follow:
 - `PlanSession.sportEmoji` — 🏊‍♂️, 🚴‍♂️, 🏃‍♂️, 💪, 🏁
 - `PlanSession.sportIcon` — figure.pool.swim, bicycle, figure.run, figure.strengthtraining.traditional, flag.checkered
 - `Color.intensity(for:isRecovery:)` — Green→yellow→orange→red gradient based on intensity % (Phase 2)
+- `Color.intensity(forHRPctMax:isRecovery:)` — HR variant: linearly maps 60–95% HRmax to the same hue sweep; called when `FlatSegment.hrPctMaxForColor` is non-nil (DRO-297)
 
 **Model Extensions:**
 - `Weekday` enum with `fullName`, `abbreviation`, date calculation
