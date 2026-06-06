@@ -50,6 +50,8 @@ DB writes: training_plans → plan_weeks → plan_sessions
 
 **Template variables:** `{{training_philosophy}}`, `{{experience_level}}`, `{{race_distance}}`, `{{race_date}}`, `{{weekly_hours}}`, `{{current_weekly_hours}}`, `{{ftp_watts}}`, `{{vma}}`, `{{swim_css}}`, `{{max_weekday_minutes}}`, `{{max_weekend_minutes}}`, sport day counts
 
+**DRO-288 (race-distance narrowing):** `{{race_distance}}` now resolves via `expandRaceObjective()` to one of two canonical strings — `"Olympic (1.5km swim / 40km bike / 10km run)"` or `"Half-Ironman (1.9km swim / 90km bike / 21.1km run)"`. The function still echoes any legacy enum value literally (e.g. the 1 audited production Sprint user) so their existing plan stays as-is; iOS lossily decodes the now-removed Sprint/Ironman cases on profile fetch and falls back to `.ironman703` defaults in the UI.
+
 ---
 
 ## Step 2: Markdown to JSON
@@ -159,6 +161,7 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 - **Canonical file:** `ai/context/workout-library.json`
 - **iOS:** Symlink at `Dromos/Dromos/Resources/workout-library.json` → canonical file. Loaded by `WorkoutLibraryService`.
 - **Edge Function:** Fetched at runtime from Supabase Storage (`static-assets/workout-library.json`). Upload via `scripts/upload-static-assets.sh`.
+- **Race templates (`race[]`):** 2 curated templates — `RACE_Race_01` (Ironman 70.3, 1.9/90/21.1) and `RACE_Race_02` (Olympic, 1.5/40/10). The previous full-IM marathon stub was removed in DRO-288.
 - **Easy intensity varies by duration:** Easy templates are NOT flat — shorter sessions use higher % (run: 65% MAS, bike: 70% FTP) while long sessions use lower % (run: 62% MAS, bike: 65% FTP). Brick runs (`RUN_Easy_01`) use the lowest (60% MAS).
 
 ---
