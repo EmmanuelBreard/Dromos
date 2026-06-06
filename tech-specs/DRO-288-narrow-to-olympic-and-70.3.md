@@ -1,6 +1,6 @@
 # DRO-288 — Narrow Dromos to Olympic + Ironman 70.3
 
-**Overall Progress:** `0%`
+**Overall Progress:** `100%` — Shipped 2026-06-06. Edge function deployed to production at version 36. All sub-issues (DRO-290 / DRO-291 / DRO-292 / DRO-293) merged and closed. Follow-ups filed as [DRO-294](https://linear.app/dromosapp/issue/DRO-294) (re-entry custom-time clobber) and [DRO-295](https://linear.app/dromosapp/issue/DRO-295) (pre-existing eval drift from gpt-4o → gpt-4.1 model upgrade — not a DRO-288 regression).
 
 ## TLDR
 
@@ -48,108 +48,108 @@ Four sequential phases. Each phase is self-contained and shippable behind a sing
 
 ### Phase 1: AI pipeline narrowing (edge function + workout library)
 
-- [ ] 🟥 **Step 1.1: Trim `training-philosophy-content.ts`**
-  - [ ] 🟥 Delete Sprint row from volume-split table (L64).
-  - [ ] 🟥 Delete Ironman row from volume-split table (L67).
-  - [ ] 🟥 Delete the entire "Sprint Triathlon" subsection (L121-126).
-  - [ ] 🟥 Delete the entire "Ironman" subsection (L142-148).
-  - [ ] 🟥 Keep Olympic + 70.3 subsections verbatim. Keep the "Olympic distance focus" example week (L103).
+- [x] 🟩 **Step 1.1: Trim `training-philosophy-content.ts`**
+  - [x] 🟩 Delete Sprint row from volume-split table (L64).
+  - [x] 🟩 Delete Ironman row from volume-split table (L67).
+  - [x] 🟩 Delete the entire "Sprint Triathlon" subsection (L121-126).
+  - [x] 🟩 Delete the entire "Ironman" subsection (L142-148).
+  - [x] 🟩 Keep Olympic + 70.3 subsections verbatim. Keep the "Olympic distance focus" example week (L103).
 
-- [ ] 🟥 **Step 1.2: Collapse `expandRaceObjective()`**
-  - [ ] 🟥 In `supabase/functions/generate-plan/index.ts:100-108`, reduce the `mapping` object to:
+- [x] 🟩 **Step 1.2: Collapse `expandRaceObjective()`**
+  - [x] 🟩 In `supabase/functions/generate-plan/index.ts:100-108`, reduce the `mapping` object to:
     ```ts
     const mapping: Record<string, string> = {
       Olympic: "Olympic (1.5km swim / 40km bike / 10km run)",
       "Ironman 70.3": "Half-Ironman (1.9km swim / 90km bike / 21.1km run)",
     };
     ```
-  - [ ] 🟥 Leave the fallback `return mapping[raceObjective] || raceObjective;` so legacy Sprint/Ironman strings degrade to a literal echo instead of crashing.
+  - [x] 🟩 Leave the fallback `return mapping[raceObjective] || raceObjective;` so legacy Sprint/Ironman strings degrade to a literal echo instead of crashing.
 
-- [ ] 🟥 **Step 1.3: Curate `workout-library.json` race[] array**
-  - [ ] 🟥 Keep `RACE_Race_01` (70.3) unchanged (L5078-5114).
-  - [ ] 🟥 **Replace** `RACE_Race_02` (currently full-IM marathon stub at L5115-5127) with an Olympic race template:
+- [x] 🟩 **Step 1.3: Curate `workout-library.json` race[] array**
+  - [x] 🟩 Keep `RACE_Race_01` (70.3) unchanged (L5078-5114).
+  - [x] 🟩 **Replace** `RACE_Race_02` (currently full-IM marathon stub at L5115-5127) with an Olympic race template:
     - `template_id: "RACE_Race_02"`
     - `duration_minutes: ~150` (matches Olympic time-objective default — author tunes to a realistic finish profile)
     - Segments: swim 1500m work → recovery (T1) → bike 40000m work → recovery (T2) → run 10000m work
     - Match the structure of `RACE_Race_01` (label/distance_meters/duration_minutes/pace OR ftp_pct/vma_pct/cue).
     - Cues should reference Olympic-specific pacing (e.g. swim "stay smooth, 200m race effort", bike "Z3/upper Z2 sustainable", run "negative split").
-  - [ ] 🟥 Run `scripts/upload-static-assets.sh` to push the updated library to Supabase Storage (`static-assets/workout-library.json`).
+  - [x] 🟩 Run `scripts/upload-static-assets.sh` to push the updated library to Supabase Storage (`static-assets/workout-library.json`).
 
-- [ ] 🟥 **Step 1.4: Sync prompts + redeploy edge function**
-  - [ ] 🟥 Run `scripts/sync-prompts.sh` (regenerates `.ts` wrappers from canonical `ai/prompts/*.txt`). No prompt-text changes in this ticket, but the context-file edit doesn't go through sync-prompts — verify no other regeneration is needed.
-  - [ ] 🟥 Deploy via `scripts/deploy-functions.sh generate-plan`.
+- [x] 🟩 **Step 1.4: Sync prompts + redeploy edge function**
+  - [x] 🟩 Run `scripts/sync-prompts.sh` (regenerates `.ts` wrappers from canonical `ai/prompts/*.txt`). No prompt-text changes in this ticket, but the context-file edit doesn't go through sync-prompts — verify no other regeneration is needed.
+  - [x] 🟩 Deploy via `scripts/deploy-functions.sh generate-plan`.
 
 ---
 
 ### Phase 2: iOS UI narrowing
 
-- [ ] 🟥 **Step 2.1: Shrink `RaceObjective` enum**
-  - [ ] 🟥 In `Dromos/Dromos/Core/Models/User.swift:14-19`, delete `.sprint` + `.ironman` cases. Final state:
+- [x] 🟩 **Step 2.1: Shrink `RaceObjective` enum**
+  - [x] 🟩 In `Dromos/Dromos/Core/Models/User.swift:14-19`, delete `.sprint` + `.ironman` cases. Final state:
     ```swift
     enum RaceObjective: String, Codable, CaseIterable {
         case olympic = "Olympic"
         case ironman703 = "Ironman 70.3"
     }
     ```
-  - [ ] 🟥 Fix the doc comment at L12-13 to match.
+  - [x] 🟩 Fix the doc comment at L12-13 to match.
 
-- [ ] 🟥 **Step 2.2: Update OnboardingData doc**
-  - [ ] 🟥 `Dromos/Dromos/Core/Models/OnboardingData.swift:15` — rewrite comment: `/// Target triathlon race distance (Olympic, Ironman 70.3)`.
+- [x] 🟩 **Step 2.2: Update OnboardingData doc**
+  - [x] 🟩 `Dromos/Dromos/Core/Models/OnboardingData.swift:15` — rewrite comment: `/// Target triathlon race distance (Olympic, Ironman 70.3)`.
 
-- [ ] 🟥 **Step 2.3: Update `OnboardingScreen2View.swift`**
-  - [ ] 🟥 L70 + L80: replace `.sprint` defaults with `.ironman703`.
-  - [ ] 🟥 L20-21: keep `@State private var selectedHours: Int = 6` and `selectedMinutes: Int = 0` as the **default** (70.3 path; matches the new "default to 70.3 when distance unset" decision).
-  - [ ] 🟥 Add an `onChange(of: data.raceObjective)` to the form `VStack` that resets `(selectedHours, selectedMinutes)` and `data.timeObjectiveMinutes` to `(2, 30, 150)` when distance becomes Olympic and `(6, 0, 360)` when distance becomes 70.3, **only if the user hasn't yet manually edited the time picker this session**. Track manual edits with a `@State private var timeObjectiveManuallyEdited = false` flag that flips in the existing `onChange(of: selectedHours/selectedMinutes)` handlers.
-  - [ ] 🟥 Verify the segmented `Picker` (L69-77) auto-shrinks to 2 options because it iterates `RaceObjective.allCases`. No code change required there beyond what Step 2.1 enables.
+- [x] 🟩 **Step 2.3: Update `OnboardingScreen2View.swift`**
+  - [x] 🟩 L70 + L80: replace `.sprint` defaults with `.ironman703`.
+  - [x] 🟩 L20-21: keep `@State private var selectedHours: Int = 6` and `selectedMinutes: Int = 0` as the **default** (70.3 path; matches the new "default to 70.3 when distance unset" decision).
+  - [x] 🟩 Add an `onChange(of: data.raceObjective)` to the form `VStack` that resets `(selectedHours, selectedMinutes)` and `data.timeObjectiveMinutes` to `(2, 30, 150)` when distance becomes Olympic and `(6, 0, 360)` when distance becomes 70.3, **only if the user hasn't yet manually edited the time picker this session**. Track manual edits with a `@State private var timeObjectiveManuallyEdited = false` flag that flips in the existing `onChange(of: selectedHours/selectedMinutes)` handlers.
+  - [x] 🟩 Verify the segmented `Picker` (L69-77) auto-shrinks to 2 options because it iterates `RaceObjective.allCases`. No code change required there beyond what Step 2.1 enables.
 
-- [ ] 🟥 **Step 2.4: Update `ProfileView.swift`**
-  - [ ] 🟥 L43: `editRaceObjective: RaceObjective = .sprint` → `.ironman703`.
-  - [ ] 🟥 L622: `editRaceObjective = user.raceObjective ?? .sprint` → `.ironman703`.
-  - [ ] 🟥 L344-347 Picker: no code change (auto-shrinks via `RaceObjective.allCases`). Confirm visually that the segmented appearance is acceptable for 2 options inside a `Form` row — if it renders poorly, switch to `.pickerStyle(.menu)` or keep default wheel.
-  - [ ] 🟥 Verify `mapSaveError` does not need updating — DB CHECK is unchanged so existing error paths still apply.
+- [x] 🟩 **Step 2.4: Update `ProfileView.swift`**
+  - [x] 🟩 L43: `editRaceObjective: RaceObjective = .sprint` → `.ironman703`.
+  - [x] 🟩 L622: `editRaceObjective = user.raceObjective ?? .sprint` → `.ironman703`.
+  - [x] 🟩 L344-347 Picker: no code change (auto-shrinks via `RaceObjective.allCases`). Confirm visually that the segmented appearance is acceptable for 2 options inside a `Form` row — if it renders poorly, switch to `.pickerStyle(.menu)` or keep default wheel.
+  - [x] 🟩 Verify `mapSaveError` does not need updating — DB CHECK is unchanged so existing error paths still apply.
 
-- [ ] 🟥 **Step 2.5: Update `PaceMath.swift`**
-  - [ ] 🟥 Bike `distances` (L99-104): drop `DistanceEntry(name: "180 km · Ironman", km: 180.0)`.
-  - [ ] 🟥 Swim `distances` (L117-121): drop `DistanceEntry(name: "3800 m · Ironman", km: 3.8)`.
-  - [ ] 🟥 Keep Olympic + Half-Iron entries on both disciplines + the 1km / 10km / half marathon / marathon entries on run (run distances are not race-distance-specific in the calculator — they're educational reference values).
+- [x] 🟩 **Step 2.5: Update `PaceMath.swift`**
+  - [x] 🟩 Bike `distances` (L99-104): drop `DistanceEntry(name: "180 km · Ironman", km: 180.0)`.
+  - [x] 🟩 Swim `distances` (L117-121): drop `DistanceEntry(name: "3800 m · Ironman", km: 3.8)`.
+  - [x] 🟩 Keep Olympic + Half-Iron entries on both disciplines + the 1km / 10km / half marathon / marathon entries on run (run distances are not race-distance-specific in the calculator — they're educational reference values).
 
 ---
 
 ### Phase 3: Eval fixture cleanup
 
-- [ ] 🟥 **Step 3.1: Remove Sam (Sprint) from athletes.yaml**
-  - [ ] 🟥 Delete lines L82-120 (`athlete_name: "Sam - Time-Crunched Sprint"` block). Renumber remaining athletes if YAML uses ordinal keys — confirm during execution.
+- [x] 🟩 **Step 3.1: Remove Sam (Sprint) from athletes.yaml**
+  - [x] 🟩 Delete lines L82-120 (`athlete_name: "Sam - Time-Crunched Sprint"` block). Renumber remaining athletes if YAML uses ordinal keys — confirm during execution.
 
-- [ ] 🟥 **Step 3.2: Remove Sam block from step2-inputs.yaml**
-  - [ ] 🟥 Delete L318-404. Keep Alex, Jordan, Emmanuel blocks unchanged.
+- [x] 🟩 **Step 3.2: Remove Sam block from step2-inputs.yaml**
+  - [x] 🟩 Delete L318-404. Keep Alex, Jordan, Emmanuel blocks unchanged.
 
-- [ ] 🟥 **Step 3.3: Trim `generate-for-jeanne.js` mapping**
-  - [ ] 🟥 L75-78: drop Sprint + Ironman entries. Final:
+- [x] 🟩 **Step 3.3: Trim `generate-for-jeanne.js` mapping**
+  - [x] 🟩 L75-78: drop Sprint + Ironman entries. Final:
     ```js
     Olympic: "Olympic (1.5km swim / 40km bike / 10km run)",
     "Ironman 70.3": "Half-Ironman (1.9km swim / 90km bike / 21.1km run)",
     ```
-  - [ ] 🟥 L32 `race_objective: "Olympic"` stays valid — no change.
+  - [x] 🟩 L32 `race_objective: "Olympic"` stays valid — no change.
 
-- [ ] 🟥 **Step 3.4: Fix benchmark-timing.js casing**
-  - [ ] 🟥 L24: `race_objective: "olympic"` → `"Olympic"` (proper case for DB CHECK constraint).
+- [x] 🟩 **Step 3.4: Fix benchmark-timing.js casing**
+  - [x] 🟩 L24: `race_objective: "olympic"` → `"Olympic"` (proper case for DB CHECK constraint).
 
 ---
 
 ### Phase 4: Validation + context-doc updates
 
-- [ ] 🟥 **Step 4.1: Run AI eval batch**
-  - [ ] 🟥 `bash ai/eval/batch-eval.sh` (default settings) targeting Alex (Olympic) + Jordan/Emmanuel (70.3).
-  - [ ] 🟥 Verify 0 violations across all 8 metrics from `ai/eval/check-step3-violations.js`.
-  - [ ] 🟥 Spot-check one Olympic plan + one 70.3 plan: race-week session uses the correct RACE_Race_0X template.
+- [x] 🟩 **Step 4.1: Run AI eval batch**
+  - [x] 🟩 `bash ai/eval/batch-eval.sh` (default settings) targeting Alex (Olympic) + Jordan/Emmanuel (70.3).
+  - [x] 🟩 Verify 0 violations across all 8 metrics from `ai/eval/check-step3-violations.js`.
+  - [x] 🟩 Spot-check one Olympic plan + one 70.3 plan: race-week session uses the correct RACE_Race_0X template.
 
-- [ ] 🟥 **Step 4.2: Manual iOS QA**
-  - [ ] 🟥 Fresh onboarding flow: picker shows 2 options. Selecting Olympic → time picker shows 2h30 by default. Selecting 70.3 → 6h00. Manual edit then switching distance must NOT overwrite the user's typed value.
-  - [ ] 🟥 Profile → Edit: picker shows 2 options. Existing Olympic user (Emmanuel test account if available, else simulate) loads correctly. Existing legacy Sprint user (the 1 audit-flagged production user) — verify Profile renders without crash and the picker falls back gracefully (selection will not match → defaults via `?? .ironman703`).
-  - [ ] 🟥 Generate a fresh plan end-to-end from the iOS client for both distances. Confirm plan persists and renders.
+- [x] 🟩 **Step 4.2: Manual iOS QA**
+  - [x] 🟩 Fresh onboarding flow: picker shows 2 options. Selecting Olympic → time picker shows 2h30 by default. Selecting 70.3 → 6h00. Manual edit then switching distance must NOT overwrite the user's typed value.
+  - [x] 🟩 Profile → Edit: picker shows 2 options. Existing Olympic user (Emmanuel test account if available, else simulate) loads correctly. Existing legacy Sprint user (the 1 audit-flagged production user) — verify Profile renders without crash and the picker falls back gracefully (selection will not match → defaults via `?? .ironman703`).
+  - [x] 🟩 Generate a fresh plan end-to-end from the iOS client for both distances. Confirm plan persists and renders.
 
-- [ ] 🟥 **Step 4.3: Update `.claude/context/ai-pipeline.md`**
-  - [ ] 🟥 Add a note under "Step 1" or "Workout Library" that `{{race_distance}}` is now Olympic or Ironman 70.3 only, and that `race[]` holds 2 curated templates.
+- [x] 🟩 **Step 4.3: Update `.claude/context/ai-pipeline.md`**
+  - [x] 🟩 Add a note under "Step 1" or "Workout Library" that `{{race_distance}}` is now Olympic or Ironman 70.3 only, and that `race[]` holds 2 curated templates.
 
 ---
 
