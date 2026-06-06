@@ -82,6 +82,9 @@ interface SourceSegment {
   distance_meters?: number;
   // Intensity — legacy and new names
   ftp_pct?: number;
+  /** Range form for ftp_pct (e.g. sweetspot 88-93%). Emits Target { min, max }. */
+  ftp_pct_min?: number;
+  ftp_pct_max?: number;
   mas_pct?: number;   // legacy name — materializer normalises to vma_pct
   vma_pct?: number;
   css_pct?: number;
@@ -89,6 +92,17 @@ interface SourceSegment {
   pace?: string;      // swim pace tag: slow | easy | medium | quick | threshold | fast | very_quick
   hr_zone?: number;
   hr_pct_max?: number;
+  /** Range form for hr_pct_max (cap range). Emits Target { min, max }. */
+  hr_pct_max_min?: number;
+  hr_pct_max_max?: number;
+  /** Explicit watts targets — Phase 2. */
+  power_watts?: number;
+  power_watts_min?: number;
+  power_watts_max?: number;
+  /** Absolute run pace string e.g. "4:15" — Phase 2. */
+  pace_per_km?: string;
+  /** Absolute swim pace string e.g. "1:50" per 100m — Phase 2. */
+  pace_per_100m?: string;
   // Cadence / coaching
   cadence_rpm?: number;
   cue?: string;
@@ -148,15 +162,27 @@ function paceToRpe(pace: string): Target {
 
 /**
  * Resolves the source segment's intensity into a Target object.
- * Phase 1 only emits single-value targets ({type, value}). The Target union
- * supports range form ({type, min, max}) but no Phase 1 templates carry ranges —
- * range emission is deferred to Phase 2 when the agent produces them.
  *
- * Priority order: ftp_pct → vma_pct → mas_pct (legacy alias) → css_pct →
- * rpe → hr_zone → hr_pct_max → swim pace tag.
+ * Priority order (Phase 1 + Phase 2 extensions):
+ *   ftp_pct (range or single) →
+ *   vma_pct / mas_pct (legacy alias) →
+ *   css_pct →
+ *   rpe →
+ *   hr_zone →
+ *   hr_pct_max (range or single) →
+ *   power_watts (range or single) →
+ *   pace_per_km →
+ *   pace_per_100m →
+ *   swim pace tag → RPE.
+ *
+ * Phase 2 adds: range forms (ftp_pct_min/max, hr_pct_max_min/max,
+ * power_watts / power_watts_min/max), pace_per_km, pace_per_100m.
  */
 function resolveTarget(seg: SourceSegment): Target | undefined {
-  // ftp_pct (bike / range support not in current templates but handled for safety)
+  // ftp_pct — range form takes priority over single value
+  if (seg.ftp_pct_min !== undefined && seg.ftp_pct_max !== undefined) {
+    return { type: "ftp_pct", min: seg.ftp_pct_min, max: seg.ftp_pct_max };
+  }
   if (seg.ftp_pct !== undefined) {
     return { type: "ftp_pct", value: seg.ftp_pct };
   }
@@ -181,8 +207,30 @@ function resolveTarget(seg: SourceSegment): Target | undefined {
     return { type: "hr_zone", value: z };
   }
 
+  // hr_pct_max — range form takes priority over single value
+  if (seg.hr_pct_max_min !== undefined && seg.hr_pct_max_max !== undefined) {
+    return { type: "hr_pct_max", min: seg.hr_pct_max_min, max: seg.hr_pct_max_max };
+  }
   if (seg.hr_pct_max !== undefined) {
     return { type: "hr_pct_max", value: seg.hr_pct_max };
+  }
+
+  // power_watts — range form takes priority over single value
+  if (seg.power_watts_min !== undefined && seg.power_watts_max !== undefined) {
+    return { type: "power_watts", min: seg.power_watts_min, max: seg.power_watts_max };
+  }
+  if (seg.power_watts !== undefined) {
+    return { type: "power_watts", value: seg.power_watts };
+  }
+
+  // Absolute run pace — string passthrough e.g. "4:15"
+  if (seg.pace_per_km !== undefined) {
+    return { type: "pace_per_km", value: seg.pace_per_km };
+  }
+
+  // Absolute swim pace — string passthrough e.g. "1:50"
+  if (seg.pace_per_100m !== undefined) {
+    return { type: "pace_per_100m", value: seg.pace_per_100m };
   }
 
   // Swim pace tag → RPE

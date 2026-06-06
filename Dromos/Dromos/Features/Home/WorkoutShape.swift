@@ -15,8 +15,9 @@ import SwiftUI
 /// component is non-interactive and chrome-free so it composes inside cards without
 /// stealing focus from the title and step list.
 ///
-/// Reuses `Color.intensity(for:isRecovery:)` so the gradient stays in lockstep with the
-/// detailed graph rendered elsewhere.
+/// Reuses `Color.intensity(for:isRecovery:)` and (for HR targets) the new
+/// `Color.intensity(forHRPctMax:isRecovery:)` so the gradient stays in lockstep with the
+/// detailed graph rendered elsewhere (DRO-297).
 struct WorkoutShape: View {
     let segments: [FlatSegment]
 
@@ -61,7 +62,7 @@ struct WorkoutShape: View {
                         let barHeight = heightFraction(for: effectivePct) * outerHeight
 
                         RoundedRectangle(cornerRadius: barCornerRadius)
-                            .fill(Color.intensity(for: effectivePct, isRecovery: segment.isRecovery))
+                            .fill(barColor(for: segment, effectivePct: effectivePct))
                             .frame(width: barWidth, height: barHeight)
                             // Push every bar to share the same baseline regardless of height.
                             .frame(maxHeight: .infinity, alignment: .bottom)
@@ -72,6 +73,23 @@ struct WorkoutShape: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityLabel)
         }
+    }
+
+    // MARK: - Color
+
+    /// Selects the bar fill color based on the segment's target type (DRO-297).
+    /// HR-based targets (hr_pct_max, hr_zone) use the HR-specific gradient;
+    /// everything else falls through to the FTP/VMA gradient.
+    /// Recovery is always green regardless of target type.
+    private func barColor(for segment: FlatSegment, effectivePct: Int?) -> Color {
+        // Recovery is always green
+        if segment.isRecovery { return Color.intensity(for: effectivePct, isRecovery: true) }
+        // HR-based target path: use the hr-specific gradient keyed on pct-of-max-HR
+        if let hrPct = segment.hrPctMaxForColor {
+            return Color.intensity(forHRPctMax: hrPct, isRecovery: false)
+        }
+        // Default: FTP/VMA percentage gradient
+        return Color.intensity(for: effectivePct, isRecovery: false)
     }
 
     // MARK: - Sizing
@@ -170,6 +188,29 @@ private let tuesdayVO2Segments: [FlatSegment] = {
         .padding(16)
         .background(Color.cardSurface)
         .padding()
+}
+
+// DRO-297: HR zone coloring — bars use Color.intensity(forHRPctMax:) gradient.
+#Preview("HR Zone shape — green to orange gradient") {
+    // Z2 midpoint ~66% (green-ish), Z4 midpoint ~87% (orange).
+    let segments: [FlatSegment] = [
+        FlatSegment(label: "warmup", durationMinutes: 10, intensityPct: 55,
+                    distanceMeters: nil, pace: nil, isRecovery: false,
+                    hrPctMaxForColor: 55),
+        FlatSegment(label: "work", durationMinutes: 30, intensityPct: 87,
+                    distanceMeters: nil, pace: nil, isRecovery: false,
+                    hrPctMaxForColor: 87),
+        FlatSegment(label: "recovery", durationMinutes: 3, intensityPct: nil,
+                    distanceMeters: nil, pace: nil, isRecovery: true),
+        FlatSegment(label: "cooldown", durationMinutes: 10, intensityPct: 55,
+                    distanceMeters: nil, pace: nil, isRecovery: false,
+                    hrPctMaxForColor: 55)
+    ]
+    return WorkoutShape(segments: segments)
+        .padding(16)
+        .background(Color.cardSurface)
+        .padding()
+        .background(Color.pageSurface)
 }
 
 #Preview("Swim — distance-driven") {

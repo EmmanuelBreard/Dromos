@@ -607,6 +607,9 @@ final class WorkoutLibraryService {
             for: seg.target, sport: sport,
             ftp: ftp, vma: vma, css: css, maxHr: maxHr
         )
+        // Populate hrPctMaxForColor so graph/shape components route to the HR color path
+        // when the segment's target is hr_pct_max or hr_zone (DRO-297).
+        let hrPctForColor = hrPctMaxForColorValue(for: seg.target)
         return FlatSegment(
             label: seg.label,
             durationMinutes: dur,
@@ -614,8 +617,27 @@ final class WorkoutLibraryService {
             distanceMeters: seg.distanceMeters,
             pace: nil,
             isRecovery: isRecovery,
-            tooltipMetric: metric
+            tooltipMetric: metric,
+            hrPctMaxForColor: hrPctForColor
         )
+    }
+
+    /// Returns the midpoint HR % of max HR for coloring purposes (DRO-297).
+    /// - `hr_pct_max` single or range → direct value / midpoint
+    /// - `hr_zone` → zone midpoint using the canonical zone table
+    /// - All other targets → nil (use FTP/VMA gradient instead)
+    private func hrPctMaxForColorValue(for target: Target?) -> Double? {
+        guard let target = target else { return nil }
+        switch target {
+        case let .hrPctMax(value, min, max):
+            return forPctMid(value: value, min: min, max: max)
+        case let .hrZone(value):
+            let idx = Swift.max(0, Swift.min(value - 1, Self.hrZoneBounds.count - 1))
+            let bounds = Self.hrZoneBounds[idx]
+            return (bounds.lo + bounds.hi) / 2.0 * 100.0
+        default:
+            return nil
+        }
     }
 
     // MARK: Structure → StepSummary
@@ -802,7 +824,10 @@ final class WorkoutLibraryService {
         case let .rpe(value):
             return clampIntensity(value * 10.0)
         case let .hrZone(value):
-            switch value { case 1: return 55; case 2: return 65; case 3: return 75; case 4: return 85; default: return 95 }
+            // Derive from hrZoneBounds midpoints so bar height and bar color share one source of truth.
+            let idx = max(0, min(value - 1, Self.hrZoneBounds.count - 1))
+            let b = Self.hrZoneBounds[idx]
+            return clampIntensity(((b.lo + b.hi) / 2.0) * 100.0)
         case let .hrPctMax(value, min, max):
             return clampIntensity(forPctMid(value: value, min: min, max: max))
         case let .powerWatts(value, min, max):
@@ -880,34 +905,72 @@ final class WorkoutLibraryService {
         return nil
     }
 
-    private func hrZoneDisplay(zone: Int, maxHr: Int?) -> String? {
-        guard let maxHr = maxHr else { return "Z\(zone) (set max HR in profile)" }
-        let bounds: (lo: Double, hi: Double)
-        switch zone {
-        case 1: bounds = (0.50, 0.60)
-        case 2: bounds = (0.60, 0.70)
-        case 3: bounds = (0.70, 0.80)
-        case 4: bounds = (0.80, 0.90)
-        default: bounds = (0.90, 1.00)
+    // MARK: HR zone boundaries (DRO-297)
+    //
+    // Zone thresholds align with common triathlon HR-zone conventions:
+    //   Z1 <60%    Recovery
+    //   Z2 60–72%  Aerobic base / fat-burning
+    //   Z3 72–82%  Aerobic power / tempo
+    //   Z4 82–92%  Sub-threshold / lactate threshold
+    //   Z5 >92%    VO2 max / neuromuscular
+    //
+    // These are stored as the lower bound of each zone band.  The upper bound of
+    // zone N equals the lower bound of zone N+1.  Zone 5 is unbounded above.
+    // Zone thresholds aligned with Dromos training-plan conventions
+    // (source: training-plan-olympic-sept-2026.md, lines 48-52):
+    //   Z1 <65%    Recovery / very easy aerobic
+    //   Z2 65–78%  Aerobic base / fat-burning
+    //   Z3 78–85%  Aerobic power / tempo
+    //   Z4 85–92%  Sub-threshold / lactate threshold
+    //   Z5 >92%    VO2 max / neuromuscular
+    //
+    // Z1 lower bound is 0.50 (not 0.00) to avoid the nonsensical
+    // "Z1 HR (0–X bpm)" display — physiologically Z1 starts at ~50% HRmax.
+    private static let hrZoneBounds: [(lo: Double, hi: Double)] = [
+        (0.50, 0.65), // Z1: Recovery
+        (0.65, 0.78), // Z2: Aerobic base
+        (0.78, 0.85), // Z3: Tempo
+        (0.85, 0.92), // Z4: Sub-threshold
+        (0.92, 1.00), // Z5: VO2 max
+    ]
+
+    /// Formats an HR-zone target.
+    /// - With maxHR: "Z2 HR (120–144 bpm)"
+    /// - Without maxHR: "Z2 HR (set max HR in profile)"
+    private func hrZoneDisplay(zone: Int, maxHr: Int?) -> String {
+        let idx = max(0, min(zone - 1, Self.hrZoneBounds.count - 1))
+        let bounds = Self.hrZoneBounds[idx]
+        let zoneName = "Z\(zone) HR"
+        guard let maxHr = maxHr else {
+            return "\(zoneName) (set max HR in profile)"
         }
         let lo = Int((Double(maxHr) * bounds.lo).rounded())
         let hi = Int((Double(maxHr) * bounds.hi).rounded())
-        return "\(lo)–\(hi) bpm"
+        return "\(zoneName) (\(lo)–\(hi) bpm)"
     }
 
+    /// Formats an HR % of max target.
+    /// - Single with maxHR: "HR 88% max (170 bpm)"
+    /// - Range with maxHR:  "HR 65–78% max (125–150 bpm)"
+    /// - Single without maxHR: "HR 88% max"
+    /// - Range without maxHR:  "HR 65–78% max"
     private func hrPctMaxDisplay(value: Double?, min: Double?, max: Double?, maxHr: Int?) -> String? {
-        guard let maxHr = maxHr else {
-            if let mn = min, let mx = max { return "\(Int(mn.rounded()))–\(Int(mx.rounded()))% max HR" }
-            if let v = value { return "\(Int(v.rounded()))% max HR" }
-            return nil
-        }
         if let mn = min, let mx = max {
-            let lo = Int((Double(maxHr) * mn / 100.0).rounded())
-            let hi = Int((Double(maxHr) * mx / 100.0).rounded())
-            return "\(lo)–\(hi) bpm"
+            let pctStr = "\(Int(mn.rounded()))–\(Int(mx.rounded()))% max"
+            if let hr = maxHr {
+                let lo = Int((Double(hr) * mn / 100.0).rounded())
+                let hi = Int((Double(hr) * mx / 100.0).rounded())
+                return "HR \(pctStr) (\(lo)–\(hi) bpm)"
+            }
+            return "HR \(pctStr)"
         }
         if let v = value {
-            return "\(Int((Double(maxHr) * v / 100.0).rounded())) bpm"
+            let pctStr = "\(Int(v.rounded()))% max"
+            if let hr = maxHr {
+                let bpm = Int((Double(hr) * v / 100.0).rounded())
+                return "HR \(pctStr) (\(bpm) bpm)"
+            }
+            return "HR \(pctStr)"
         }
         return nil
     }

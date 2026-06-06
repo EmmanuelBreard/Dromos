@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-> Last updated: 2026-04-25 | Migrations: 001-016 + summary_polyline + 20260405_align-swim-templates + 20260425_session_structure_and_max_hr
+> Last updated: 2026-06-06 | Migrations: 001-016 + summary_polyline + 20260405_align-swim-templates + 20260425_session_structure_and_max_hr + 017_plan_snapshots + 018_revoke_import_plan_atomic_from_public
 
 ## Tables Overview
 
@@ -121,16 +121,6 @@ Individual training sessions within a week.
 
 ---
 
-## Functions
-
-| Function | Type | Behavior |
-|----------|------|----------|
-| `handle_new_user()` | TRIGGER (AFTER INSERT on `auth.users`) | Auto-inserts `users` row with id/email/name |
-| `update_updated_at()` | TRIGGER (BEFORE UPDATE) | Sets `updated_at = now()` on `users` and `training_plans` |
-| `reorder_sessions(JSONB)` | RPC (SECURITY DEFINER) | Batch-updates `day`, `week_id`, `order_in_day` on `plan_sessions`. Validates per-row ownership via `auth.uid()`. GRANT EXECUTE TO authenticated. |
-
----
-
 ---
 
 ## `public.strava_connections`
@@ -218,6 +208,35 @@ Per-lap breakdown of Strava activities. Written by `strava-sync` Edge Function.
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | `strava_athlete_id` | BIGINT | | Denormalised from `strava_connections`. NULL = not connected. |
+
+---
+
+## `public.plan_snapshots`
+
+Point-in-time snapshots of training plans, written before destructive import/replace operations. Enables rollback safety. Created in migration `017_plan_snapshots.sql`.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | UUID | PK, DEFAULT `gen_random_uuid()` | |
+| `user_id` | UUID | NOT NULL, FK → `users(id)` CASCADE | |
+| `snapshot` | JSONB | NOT NULL | Full plan state: `{plan: {...}, weeks: [{week: {...}, sessions: [...]}]}` |
+| `reason` | TEXT | NOT NULL | Short slug, e.g. `"import-plan-replace"` |
+| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT `now()` | |
+
+**RLS:** SELECT own snapshots only (`auth.uid() = user_id`). Writes via `service_role` / `import_plan_atomic` SECURITY DEFINER function only.
+
+**Indexes:** `idx_plan_snapshots_user_id_created_at` on `(user_id, created_at DESC)` — fast latest-snapshot lookup.
+
+---
+
+## Functions (updated)
+
+| Function | Type | Behavior |
+|----------|------|----------|
+| `handle_new_user()` | TRIGGER (AFTER INSERT on `auth.users`) | Auto-inserts `users` row with id/email/name |
+| `update_updated_at()` | TRIGGER (BEFORE UPDATE) | Sets `updated_at = now()` on `users` and `training_plans` |
+| `reorder_sessions(JSONB)` | RPC (SECURITY DEFINER) | Batch-updates `day`, `week_id`, `order_in_day` on `plan_sessions`. Validates per-row ownership via `auth.uid()`. GRANT EXECUTE TO authenticated. |
+| `import_plan_atomic(p_user_id, p_plan, p_weeks, p_profile_updates)` | RPC (SECURITY DEFINER) | Atomically: snapshots existing plan → plan_snapshots, DELETEs old plan (CASCADE), INSERTs new plan/weeks/sessions (with pre-materialised `structure` JSONB), optionally updates `users` profile fields. Returns `{plan_id, snapshot_id, weeks_inserted, sessions_inserted}`. GRANT EXECUTE TO service_role only — PUBLIC/anon/authenticated revoked (migration 018). `race_date` profile update cast via `::date::timestamptz` for UTC-safe writes (migration 018). Called by `import-plan` Edge Function. |
 
 ---
 

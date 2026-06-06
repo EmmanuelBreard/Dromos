@@ -81,7 +81,7 @@ Dromos/Dromos/
 
 ---
 
-## Shared Materializer (DRO-215 — Phase 1)
+## Shared Materializer (DRO-215 Phase 1 + DRO-298 Phase 2)
 
 **File:** `supabase/functions/_shared/materialize-structure.ts`
 
@@ -97,7 +97,36 @@ Pure TypeScript function `materialize(template: WorkoutTemplate) -> SessionStruc
 - `duration_seconds` converted to `duration_minutes` (ceiling)
 - Nested repeat segments processed recursively (unlimited depth)
 
-**Tests:** `supabase/functions/_shared/__tests__/materialize-structure.test.ts` (17 tests, Deno test runner)
+**Supported intensity source field families (Phase 2 additions):**
+- `ftp_pct` — single value: `{ type: "ftp_pct", value }` / range form (`ftp_pct_min` + `ftp_pct_max`): `{ type: "ftp_pct", min, max }`
+- `vma_pct` / `mas_pct` (legacy alias) — single value only
+- `css_pct` — single value only
+- `rpe` — single value only
+- `hr_zone` — single value (clamped 1-5, rounds to integer)
+- `hr_pct_max` — single value: `{ type: "hr_pct_max", value }` / range form (`hr_pct_max_min` + `hr_pct_max_max`): `{ type: "hr_pct_max", min, max }`
+- `power_watts` — single value: `{ type: "power_watts", value }` / range form (`power_watts_min` + `power_watts_max`): `{ type: "power_watts", min, max }`
+- `pace_per_km` — string passthrough e.g. `"4:15"`
+- `pace_per_100m` — string passthrough e.g. `"1:50"`
+
+**Priority order in `resolveTarget()`** (first match wins):
+1. `ftp_pct_min` + `ftp_pct_max` (range) → `ftp_pct`
+2. `ftp_pct` (single) → `ftp_pct`
+3. `vma_pct` / `mas_pct` → `vma_pct`
+4. `css_pct`
+5. `rpe`
+6. `hr_zone`
+7. `hr_pct_max_min` + `hr_pct_max_max` (range) → `hr_pct_max`
+8. `hr_pct_max` (single) → `hr_pct_max`
+9. `power_watts_min` + `power_watts_max` (range) → `power_watts`
+10. `power_watts` (single) → `power_watts`
+11. `pace_per_km`
+12. `pace_per_100m`
+13. swim `pace` tag → `rpe`
+
+**IMPORTANT — unpaired min/max fields silently drop:**
+Range forms require BOTH `_min` AND `_max` to be set. If only one is present, the range branch is skipped and the materializer falls through to the next field. If no other intensity field is present, `target` is `undefined`. This is pinned by negative tests in the test suite.
+
+**Tests:** `supabase/functions/_shared/__tests__/materialize-structure.test.ts` (42 tests, Deno test runner)
 
 ```
 ```
@@ -177,14 +206,15 @@ All services follow:
 - Singleton service loading bundled `workout-library.json`
 - O(1) template lookup by `templateId`
 - `swimDistance(for:)` — Recursive distance calculation for swim templates
-- `flattenedSegments(for:)` — Returns `[FlatSegment]` for graph rendering (expands repeats)
-- `stepSummaries(for:sport:ftp:vma:css:)` — Returns `[StepSummary]` for text display (collapses repeats)
-- Library JSON now has 4 top-level arrays: `swim`, `bike`, `run`, `race` (optional) — strength was removed (see DRO-222 for DB cleanup)
+- `flattenedSegments(for:sport:ftp:vma:css:maxHr:)` — Returns `[FlatSegment]` for graph rendering (expands repeats); accepts `maxHr:` to populate `hrPctMaxForColor` on HR-targeted segments (DRO-297)
+- `stepSummaries(for:sport:ftp:vma:css:maxHr:)` — Returns `[StepSummary]` for text display (collapses repeats); accepts `maxHr:` for HR-zone display string formatting (DRO-297)
+- Library JSON now has 5 top-level arrays: `swim`, `bike`, `run`, `race`, `strength` — `strength` was re-added as a placeholder in DRO-298 (`STRENGTH_NOTES_ONLY` with empty segments). Strength sessions render via notes-only path (DRO-297); full sets×reps strength UI is deferred to a follow-up.
 
 **FlatSegment** (`WorkoutTemplate.swift`):
 - Identifiable struct for graph rendering
-- Fields: `label`, `durationMinutes`, `intensityPct`, `distanceMeters`, `pace`, `isRecovery`
-- Used by `WorkoutGraphView` for intensity bar chart visualization
+- Fields: `label`, `durationMinutes`, `intensityPct`, `distanceMeters`, `pace`, `isRecovery`, `tooltipMetric`, `hrPctMaxForColor`
+- `hrPctMaxForColor: Double?` — Set when segment target is `hr_pct_max` or `hr_zone` (converted to zone midpoint %); graph/shape components use `Color.intensity(forHRPctMax:)` instead of FTP/VMA path when non-nil (DRO-297)
+- Used by `WorkoutGraphView` and `WorkoutShape` for intensity bar chart visualization
 
 **StepSummary** (`WorkoutTemplate.swift`):
 - Identifiable struct for step-by-step text display
@@ -200,6 +230,7 @@ All services follow:
 - Maps intensity percentage (50-120) to HSL gradient (green→yellow→orange→red)
 - Used consistently across step dots and graph bars for visual coherence
 - Recovery segments always shown in green
+- **DRO-297 addition:** `Color.intensity(forHRPctMax:isRecovery:)` — HR-specific variant that linearly maps 60–95% HRmax onto the same 120°→0° hue sweep (60%→green, 78%→yellow, 95%→red). Called by `WorkoutShape` and `WorkoutGraphView` when `FlatSegment.hrPctMaxForColor` is non-nil.
 
 **WorkoutStepsView** (`WorkoutStepsView.swift`):
 - Compact vertical list of workout steps
@@ -231,6 +262,7 @@ All services follow:
 - Shows `WorkoutGraphView` for all sessions with a template
 - Passes sport + athlete metrics to graph for tap popover formatting
 - Swim exception: simple swims (1 segment, no repeats) → show distance only
+- **Strength convention (DRO-297):** For `sport == "strength"`, graph + step list are suppressed in both planned and completed disclosure views — notes block only. Mirrors `TodayPlannedCard` and `TodayCompletedCard`.
 - **Phase 3 additions:**
   - When `.completed`: actual Strava data (`ActualMetricsView` + `StravaRouteMapView`) is always visible as primary content
   - Planned workout (steps + intensity graph + swim distance) behind a local `@State` disclosure button ("Planned workout" with rotating chevron), default collapsed
@@ -276,6 +308,7 @@ All services follow:
 - `PlanSession.sportEmoji` — 🏊‍♂️, 🚴‍♂️, 🏃‍♂️, 💪, 🏁
 - `PlanSession.sportIcon` — figure.pool.swim, bicycle, figure.run, figure.strengthtraining.traditional, flag.checkered
 - `Color.intensity(for:isRecovery:)` — Green→yellow→orange→red gradient based on intensity % (Phase 2)
+- `Color.intensity(forHRPctMax:isRecovery:)` — HR variant: linearly maps 60–95% HRmax to the same hue sweep; called when `FlatSegment.hrPctMaxForColor` is non-nil (DRO-297)
 
 **Model Extensions:**
 - `Weekday` enum with `fullName`, `abbreviation`, date calculation
@@ -294,6 +327,7 @@ All services follow:
 | `strava-sync` | `supabase/functions/strava-sync/` | POST: Paginated Strava activity fetch (up to 2000), token auto-refresh, upsert into `strava_activities`, then fetch laps + streams per activity (non-fatal). Laps stored in `strava_activity_laps`, streams as JSONB on activity row. JWT validated via `auth.getUser()`. |
 | `session-feedback` | `supabase/functions/session-feedback/` | POST: Auth → fetch session/activity/profile/week context → OpenAI gpt-4.1 → write feedback to plan_sessions. JWT validated via `auth.getUser()`. |
 | `chat-adjust` | `supabase/functions/chat-adjust/` | POST: Auth → email allowlist gate (V0: `ebreard4@gmail.com` only, 403 otherwise) → parallel context fetch (profile, plan + weeks, current-week sessions + Strava activities + laps, last-3 completed across plan, history) → OpenAI gpt-4.1 with `stream: true` → SSE passthrough via `TransformStream` → DB write of complete assistant message on stream end. JWT validated via `auth.getUser()`. Returns `text/event-stream` (OpenAI SSE chunks verbatim). Prompt: `coach-chat-v0.txt` with STATIC (system) + DYNAMIC (user) split for OpenAI prefix caching. (DRO-256). |
+| `import-plan` | `supabase/functions/import-plan/` | POST: Auth → hard-fail if `SUPABASE_ANON_KEY` missing (500) → Content-Length guard (413 if > 512 KB) → email allowlist gate (V0: `ebreard4@gmail.com` only, 403 otherwise) → validates body schema: plan fields (race_objective, dates, total_weeks as positive integer), weeks (≤ 60, with duplicate/sequential week_number checks, per-week/session field types, sport/type/day enum checks, profile_updates ranges) → validates all `template_id`s against `workout-library.json` (400 on unknown IDs; library cached in module scope across warm invocations) → conflict check against active plans only (409 if plan exists and `replace !== true`) → materialises `structure` JSONB for each session (hard 400 with `failed_template_ids` if any materialize() throws) → calls `import_plan_atomic` RPC (snapshot → delete → insert). Returns `{plan_id, snapshot_id, weeks_inserted, sessions_inserted}`. JWT validated via `auth.getUser()`. (DRO-299 + fix1). |
 
 **Deployment:** All functions are deployed with `--no-verify-jwt` (gateway JWT check disabled — each function validates JWTs itself via `auth.getUser()`). Use `scripts/deploy-functions.sh` to deploy one or all functions with the correct flags.
 
