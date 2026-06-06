@@ -273,7 +273,7 @@ final class PlanService: ObservableObject {
     /// Pure function: no published-state mutation, no I/O.
     // TODO(follow-up): Promote (done, total) to a shared `SportTotals` struct returned directly,
     // once a 2nd caller appears. The view currently re-wraps in SportProgressStrip.SportTotals.
-    nonisolated func weeklySportTotals(
+    func weeklySportTotals(
         for week: PlanWeek,
         with activities: [StravaActivity]
     ) -> [String: (done: Int, total: Int)] {
