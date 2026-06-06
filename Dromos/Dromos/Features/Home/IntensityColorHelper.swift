@@ -59,6 +59,34 @@ extension Color {
         }
     }
 
+    // MARK: - HR-based intensity color (DRO-297)
+
+    /// HR-based intensity color for segments whose target is `hr_pct_max` or `hr_zone`.
+    ///
+    /// Maps a heart-rate percentage of max HR (0–100) to the same green→yellow→orange→red
+    /// gradient used by `Color.intensity(for:isRecovery:)`. Anchors:
+    /// - ≤65% → green (warm-up / Z1)
+    /// - 65–80% → green fading to yellow (Z2–Z3)
+    /// - 80–90% → yellow fading to orange (Z3–Z4)
+    /// - ≥90% → orange fading to red (Z4–Z5)
+    /// - Recovery → always green regardless of percentage.
+    ///
+    /// - Parameters:
+    ///   - pct: Heart-rate percentage of max HR (e.g., 88.0 for 88%).
+    ///   - isRecovery: Force green for recovery segments.
+    /// - Returns: A Color in the green→red gradient.
+    static func intensity(forHRPctMax pct: Double, isRecovery: Bool = false) -> Color {
+        guard !isRecovery else {
+            return Color(hue: 0.33, saturation: 0.65, brightness: 0.85)
+        }
+        // Map the physiologically relevant HR range (60–95%) linearly onto the
+        // same 120°→0° hue sweep used by the FTP/VMA percentage path.
+        // Below 60% → full green; above 95% → full red.
+        let clamped = max(60.0, min(95.0, pct))
+        let hue = max(0.0, (120.0 - ((clamped - 60.0) / 35.0 * 120.0))) / 360.0
+        return Color(hue: hue, saturation: 0.65, brightness: 0.85)
+    }
+
     // MARK: - Asset-backed color tokens
     //
     // `Color.errorStrong` is generated automatically by Xcode from the `ErrorStrong`

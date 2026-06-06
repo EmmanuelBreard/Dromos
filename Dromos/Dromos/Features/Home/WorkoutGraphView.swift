@@ -67,7 +67,7 @@ struct WorkoutGraphView: View {
                             let barHeight = normalizedHeight(for: effectivePct)
 
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.intensity(for: effectivePct, isRecovery: segment.isRecovery))
+                                .fill(barColor(for: segment, effectivePct: effectivePct))
                                 .frame(width: max(barWidth, 2), height: barHeight) // Minimum 2pt width for visibility
                                 .frame(maxHeight: .infinity, alignment: .bottom)
                                 .contentShape(Rectangle()) // Make entire bar tappable
@@ -320,6 +320,17 @@ struct WorkoutGraphView: View {
 
     // MARK: - Helper Methods
 
+    /// Selects bar fill color, routing HR-based targets to the HR-specific gradient (DRO-297).
+    /// Falls through to the standard FTP/VMA gradient for all other targets.
+    /// Recovery is always green regardless of target type.
+    private func barColor(for segment: FlatSegment, effectivePct: Int?) -> Color {
+        if segment.isRecovery { return Color.intensity(for: effectivePct, isRecovery: true) }
+        if let hrPct = segment.hrPctMaxForColor {
+            return Color.intensity(forHRPctMax: hrPct, isRecovery: false)
+        }
+        return Color.intensity(for: effectivePct, isRecovery: false)
+    }
+
     /// Derives an effective intensity for bar height calculation.
     /// For swim segments without intensityPct, maps pace label to approximate intensity.
     private func effectiveIntensity(for segment: FlatSegment) -> Int? {
@@ -423,6 +434,65 @@ struct WorkoutGraphView: View {
         totalDurationMinutes: totalDuration,
         sport: "swim",
         ftp: nil,
+        vma: nil
+    )
+    .padding()
+    .background(Color(.systemBackground))
+}
+
+// DRO-297: HR-based color path — bars use Color.intensity(forHRPctMax:) gradient.
+#Preview("HR Zone (Z2/Z4 run) — HR gradient") {
+    // Simulate a structure-based session where segments carry hrPctMaxForColor.
+    // Z2 midpoint ≈ 66%, Z4 midpoint ≈ 87% — should show green and orange bars.
+    let segments = [
+        FlatSegment(label: "warmup", durationMinutes: 10,
+                    intensityPct: 66, distanceMeters: nil, pace: nil, isRecovery: false,
+                    tooltipMetric: "Z1 HR (0–120 bpm)", hrPctMaxForColor: 66),
+        FlatSegment(label: "work", durationMinutes: 30,
+                    intensityPct: 87, distanceMeters: nil, pace: nil, isRecovery: false,
+                    tooltipMetric: "Z4 HR (164–184 bpm)", hrPctMaxForColor: 87),
+        FlatSegment(label: "recovery", durationMinutes: 5,
+                    intensityPct: nil, distanceMeters: nil, pace: nil, isRecovery: true,
+                    tooltipMetric: nil, hrPctMaxForColor: nil),
+        FlatSegment(label: "cooldown", durationMinutes: 10,
+                    intensityPct: 55, distanceMeters: nil, pace: nil, isRecovery: false,
+                    tooltipMetric: "Z1 HR (0–120 bpm)", hrPctMaxForColor: 55)
+    ]
+    let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
+    return WorkoutGraphView(
+        segments: segments,
+        totalDurationMinutes: totalDuration,
+        sport: "run",
+        ftp: nil,
+        vma: nil,
+        maxHr: 200
+    )
+    .padding()
+    .background(Color(.systemBackground))
+}
+
+// DRO-297: power_watts target — pre-formatted tooltip metric from structure path.
+#Preview("Power Watts range — 240–260 W") {
+    let segments = [
+        FlatSegment(label: "warmup", durationMinutes: 15,
+                    intensityPct: 50, distanceMeters: nil, pace: nil, isRecovery: false,
+                    tooltipMetric: "120–130 W"),
+        FlatSegment(label: "work", durationMinutes: 20,
+                    intensityPct: 96, distanceMeters: nil, pace: nil, isRecovery: false,
+                    tooltipMetric: "240–260 W"),
+        FlatSegment(label: "recovery", durationMinutes: 5,
+                    intensityPct: nil, distanceMeters: nil, pace: nil, isRecovery: true,
+                    tooltipMetric: nil),
+        FlatSegment(label: "cooldown", durationMinutes: 10,
+                    intensityPct: 45, distanceMeters: nil, pace: nil, isRecovery: false,
+                    tooltipMetric: "110 W")
+    ]
+    let totalDuration = segments.reduce(0) { $0 + $1.durationMinutes }
+    return WorkoutGraphView(
+        segments: segments,
+        totalDurationMinutes: totalDuration,
+        sport: "bike",
+        ftp: 250,
         vma: nil
     )
     .padding()

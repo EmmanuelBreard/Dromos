@@ -67,18 +67,31 @@ struct TodayPlannedCard: View {
             .fontWeight(.bold)
             .kerning(-0.4)
             .foregroundColor(.primary)
-            if let notes = session.notes, !notes.isEmpty {
-                Text(notes)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if !segments.isEmpty {
-                WorkoutShape(segments: segments)
-            }
-            if !steps.isEmpty {
-                Divider()
-                WorkoutStepList(steps: steps)
+
+            // Strength sessions: show notes only — no graph, no step list (DRO-297).
+            // The shape and step list are deliberately suppressed; the notes block carries
+            // all actionable guidance for strength work.
+            if session.sport.lowercased() == "strength" {
+                if let notes = session.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                if let notes = session.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !segments.isEmpty {
+                    WorkoutShape(segments: segments)
+                }
+                if !steps.isEmpty {
+                    Divider()
+                    WorkoutStepList(steps: steps)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -262,6 +275,38 @@ private let _previewEveningRun = PlanSession(
             vma: nil,
             css: 95,
             maxHr: 188,
+            sequenceContext: nil
+        )
+        .padding(16)
+    }
+    .background(Color.pageSurface)
+}
+
+#Preview("Strength session — notes only, no graph") {
+    // DRO-297: Strength sport must show header + notes block only.
+    // No WorkoutShape, no WorkoutStepList should appear.
+    let strengthSession = PlanSession(
+        id: UUID(),
+        weekId: UUID(),
+        day: "Thursday",
+        sport: "strength",
+        type: "Easy",
+        templateId: "STRENGTH_Core_01",
+        durationMinutes: 40,
+        isBrick: false,
+        notes: "3 sets: 10 squats, 10 lunges, 20 crunches, 30s plank. Rest 90s between sets. Focus on controlled movement — no rushing.",
+        orderInDay: 0,
+        feedback: nil,
+        matchedActivityId: nil
+    )
+    return ScrollView {
+        TodayPlannedCard(
+            session: strengthSession,
+            template: nil,
+            ftp: nil,
+            vma: nil,
+            css: nil,
+            maxHr: nil,
             sequenceContext: nil
         )
         .padding(16)
