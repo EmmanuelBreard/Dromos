@@ -21,6 +21,7 @@ ALL_FUNCTIONS=(
   "strava-sync"
   "chat-adjust"
   "session-feedback"
+  "import-plan"
 )
 
 deploy_function() {
