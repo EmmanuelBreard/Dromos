@@ -1333,7 +1333,7 @@
           "label": "work",
           "distance_meters": 1000,
           "pace": "slow",
-          "cue": "open water \u2014 feel the water, relaxed stroke"
+          "cue": "open water — feel the water, relaxed stroke"
         }
       ]
     },
@@ -3257,15 +3257,14 @@
           "duration_minutes": 90,
           "ftp_pct_min": 65,
           "ftp_pct_max": 75,
-          "hr_pct_max_max": 78,
           "cadence_rpm": 85,
-          "cue": "Z2 endurance — keep HR cap ≤78% HRmax"
+          "cue": "Z2 endurance — ftp_pct 65-75%, cap HR at 78% HRmax (~150 bpm)"
         }
       ]
     },
     {
       "template_id": "BIKE_SS_4x6min_245W",
-      "duration_minutes": 59,
+      "duration_minutes": 65,
       "segments": [
         {
           "label": "warmup",
@@ -3303,7 +3302,7 @@
     },
     {
       "template_id": "BIKE_THR_2x15min_260W",
-      "duration_minutes": 63,
+      "duration_minutes": 71,
       "segments": [
         {
           "label": "warmup",
@@ -3339,7 +3338,7 @@
       ]
     },
     {
-      "template_id": "BIKE_VO2_5x3min_290W",
+      "template_id": "BIKE_VO2_5x3min_295W",
       "duration_minutes": 55,
       "segments": [
         {
@@ -3414,8 +3413,8 @@
       ]
     },
     {
-      "template_id": "BIKE_OU_2x10min_95_110",
-      "duration_minutes": 67,
+      "template_id": "BIKE_OU_2x12min_95_110",
+      "duration_minutes": 61,
       "segments": [
         {
           "label": "warmup",
@@ -3439,7 +3438,7 @@
                   "cue": "Over — 110% FTP surge"
                 },
                 {
-                  "label": "recovery",
+                  "label": "work",
                   "duration_minutes": 3,
                   "ftp_pct": 95,
                   "cadence_rpm": 90,
@@ -3518,7 +3517,7 @@
     },
     {
       "template_id": "BIKE_VO2_3x6min_295W",
-      "duration_minutes": 57,
+      "duration_minutes": 55,
       "segments": [
         {
           "label": "warmup",
@@ -3908,7 +3907,7 @@
     },
     {
       "template_id": "RUN_Tempo_11",
-      "name": "Viktor R\u00f6thlin",
+      "name": "Viktor Röthlin",
       "duration_minutes": 222,
       "segments": [
         {
@@ -4083,7 +4082,7 @@
     },
     {
       "template_id": "RUN_Tempo_14",
-      "name": "Endurance K\u00e9nyane",
+      "name": "Endurance Kényane",
       "duration_minutes": 45,
       "segments": [
         {
@@ -5408,7 +5407,7 @@
               "label": "work",
               "duration_minutes": 2,
               "vma_pct": 100,
-              "cue": "90s @3:20/km \u2014 ceiling touch"
+              "cue": "90s @3:20/km — ceiling touch"
             }
           ],
           "recovery": {
@@ -5618,7 +5617,8 @@
           "label": "work",
           "duration_minutes": 75,
           "hr_pct_max_max": 78,
-          "cue": "Long Z2 run — cap HR at 78% HRmax (~150bpm). Easy conversational pace."
+          "cue": "Long Z2 run — stay in HR zone 65-78% HRmax (~150bpm). Easy conversational pace.",
+          "hr_pct_max_min": 65
         }
       ]
     },
@@ -5630,13 +5630,14 @@
           "label": "work",
           "duration_minutes": 45,
           "hr_pct_max_max": 73,
-          "cue": "Easy Z1/Z2 run — HR cap 73% HRmax (~140bpm). Full recovery pace."
+          "cue": "Easy Z1/Z2 run — HR zone 50-73% HRmax (~140bpm). Full recovery pace.",
+          "hr_pct_max_min": 50
         }
       ]
     },
     {
       "template_id": "RUN_TEMPO_4x4min_4_15km",
-      "duration_minutes": 51,
+      "duration_minutes": 49,
       "segments": [
         {
           "label": "warmup",
@@ -5657,7 +5658,8 @@
               "label": "recovery",
               "duration_minutes": 2,
               "hr_pct_max_max": 65,
-              "cue": "Jog recovery — let HR drop"
+              "cue": "Jog recovery — let HR drop to 50-65% HRmax",
+              "hr_pct_max_min": 50
             }
           ]
         },
@@ -5843,7 +5845,7 @@
     },
     {
       "template_id": "RUN_THR_3x10min_4_22km",
-      "duration_minutes": 60,
+      "duration_minutes": 70,
       "segments": [
         {
           "label": "warmup",
@@ -5889,7 +5891,8 @@
           "label": "cooldown",
           "duration_minutes": 10,
           "hr_pct_max_max": 78,
-          "cue": "Z2 wind-down — let heart rate settle"
+          "cue": "Z2 wind-down — HR 50-78% HRmax, let heart rate settle",
+          "hr_pct_max_min": 50
         }
       ]
     }
@@ -5904,31 +5907,31 @@
           "distance_meters": 1900,
           "duration_minutes": 37,
           "pace": "medium",
-          "cue": "Swim 1.9km \u2014 draft, stay calm in Gardon river current"
+          "cue": "Swim 1.9km — draft, stay calm in Gardon river current"
         },
         {
           "label": "recovery",
           "duration_minutes": 4,
-          "cue": "T1 \u2014 wetsuit off, helmet on, go"
+          "cue": "T1 — wetsuit off, helmet on, go"
         },
         {
           "label": "work",
           "distance_meters": 90000,
           "duration_minutes": 162,
           "ftp_pct": 69,
-          "cue": "Bike 90km \u2014 negative split, 190W avg, eat 60-80g carbs/h"
+          "cue": "Bike 90km — negative split, 190W avg, eat 60-80g carbs/h"
         },
         {
           "label": "recovery",
           "duration_minutes": 3,
-          "cue": "T2 \u2014 caffeine gel"
+          "cue": "T2 — caffeine gel"
         },
         {
           "label": "work",
           "distance_meters": 21000,
           "duration_minutes": 93,
           "vma_pct": 75,
-          "cue": "Run 21km \u2014 start 4:35/km, build to 4:20/km if legs allow"
+          "cue": "Run 21km — start 4:35/km, build to 4:20/km if legs allow"
         }
       ]
     },
@@ -5941,68 +5944,65 @@
           "distance_meters": 1500,
           "duration_minutes": 28,
           "pace": "medium",
-          "cue": "Swim 1.5km \u2014 settle quick, find feet, sight every 4-6 strokes. First 200m race-effort, then lock into sustainable rhythm."
+          "cue": "Swim 1.5km — settle quick, find feet, sight every 4-6 strokes. First 200m race-effort, then lock into sustainable rhythm."
         },
         {
           "label": "recovery",
           "duration_minutes": 3,
-          "cue": "T1 \u2014 wetsuit stripped fast, helmet on before bike off the rack, mount past the line."
+          "cue": "T1 — wetsuit stripped fast, helmet on before bike off the rack, mount past the line."
         },
         {
           "label": "work",
           "distance_meters": 40000,
           "duration_minutes": 70,
           "ftp_pct": 82,
-          "cue": "Bike 40km \u2014 sit at upper-Z3 / sweetspot (82% FTP avg). Aero on the flats, controlled on climbs, no surges. 30-50g carbs/h."
+          "cue": "Bike 40km — sit at upper-Z3 / sweetspot (82% FTP avg). Aero on the flats, controlled on climbs, no surges. 30-50g carbs/h."
         },
         {
           "label": "recovery",
           "duration_minutes": 2,
-          "cue": "T2 \u2014 rack bike, helmet off, run shoes on, caffeine gel out the gate."
+          "cue": "T2 — rack bike, helmet off, run shoes on, caffeine gel out the gate."
         },
         {
           "label": "work",
           "distance_meters": 10000,
           "duration_minutes": 47,
           "vma_pct": 82,
-          "cue": "Run 10km \u2014 first 1km off the bike at 80% (legs find rhythm), then build to 85% VMA. Negative split \u2014 last 3km should be the fastest."
+          "cue": "Run 10km — first 1km off the bike at 80% (legs find rhythm), then build to 85% VMA. Negative split — last 3km should be the fastest."
         }
       ]
     },
     {
       "template_id": "RACE_OLYMPIC",
-      "duration_minutes": 120,
+      "duration_minutes": 132,
       "segments": [
         {
           "label": "work",
           "distance_meters": 1500,
-          "duration_minutes": 22,
           "pace": "medium",
-          "cue": "Swim 1.5km \u2014 start calm, find feet to draft, sight every 4-6 strokes. First 200m race effort, settle into sustainable rhythm."
+          "cue": "Swim 1.5km — start calm, find feet to draft, sight every 4-6 strokes. First 200m race effort, settle into sustainable rhythm."
         },
         {
           "label": "recovery",
           "duration_minutes": 2,
-          "cue": "T1 \u2014 wetsuit off fast, helmet on before bike leaves rack, mount past the line."
+          "cue": "T1 — wetsuit off fast, helmet on before bike leaves rack, mount past the line."
         },
         {
           "label": "work",
           "distance_meters": 40000,
-          "duration_minutes": 62,
           "ftp_pct": 82,
-          "cue": "Bike 40km \u2014 82% FTP steady. Aero position on flats, controlled on climbs. 30-50g carbs/h."
+          "cue": "Bike 40km — 82% FTP steady. Aero position on flats, controlled on climbs. 30-50g carbs/h."
         },
         {
           "label": "recovery",
           "duration_minutes": 1,
-          "cue": "T2 \u2014 rack bike, helmet off, lace locks, caffeine gel at exit."
+          "cue": "T2 — rack bike, helmet off, lace locks, caffeine gel at exit."
         },
         {
           "label": "work",
           "distance_meters": 10000,
-          "duration_minutes": 42,
           "pace_per_km": "4:10",
-          "cue": "Run 10km \u2014 first km settle at 4:20-4:25, build to 4:10/km. Negative split if possible."
+          "cue": "Run 10km — first km settle at 4:20-4:25, build to 4:10/km. Negative split if possible."
         }
       ]
     }

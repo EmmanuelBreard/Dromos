@@ -509,7 +509,7 @@ Deno.test("nested repeats with HR children: BIKE_OU over-under structure materia
             repeats: 3,
             segments: [
               { label: "work", duration_minutes: 1, ftp_pct: 110, cadence_rpm: 100 },
-              { label: "recovery", duration_minutes: 3, ftp_pct: 95, cadence_rpm: 90 },
+              { label: "work", duration_minutes: 3, ftp_pct: 95, cadence_rpm: 90 },  // Fixed: 95% FTP is high tempo, not recovery
             ],
           },
         ],
@@ -535,7 +535,8 @@ Deno.test("nested repeats with HR children: BIKE_OU over-under structure materia
   assertEquals(overSeg.target, { type: "ftp_pct", value: 110 });
 
   const underSeg = innerRepeat.segments![1];
-  assertEquals(underSeg.label, "recovery");
+  // After DRO-298 fix1: "under" block is label="work" (95% FTP is high tempo, not recovery)
+  assertEquals(underSeg.label, "work");
   assertEquals(underSeg.target, { type: "ftp_pct", value: 95 });
 });
 
@@ -560,5 +561,94 @@ Deno.test("ftp_pct: min+max range form produces { type, min, max }", () => {
   assertEquals(
     materialize(tpl).segments[0].target,
     { type: "ftp_pct", min: 88, max: 93 },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Unpaired min/max negative tests — pins the silent-drop contract (DRO-298 fix1)
+//
+// IMPORTANT: When only ONE side of a range pair is set (_min without _max, or
+// vice versa), the range branch is skipped entirely. If no other intensity field
+// is present the target is undefined. This is intentional — an unpaired field
+// indicates a data error in the template, and the materializer deliberately
+// ignores it rather than emitting a malformed Target.
+// ---------------------------------------------------------------------------
+
+Deno.test("hr_pct_max: only _max set (no _min) → target is undefined (silent drop)", () => {
+  // This was the original bug in 5 Phase 2 templates before fix1.
+  const tpl = simpleTemplate("RUN_BAD_HR_01", [
+    { label: "work", duration_minutes: 45, hr_pct_max_max: 78 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired hr_pct_max_max alone must produce undefined target",
+  );
+});
+
+Deno.test("hr_pct_max: only _min set (no _max) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("RUN_BAD_HR_02", [
+    { label: "work", duration_minutes: 45, hr_pct_max_min: 65 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired hr_pct_max_min alone must produce undefined target",
+  );
+});
+
+Deno.test("ftp_pct: only _min set (no _max) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_FTP_01", [
+    { label: "work", duration_minutes: 10, ftp_pct_min: 88 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired ftp_pct_min alone must produce undefined target",
+  );
+});
+
+Deno.test("ftp_pct: only _max set (no _min) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_FTP_02", [
+    { label: "work", duration_minutes: 10, ftp_pct_max: 93 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired ftp_pct_max alone must produce undefined target",
+  );
+});
+
+Deno.test("power_watts: only _min set (no _max) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_POWER_01", [
+    { label: "work", duration_minutes: 3, power_watts_min: 290 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired power_watts_min alone must produce undefined target",
+  );
+});
+
+Deno.test("power_watts: only _max set (no _min) → target is undefined (silent drop)", () => {
+  const tpl = simpleTemplate("BIKE_BAD_POWER_02", [
+    { label: "work", duration_minutes: 3, power_watts_max: 300 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    undefined,
+    "unpaired power_watts_max alone must produce undefined target",
+  );
+});
+
+// Legacy single-value hr_pct_max still works (positive regression guard)
+Deno.test("hr_pct_max: legacy single-value field produces { type, value } (positive regression)", () => {
+  const tpl = simpleTemplate("RUN_HR_LEGACY_01", [
+    { label: "work", duration_minutes: 30, hr_pct_max: 73 },
+  ]);
+  assertEquals(
+    materialize(tpl).segments[0].target,
+    { type: "hr_pct_max", value: 73 },
+    "legacy hr_pct_max single value must still produce a valid target",
   );
 });

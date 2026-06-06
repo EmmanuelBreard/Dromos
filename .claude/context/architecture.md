@@ -81,7 +81,7 @@ Dromos/Dromos/
 
 ---
 
-## Shared Materializer (DRO-215 — Phase 1)
+## Shared Materializer (DRO-215 Phase 1 + DRO-298 Phase 2)
 
 **File:** `supabase/functions/_shared/materialize-structure.ts`
 
@@ -97,7 +97,36 @@ Pure TypeScript function `materialize(template: WorkoutTemplate) -> SessionStruc
 - `duration_seconds` converted to `duration_minutes` (ceiling)
 - Nested repeat segments processed recursively (unlimited depth)
 
-**Tests:** `supabase/functions/_shared/__tests__/materialize-structure.test.ts` (17 tests, Deno test runner)
+**Supported intensity source field families (Phase 2 additions):**
+- `ftp_pct` — single value: `{ type: "ftp_pct", value }` / range form (`ftp_pct_min` + `ftp_pct_max`): `{ type: "ftp_pct", min, max }`
+- `vma_pct` / `mas_pct` (legacy alias) — single value only
+- `css_pct` — single value only
+- `rpe` — single value only
+- `hr_zone` — single value (clamped 1-5, rounds to integer)
+- `hr_pct_max` — single value: `{ type: "hr_pct_max", value }` / range form (`hr_pct_max_min` + `hr_pct_max_max`): `{ type: "hr_pct_max", min, max }`
+- `power_watts` — single value: `{ type: "power_watts", value }` / range form (`power_watts_min` + `power_watts_max`): `{ type: "power_watts", min, max }`
+- `pace_per_km` — string passthrough e.g. `"4:15"`
+- `pace_per_100m` — string passthrough e.g. `"1:50"`
+
+**Priority order in `resolveTarget()`** (first match wins):
+1. `ftp_pct_min` + `ftp_pct_max` (range) → `ftp_pct`
+2. `ftp_pct` (single) → `ftp_pct`
+3. `vma_pct` / `mas_pct` → `vma_pct`
+4. `css_pct`
+5. `rpe`
+6. `hr_zone`
+7. `hr_pct_max_min` + `hr_pct_max_max` (range) → `hr_pct_max`
+8. `hr_pct_max` (single) → `hr_pct_max`
+9. `power_watts_min` + `power_watts_max` (range) → `power_watts`
+10. `power_watts` (single) → `power_watts`
+11. `pace_per_km`
+12. `pace_per_100m`
+13. swim `pace` tag → `rpe`
+
+**IMPORTANT — unpaired min/max fields silently drop:**
+Range forms require BOTH `_min` AND `_max` to be set. If only one is present, the range branch is skipped and the materializer falls through to the next field. If no other intensity field is present, `target` is `undefined`. This is pinned by negative tests in the test suite.
+
+**Tests:** `supabase/functions/_shared/__tests__/materialize-structure.test.ts` (42 tests, Deno test runner)
 
 ```
 ```
@@ -177,9 +206,9 @@ All services follow:
 - Singleton service loading bundled `workout-library.json`
 - O(1) template lookup by `templateId`
 - `swimDistance(for:)` — Recursive distance calculation for swim templates
-- `flattenedSegments(for:sport:ftp:vma:css:maxHr:)` — Returns `[FlatSegment]` for graph rendering (expands repeats); now accepts `maxHr:` to populate `hrPctMaxForColor` on HR-targeted segments (DRO-297)
-- `stepSummaries(for:sport:ftp:vma:css:maxHr:)` — Returns `[StepSummary]` for text display (collapses repeats); now accepts `maxHr:` for HR-zone display string formatting (DRO-297)
-- Library JSON now has 4 top-level arrays: `swim`, `bike`, `run`, `race` (optional) — strength was removed (see DRO-222 for DB cleanup)
+- `flattenedSegments(for:sport:ftp:vma:css:maxHr:)` — Returns `[FlatSegment]` for graph rendering (expands repeats); accepts `maxHr:` to populate `hrPctMaxForColor` on HR-targeted segments (DRO-297)
+- `stepSummaries(for:sport:ftp:vma:css:maxHr:)` — Returns `[StepSummary]` for text display (collapses repeats); accepts `maxHr:` for HR-zone display string formatting (DRO-297)
+- Library JSON now has 5 top-level arrays: `swim`, `bike`, `run`, `race`, `strength` — `strength` was re-added as a placeholder in DRO-298 (`STRENGTH_NOTES_ONLY` with empty segments). Strength sessions render via notes-only path (DRO-297); full sets×reps strength UI is deferred to a follow-up.
 
 **FlatSegment** (`WorkoutTemplate.swift`):
 - Identifiable struct for graph rendering
