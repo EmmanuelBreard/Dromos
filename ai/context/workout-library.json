@@ -1526,21 +1526,66 @@
       "duration_minutes": 60,
       "segments": [
         {
-          "label": "work",
-          "distance_meters": 2500,
+          "label": "warmup",
+          "distance_meters": 300,
           "pace": "easy",
-          "cue": "Z2 endurance — easy steady state, bilateral breathing, no rush"
+          "cue": "Mixed strokes, build pace from RPE 2 to 3"
+        },
+        {
+          "label": "drill",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "cue": "One drill per 100: catch-up / fingertip drag / 3-3-3 / free"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "repeat",
+          "repeats": 6,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 250,
+              "pace": "easy",
+              "cue": "Steady RPE 3 — bilateral breathing, focus on stroke length"
+            }
+          ],
+          "rest_seconds": 20
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 200,
+          "pace": "easy",
+          "cue": "Easy, exhale fully underwater, body relaxed"
         }
       ]
     },
     {
       "template_id": "SWIM_THR_6x150_1_50",
-      "duration_minutes": 42,
+      "duration_minutes": 48,
       "segments": [
         {
           "label": "warmup",
           "distance_meters": 300,
           "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 50,
+              "pace": "easy",
+              "cue": "One drill per 50: catch-up / fingertip drag / 3-3-3 / free"
+            }
+          ],
+          "rest_seconds": 10
         },
         {
           "label": "repeat",
@@ -1558,18 +1603,32 @@
         {
           "label": "cooldown",
           "distance_meters": 200,
-          "pace": "slow"
+          "pace": "slow",
+          "cue": "Easy, exhale fully underwater, body relaxed"
         }
       ]
     },
     {
       "template_id": "SWIM_CSS_8x100_1_45",
-      "duration_minutes": 42,
+      "duration_minutes": 48,
       "segments": [
         {
           "label": "warmup",
           "distance_meters": 400,
           "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 50,
+              "pace": "easy",
+              "cue": "One drill per 50: catch-up / fingertip drag / 6-3-6 / free"
+            }
+          ],
+          "rest_seconds": 10
         },
         {
           "label": "repeat",
@@ -1587,18 +1646,32 @@
         {
           "label": "cooldown",
           "distance_meters": 200,
-          "pace": "slow"
+          "pace": "slow",
+          "cue": "Easy, exhale fully underwater, body relaxed"
         }
       ]
     },
     {
       "template_id": "SWIM_RACE_2x750_1_48",
-      "duration_minutes": 42,
+      "duration_minutes": 50,
       "segments": [
         {
           "label": "warmup",
           "distance_meters": 300,
           "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 50,
+              "pace": "easy",
+              "cue": "One drill per 50: catch-up / fingertip drag / side kick / free"
+            }
+          ],
+          "rest_seconds": 10
         },
         {
           "label": "repeat",
@@ -1616,18 +1689,32 @@
         {
           "label": "cooldown",
           "distance_meters": 200,
-          "pace": "slow"
+          "pace": "slow",
+          "cue": "Easy, exhale fully underwater, body relaxed"
         }
       ]
     },
     {
       "template_id": "SWIM_VO2_8x50_fast",
-      "duration_minutes": 30,
+      "duration_minutes": 38,
       "segments": [
         {
           "label": "warmup",
           "distance_meters": 400,
           "pace": "slow"
+        },
+        {
+          "label": "drill",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 50,
+              "pace": "easy",
+              "cue": "One drill per 50: catch-up / fingertip drag / 3-3-3 / free"
+            }
+          ],
+          "rest_seconds": 10
         },
         {
           "label": "repeat",
@@ -1645,7 +1732,8 @@
         {
           "label": "cooldown",
           "distance_meters": 200,
-          "pace": "slow"
+          "pace": "slow",
+          "cue": "Easy, exhale fully underwater, body relaxed"
         }
       ]
     },
@@ -1695,24 +1783,51 @@
     },
     {
       "template_id": "SWIM_DRILLS_1800m",
-      "duration_minutes": 45,
+      "duration_minutes": 50,
       "segments": [
         {
           "label": "warmup",
-          "distance_meters": 300,
-          "pace": "slow"
+          "distance_meters": 200,
+          "pace": "slow",
+          "cue": "Mixed strokes, easy build"
         },
         {
           "label": "drill",
-          "distance_meters": 1000,
-          "pace": "easy",
-          "cue": "Drill mix — catch-up, side kick, fingertip drag, fist drill. 4×250m, rotate drills."
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "cue": "One drill per 100: catch-up / fingertip drag / 6-3-6 / free"
+            }
+          ],
+          "rest_seconds": 15
+        },
+        {
+          "label": "drill",
+          "repeats": 4,
+          "segments": [
+            {
+              "label": "work",
+              "distance_meters": 100,
+              "pace": "easy",
+              "cue": "Pull buoy: focus on body line and rotation"
+            }
+          ],
+          "rest_seconds": 15
         },
         {
           "label": "work",
-          "distance_meters": 500,
+          "distance_meters": 800,
           "pace": "easy",
-          "cue": "Steady aerobic — apply drill cues"
+          "cue": "Steady aerobic — apply drill cues, long strokes"
+        },
+        {
+          "label": "cooldown",
+          "distance_meters": 200,
+          "pace": "slow",
+          "cue": "Easy, exhale fully underwater, body relaxed"
         }
       ]
     }
