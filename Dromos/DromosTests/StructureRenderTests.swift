@@ -306,4 +306,119 @@ final class StructureRenderTests: XCTestCase {
         // 400 + (100 × 10) + 200 = 1600
         XCTAssertEqual(svc.swimDistance(for: session), 1600)
     }
+
+    // MARK: - DRO-304: swim repeat block step text includes total block distance
+
+    /// SWIM_Easy_03 structure: 300m warmup + 8×50m drill + 5×200m work + 300m cooldown = 2000m.
+    /// The step text for each repeat block must include the total block distance so it agrees
+    /// with the subtitle ("2000m"), not just the per-rep distance that naively sums to 850m.
+    func test_swimRepeatBlock_stepText_appendsBlockTotal() {
+        let structure = SessionStructure(segments: [
+            StructureSegment(label: "warmup", distanceMeters: 300, target: .rpe(value: 3)),
+            StructureSegment(
+                label: "repeat", repeats: 8, restSeconds: 15,
+                segments: [
+                    StructureSegment(label: "drill", distanceMeters: 50, target: .rpe(value: 3))
+                ]
+            ),
+            StructureSegment(
+                label: "repeat", repeats: 5, restSeconds: 20,
+                segments: [
+                    StructureSegment(label: "work", distanceMeters: 200, target: .rpe(value: 3))
+                ]
+            ),
+            StructureSegment(label: "cooldown", distanceMeters: 300, target: .rpe(value: 3))
+        ])
+
+        let steps = svc.stepSummaries(
+            structure: structure, sport: "swim",
+            ftp: nil, vma: nil, css: nil, maxHr: nil
+        )
+
+        // 4 step rows: warmup, 8×drill block, 5×work block, cooldown
+        XCTAssertEqual(steps.count, 4)
+
+        // Drill block: 8 × 50m = 400m total — must appear in the text
+        let drillBlock = steps[1].text
+        XCTAssertTrue(drillBlock.contains("8×"), "expected repeat prefix, got: \(drillBlock)")
+        XCTAssertTrue(drillBlock.contains("50m"), "expected per-rep distance, got: \(drillBlock)")
+        XCTAssertTrue(drillBlock.contains("400m"), "expected total block distance, got: \(drillBlock)")
+
+        // Work block: 5 × 200m = 1000m total — must appear in the text
+        let workBlock = steps[2].text
+        XCTAssertTrue(workBlock.contains("5×"), "expected repeat prefix, got: \(workBlock)")
+        XCTAssertTrue(workBlock.contains("200m"), "expected per-rep distance, got: \(workBlock)")
+        XCTAssertTrue(workBlock.contains("1000m"), "expected total block distance, got: \(workBlock)")
+    }
+
+    /// Swim repeat block with a recovery segment that has distanceMeters:
+    /// 4 × (100m work + 50m recovery) — work total = 4×100 = 400, recovery = 3×50 = 150, block = 550m.
+    func test_swimRepeatBlock_stepText_includesRecoveryInTotal() {
+        let structure = SessionStructure(segments: [
+            StructureSegment(
+                label: "repeat", repeats: 4,
+                recovery: StructureSegment(label: "recovery", distanceMeters: 50, target: .rpe(value: 3)),
+                segments: [
+                    StructureSegment(label: "work", distanceMeters: 100, target: .rpe(value: 7))
+                ]
+            )
+        ])
+
+        let steps = svc.stepSummaries(
+            structure: structure, sport: "swim",
+            ftp: nil, vma: nil, css: nil, maxHr: nil
+        )
+
+        XCTAssertEqual(steps.count, 1)
+        let text = steps[0].text
+        // Block total: 4×100 + 3×50 = 400 + 150 = 550m
+        XCTAssertTrue(text.contains("550m"), "expected 550m total, got: \(text)")
+    }
+
+    /// Bike repeat block must NOT get a distance suffix (bike uses duration, not meters).
+    func test_bikeRepeatBlock_stepText_noDistanceSuffix() {
+        let structure = SessionStructure(segments: [
+            StructureSegment(
+                label: "repeat", repeats: 3,
+                segments: [
+                    StructureSegment(label: "work", durationMinutes: 6.0,
+                                     target: .ftpPct(value: nil, min: 95, max: 100))
+                ]
+            )
+        ])
+
+        let steps = svc.stepSummaries(
+            structure: structure, sport: "bike",
+            ftp: 250, vma: nil, css: nil, maxHr: nil
+        )
+
+        XCTAssertEqual(steps.count, 1)
+        let text = steps[0].text
+        // Should NOT contain a "· Xm" suffix
+        XCTAssertFalse(text.contains("· "), "bike repeat should not have distance suffix, got: \(text)")
+    }
+
+    /// Subtitle distance must equal the sum of all fully-expanded step distances.
+    /// SWIM_Easy_03: 300 + 8×50 + 5×200 + 300 = 2000m.
+    func test_swimDistance_matchesExpandedStepSum_SWIM_Easy_03() {
+        let structure = SessionStructure(segments: [
+            StructureSegment(label: "warmup", distanceMeters: 300, target: .rpe(value: 3)),
+            StructureSegment(
+                label: "repeat", repeats: 8, restSeconds: 15,
+                segments: [StructureSegment(label: "drill", distanceMeters: 50, target: .rpe(value: 3))]
+            ),
+            StructureSegment(
+                label: "repeat", repeats: 5, restSeconds: 20,
+                segments: [StructureSegment(label: "work", distanceMeters: 200, target: .rpe(value: 3))]
+            ),
+            StructureSegment(label: "cooldown", distanceMeters: 300, target: .rpe(value: 3))
+        ])
+        let session = PlanSession(
+            id: UUID(), weekId: UUID(), day: "Wednesday", sport: "swim",
+            type: "Easy", templateId: "SWIM_Easy_03", durationMinutes: 43,
+            isBrick: false, notes: nil, orderInDay: 0, feedback: nil,
+            matchedActivityId: nil, structure: structure
+        )
+        XCTAssertEqual(svc.swimDistance(for: session), 2000)
+    }
 }

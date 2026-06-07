@@ -416,10 +416,12 @@ struct CalendarView: View {
     }
 
     /// Gets swim distance for a session from the workout library.
+    /// Uses the dual-path entry (structure first, then template) so sessions with a
+    /// materialised `structure` JSONB return the correct calculated total rather than
+    /// falling back to the raw template — which would agree but is the wrong data path.
     /// Returns nil for non-swim sessions.
     private func swimDistance(for session: PlanSession) -> Int? {
-        guard session.sport.lowercased() == "swim" else { return nil }
-        return workoutLibrary.swimDistance(for: session.templateId)
+        return workoutLibrary.swimDistance(for: session)
     }
 
     // MARK: - Completion Status
