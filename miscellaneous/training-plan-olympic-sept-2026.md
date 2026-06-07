@@ -236,8 +236,8 @@ Today is D+6 post Nîmes. Two more light days before Week 1.
 | Day | AM | PM |
 |---|---|---|
 | Mon | Swim 2800m endurance | Easy run 45min Z2 |
-| Tue | Bike 90min: 15wu / **4×6min sweet-spot @ 245-255W** / 4min rec / cd | Run 55min: 10wu / **5×3min @ Z4 (4:15/km)** / 2min rec / cd |
-| Wed | Swim 3000m: wu + **2×400 + 4×200 @ threshold** + cd | Strength B (30min) |
+| Tue | Strength B (30min) | Run 55min: 10wu / **5×3min @ Z4 (4:15/km)** / 2min rec / cd |
+| Wed | Swim 3000m: wu + **2×400 + 4×200 @ threshold** + cd | Bike 90min: 15wu / **4×6min sweet-spot @ 245-255W** / 4min rec / cd |
 | Thu | **REST** | — |
 | Fri | Bike 75min: 15wu / **2×15min sweet-spot @ 240W** / 8min rec / cd | Easy swim 30min recovery |
 | Sat | Long bike 2h00min Z2 (HR <150, power 180-200W) | Strength B (30min) |
@@ -299,8 +299,8 @@ Today is D+6 post Nîmes. Two more light days before Week 1.
 | Day | AM | PM |
 |---|---|---|
 | Mon | Swim 3200m endurance + 10×50 fast | Easy run 50min Z2 |
-| Tue | Bike 75min: 15wu / **3×10min @ Z4 (260-270W)** / 5min rec / cd | Run 60min: 15wu / **5×600m @ Z5 (3:45/km)** / 90s jog rec / cd |
-| Wed | Swim 3400m: wu + **8×100 @ CSS-5 (1:45)** / 20s rest + 4×200 endurance + cd | Strength C (35min) |
+| Tue | Strength C (35min) | Run 60min: 15wu / **5×600m @ Z5 (3:45/km)** / 90s jog rec / cd |
+| Wed | Swim 3400m: wu + **8×100 @ CSS-5 (1:45)** / 20s rest + 4×200 endurance + cd | Bike 75min: 15wu / **3×10min @ Z4 (260-270W)** / 5min rec / cd |
 | Thu | **REST** | — |
 | Fri | Bike 100min: 15wu / **5×3min @ Z5 (295W)** / 3min rec / 10min easy / **2×10min SS @ 245W** / cd | Easy swim 30min recovery |
 | Sat | **BRICK 2:** Bike 90min Z2 (steady 180-200W) + Run 20min @ tempo (4:30/km) | Strength C (35min) |
@@ -313,8 +313,8 @@ Today is D+6 post Nîmes. Two more light days before Week 1.
 | Day | AM | PM |
 |---|---|---|
 | Mon | Swim 3400m endurance | Easy run 50min Z2 |
-| Tue | Bike 80min: 15wu / **2×15min @ Z4 (260W)** / 8min rec / cd | Run 65min: 15wu / **4×800m @ 3:40/km** / 400m jog rec / cd |
-| Wed | Swim 3600m: wu + **5×200 @ threshold** + 8×50 fast on 15s rest + cd | Strength C (35min) |
+| Tue | Strength C (35min) | Run 65min: 15wu / **4×800m @ 3:40/km** / 400m jog rec / cd |
+| Wed | Swim 3600m: wu + **5×200 @ threshold** + 8×50 fast on 15s rest + cd | Bike 80min: 15wu / **2×15min @ Z4 (260W)** / 8min rec / cd |
 | Thu | **REST** | — |
 | Fri | Bike 110min: 15wu / **5×4min @ Z5 (290W)** / 3min rec / 10min easy / **2×12min SS @ 245W** / cd | Easy swim 30min recovery |
 | Sat | **BRICK 3:** Bike 2h Z2 (200-210W steady) + Run 25min @ tempo | Strength C (35min) |
@@ -353,8 +353,8 @@ Today is D+6 post Nîmes. Two more light days before Week 1.
 | Day | AM | PM |
 |---|---|---|
 | Mon | Swim 3000m endurance + OW practice (if pool option) | Easy run 50min Z2 |
-| Tue | Bike 75min: 15wu / **20min race-pace @ IF 0.85 (235W)** / cd | Run 65min: 15wu / **5×800m @ 3:40/km** / 400m jog / cd |
-| Wed | Swim 3400m: wu + **race-pace 8×100 @ 1:45 / 15s rest** + 4×200 endurance + cd | Strength C maintenance (30min) |
+| Tue | Strength C maintenance (30min) | Run 65min: 15wu / **5×800m @ 3:40/km** / 400m jog / cd |
+| Wed | Swim 3400m: wu + **race-pace 8×100 @ 1:45 / 15s rest** + 4×200 endurance + cd | Bike 75min: 15wu / **20min race-pace @ IF 0.85 (235W)** / cd |
 | Thu | **REST** | — |
 | Fri | Bike 100min: 15wu / **3×6min @ Z5 (295W)** / 4min rec / 12min easy / **2×15min @ Z4 (265W)** / cd | OW swim 1500m if available (or easy 25min recovery) |
 | Sat | **BRICK 4 — race effort:** Bike 75min (15wu + **40min @ race effort IF 0.85** + cd) + Run 25min: first 15min @ race pace (4:00/km), last 10min Z2 | Strength C maintenance (30min) |
@@ -416,8 +416,8 @@ Today is D+6 post Nîmes. Two more light days before Week 1.
 | Day | AM | PM |
 |---|---|---|
 | Mon | Swim 2800m + 8×50 fast | Easy run 45min Z2 |
-| Tue | Bike 70min: 15wu / **3×5min @ Z5 (295W)** / 3min rec / cd | Run 55min: 15wu / **6×600m @ 3:40/km / 90s rec** / cd |
-| Wed | Swim 3000m: wu + **5×200 @ threshold + 4×100 @ Z5** + cd | Strength maintenance (25min, light) |
+| Tue | Strength maintenance (25min, light) | Run 55min: 15wu / **6×600m @ 3:40/km / 90s rec** / cd |
+| Wed | Swim 3000m: wu + **5×200 @ threshold + 4×100 @ Z5** + cd | Bike 70min: 15wu / **3×5min @ Z5 (295W)** / 3min rec / cd |
 | Thu | **REST** | — |
 | Fri | Bike 90min: 15wu / **race-pace 2×15min @ IF 0.85** / 8min rec / cd | Easy swim 30min recovery |
 | Sat | **Mini-brick:** Bike 60min Z2 + Run 15min @ race pace | Strength maintenance (25min) |
