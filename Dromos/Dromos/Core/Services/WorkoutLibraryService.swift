@@ -324,12 +324,45 @@ final class WorkoutLibraryService {
         }
         
         let innerText = parts.joined(separator: " + ")
-        let text = "\(repeats)× (\(innerText))"
-        
+        var text = "\(repeats)× (\(innerText))"
+
+        // For swim, append the total block distance so it agrees with the subtitle.
+        if sport.lowercased() == "swim" {
+            let blockDist = legacySwimBlockDistance(repeats: repeats, segments: segments, recovery: recovery)
+            if let blockDist = blockDist, blockDist > 0 {
+                text += " · \(blockDist)m"
+            }
+        }
+
         // Use intensity from first work segment for dot color
         let intensityPct = segments.first?.ftpPct ?? segments.first?.masPct
-        
+
         return StepSummary(text: text, intensityPct: intensityPct, isRepeatBlock: true)
+    }
+
+    /// Legacy-template variant of swimBlockDistance — walks WorkoutSegment trees.
+    private func legacySwimBlockDistance(
+        repeats: Int,
+        segments: [WorkoutSegment],
+        recovery: WorkoutSegment?
+    ) -> Int? {
+        var perRepDist = 0
+        for seg in segments {
+            if let innerRepeats = seg.repeats, let innerSegs = seg.segments {
+                guard let inner = legacySwimBlockDistance(repeats: innerRepeats, segments: innerSegs, recovery: seg.recovery) else {
+                    return nil
+                }
+                perRepDist += inner
+            } else {
+                guard let d = seg.distanceMeters else { return nil }
+                perRepDist += d
+            }
+        }
+        var total = perRepDist * repeats
+        if let rec = recovery, let recDist = rec.distanceMeters {
+            total += recDist * Swift.max(0, repeats - 1)
+        }
+        return total
     }
     
     /// Formats a simple segment as a step summary.
@@ -737,13 +770,53 @@ final class WorkoutLibraryService {
             else                   { parts.append("\(restSec)\" rest") }
         }
         let inner = parts.joined(separator: " + ")
-        let text = "\(repeats)× (\(inner))"
+        var text = "\(repeats)× (\(inner))"
+
+        // For swim, append the total block distance so it agrees with the subtitle.
+        // e.g. "8× (50m drill + 15\" rest) · 400m"
+        // Only appended when every work segment in this block has distanceMeters (pure
+        // distance-based swim blocks). Duration-based blocks (bike/run) are unaffected.
+        if sport.lowercased() == "swim" {
+            let blockDist = swimBlockDistance(repeats: repeats, segments: segments, recovery: recovery)
+            if let blockDist = blockDist, blockDist > 0 {
+                text += " · \(blockDist)m"
+            }
+        }
+
         let firstLeaf = segments.first
         let intensity = intensityPct(
             for: firstLeaf?.target,
             sport: sport, ftp: ftp, vma: vma, css: css, maxHr: maxHr
         )
         return StepSummary(text: text, intensityPct: intensity, isRepeatBlock: true)
+    }
+
+    /// Returns the total distance contributed by a repeat block (repeats × nested leaf distances
+    /// + recovery distance × (repeats − 1)), or nil if any leaf segment lacks distanceMeters
+    /// (i.e. the block is duration-based and distance cannot be inferred).
+    private func swimBlockDistance(
+        repeats: Int,
+        segments: [StructureSegment],
+        recovery: StructureSegment?
+    ) -> Int? {
+        var perRepDist = 0
+        for seg in segments {
+            if let innerRepeats = seg.repeats, let innerSegs = seg.segments {
+                // Nested repeat — recurse
+                guard let inner = swimBlockDistance(repeats: innerRepeats, segments: innerSegs, recovery: seg.recovery) else {
+                    return nil
+                }
+                perRepDist += inner
+            } else {
+                guard let d = seg.distanceMeters else { return nil }
+                perRepDist += d
+            }
+        }
+        var total = perRepDist * repeats
+        if let rec = recovery, let recDist = rec.distanceMeters {
+            total += recDist * Swift.max(0, repeats - 1)
+        }
+        return total
     }
 
     private func formatStructureDuration(_ seg: StructureSegment, sport: String) -> String {
