@@ -592,8 +592,9 @@ struct HomeView: View {
     ///
     /// **Precedence (highest → lowest):**
     /// 1. `today` — always `.today`, regardless of sessions or unscheduled count.
-    /// 2. Race day (any session has `sport == "race"`) — `.planned` / `.completed` / `.missed`
-    ///    per the normal planned-session logic; race day is never overridden by unscheduled.
+    /// 2. Race day — there is no dedicated race branch here: a race day always carries a
+    ///    planned `race` session, so it flows through the non-empty-sessions logic below
+    ///    (rules 3–4) and is therefore never reachable by the unscheduled branch (rule 5).
     /// 3. Past day with planned sessions where all are completed → `.completed`
     ///    (planned completion wins even if the athlete also did unscheduled bonus work).
     /// 4. Past day with planned sessions where any is missed → `.missed`.
