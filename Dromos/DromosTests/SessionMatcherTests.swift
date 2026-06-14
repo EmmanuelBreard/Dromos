@@ -68,7 +68,8 @@ private func makeSession(
         notes: nil,
         orderInDay: 0,
         feedback: nil,
-        matchedActivityId: nil
+        matchedActivityId: nil,
+        structure: nil
     )
 }
 
@@ -285,21 +286,20 @@ final class StravaActivity_DisplayHelpersTests: XCTestCase {
 
     // MARK: displayName
 
-    func test_displayName_withName_returnsTitleCased() {
-        var a = makeActivity(stravaId: 10, sport: "run", startDateLocal: Date())
-        // Re-create with a non-nil name — makeActivity sets name to nil, so we build inline.
+    func test_displayName_withName_returnsTrimmedVerbatim() {
+        // makeActivity sets name to nil, so build inline with a real name. The name must
+        // be returned VERBATIM (only trimmed) — not title-cased — to preserve acronyms.
         let named = StravaActivity(
             id: UUID(), userId: UUID(), stravaActivityId: 10,
             sportType: "run", normalizedSport: "run",
-            name: "morning run",
+            name: "  VO2max intervals  ",
             startDate: Date(), startDateLocal: Date(),
             elapsedTime: 3600, movingTime: 3600,
             distance: nil, totalElevationGain: nil,
             averageSpeed: nil, averageHeartrate: nil, averageWatts: nil,
             isManual: false, summaryPolyline: nil, createdAt: Date()
         )
-        _ = a // suppress unused warning
-        XCTAssertEqual(named.displayName, "Morning Run")
+        XCTAssertEqual(named.displayName, "VO2max intervals")
     }
 
     func test_displayName_nilName_swim_returnsSport() {
