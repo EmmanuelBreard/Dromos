@@ -87,7 +87,10 @@ struct WeekDayStrip: View {
 
     @ViewBuilder
     private func pillView(for pill: DayPill) -> some View {
-        VStack(spacing: 2) {
+        // Local flag for the dashed-border overlay below — avoids relying on PillState
+        // Equatable and keeps the overlay opacity expression readable.
+        let isUnscheduled: Bool = { if case .unscheduled = pill.state { return true } else { return false } }()
+        return VStack(spacing: 2) {
             // Day-of-week label (Mon/Tue/...)
             // For `.today` we explicitly invert to `cardSurface` because the pill background
             // is `Color.primary`. SwiftUI's HierarchicalShapeStyle does not auto-invert against
@@ -126,6 +129,23 @@ struct WeekDayStrip: View {
         // the default selected pill. The outline + the today solid background
         // together signal "this is today AND it's the previewed day"; tapping
         // a different pill moves the outline off today onto that day.
+        // DRO-305 / DRO-308: dashed accent border for `.unscheduled` days, drawn as an
+        // overlay (outside the clip) so the dash isn't shaved at the corners. Suppressed
+        // when the pill is selected — the solid 2pt outline below already frames it, and
+        // stacking both accent strokes reads as a rendering glitch.
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    Color.accentColor.opacity(0.5),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                )
+                .opacity(isUnscheduled && !pill.isSelected ? 1 : 0)
+        )
+        // Selected pill: 2pt accent outline overlays the state background.
+        // DRO-244: applies to every state — including `.today`, since today is
+        // the default selected pill. The outline + the today solid background
+        // together signal "this is today AND it's the previewed day"; tapping
+        // a different pill moves the outline off today onto that day.
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(
@@ -158,18 +178,10 @@ struct WeekDayStrip: View {
         case .rest:
             Color.cardSurface
         case .unscheduled:
-            // DRO-305 / DRO-308: cardSurface fill with a dashed accent overlay.
-            // Chosen to be visually distinct from `.completed` (solid tint) while
-            // still hinting at a positive outcome (accent hue). The dashed stroke
-            // signals "outside the plan" without implying success or failure.
-            ZStack {
-                Color.cardSurface
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(
-                        Color.accentColor.opacity(0.5),
-                        style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-                    )
-            }
+            // DRO-305 / DRO-308: plain cardSurface fill. The distinguishing dashed
+            // accent border is drawn as an `.overlay` at the pill level (see `pillView`)
+            // so it sits OUTSIDE the `.clipShape` and isn't shaved at the rounded corners.
+            Color.cardSurface
         }
     }
 }
