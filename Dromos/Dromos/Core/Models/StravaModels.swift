@@ -49,14 +49,17 @@ extension StravaActivity {
         }
     }
 
-    /// Human-readable activity name, title-cased and trimmed.
+    /// Human-readable activity name, trimmed of surrounding whitespace.
+    /// Returns the athlete's Strava title verbatim — we deliberately do NOT title-case it,
+    /// because `.capitalized` corrupts the acronyms and unit suffixes common in real activity
+    /// names ("VO2max intervals" → "Vo2max Intervals", "10K TT" → "10k Tt").
     /// Falls back to a sport label ("Swim" / "Bike" / "Run" / "Activity") when `name`
     /// is nil or empty — ensures the UI always has something meaningful to display even
     /// for manually logged activities that may have generic or blank titles.
     var displayName: String {
-        if let raw = name, !raw.trimmingCharacters(in: .whitespaces).isEmpty {
-            // Title-case the Strava name ("morning run" → "Morning Run").
-            return raw.trimmingCharacters(in: .whitespaces).capitalized
+        if let raw = name {
+            let trimmed = raw.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty { return trimmed }
         }
         switch normalizedSport?.lowercased() {
         case "swim": return "Swim"
