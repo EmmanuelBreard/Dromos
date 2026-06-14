@@ -49,6 +49,11 @@ enum PillState {
     case planned
     case missed
     case rest
+    /// DRO-305 / DRO-308: an activity was logged on this day even though no
+    /// session was scheduled. Visually DISTINCT from `.completed` (which signals
+    /// a planned session that was executed). Reads as "bonus effort" or
+    /// "unplanned training" rather than "plan fulfilled".
+    case unscheduled
 }
 
 // MARK: - WeekDayStrip
@@ -152,6 +157,19 @@ struct WeekDayStrip: View {
             Color.errorStrong.opacity(0.12)
         case .rest:
             Color.cardSurface
+        case .unscheduled:
+            // DRO-305 / DRO-308: cardSurface fill with a dashed accent overlay.
+            // Chosen to be visually distinct from `.completed` (solid tint) while
+            // still hinting at a positive outcome (accent hue). The dashed stroke
+            // signals "outside the plan" without implying success or failure.
+            ZStack {
+                Color.cardSurface
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(
+                        Color.accentColor.opacity(0.5),
+                        style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                    )
+            }
         }
     }
 }
@@ -189,6 +207,10 @@ private struct GlyphTextStyle: ViewModifier {
             content.foregroundStyle(.tertiary)
         case .completed, .planned, .missed:
             content.foregroundStyle(.primary)
+        case .unscheduled:
+            // Matches the accent hint of the dashed border background —
+            // slightly de-emphasised so the dashed outline reads first.
+            content.foregroundStyle(Color.accentColor.opacity(0.7))
         }
     }
 }
@@ -239,6 +261,25 @@ private struct DurationTextStyle: ViewModifier {
         DayPill(weekday: .friday,    glyphs: ["bed.double.fill"],  durationLabel: nil,   state: .rest),
         DayPill(weekday: .saturday,  glyphs: ["figure.run"],       durationLabel: "1h30", state: .planned, isSelected: true),
         DayPill(weekday: .sunday,    glyphs: ["bicycle"],          durationLabel: "2h",  state: .planned)
+    ]
+
+    return WeekDayStrip(days: days, onPillTap: { _ in })
+        .padding()
+        .background(Color.pageSurface)
+}
+
+#Preview("WeekDayStrip — unscheduled vs completed") {
+    // DRO-305 / DRO-308: validates that `.unscheduled` (dashed accent border on
+    // cardSurface) reads as distinct from `.completed` (solid accent tint). Monday
+    // was a bonus swim; Tuesday was a planned-and-executed ride.
+    let days: [DayPill] = [
+        DayPill(weekday: .monday,    glyphs: ["figure.pool.swim"], durationLabel: "30m",  state: .unscheduled),
+        DayPill(weekday: .tuesday,   glyphs: ["bicycle"],          durationLabel: "1h",   state: .completed),
+        DayPill(weekday: .wednesday, glyphs: ["figure.run"],       durationLabel: "40m",  state: .missed),
+        DayPill(weekday: .thursday,  glyphs: ["bicycle"],          durationLabel: "1h",   state: .today, isSelected: true),
+        DayPill(weekday: .friday,    glyphs: ["bed.double.fill"],  durationLabel: nil,    state: .rest),
+        DayPill(weekday: .saturday,  glyphs: ["figure.run"],       durationLabel: "1h30", state: .planned),
+        DayPill(weekday: .sunday,    glyphs: ["figure.pool.swim"], durationLabel: "45m",  state: .unscheduled)
     ]
 
     return WeekDayStrip(days: days, onPillTap: { _ in })
