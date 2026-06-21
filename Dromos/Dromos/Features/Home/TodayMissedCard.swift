@@ -14,10 +14,9 @@ import SwiftUI
 /// - No rationale, no `WorkoutShape`, no `WorkoutStepList`, no CTA.
 /// - Session name is rendered in `.headline` + `.secondary` (semantic dim, no opacity).
 ///
-/// The accent hit comes from the `MissedTag` — always shown so a missed session reads as
-/// missed in both single- and multi-session days; in a multi-session day a numbered
-/// `SessionSequenceBadge` precedes it for ordering. Nothing else on the card is colored,
-/// which keeps the missed state from dominating the screen after a missed day.
+/// The single accent hit comes from the `MissedTag` (or numbered badge in multi-session
+/// days) — nothing else on the card is colored. This keeps the missed state from
+/// dominating the screen when the athlete opens Today after a missed day.
 struct TodayMissedCard: View {
     let session: PlanSession
     let sequenceContext: (index: Int, total: Int)?
@@ -43,14 +42,14 @@ struct TodayMissedCard: View {
     @ViewBuilder
     private var header: some View {
         HStack(alignment: .center, spacing: 8) {
-            // In a multi-session day the numbered badge carries ordering, but the
-            // `MissedTag` is ALWAYS shown so a missed session is never mistaken for a
-            // planned/upcoming one (DRO-305 QA: missed sessions in a stack previously
-            // showed only a badge + caption, making them indistinguishable from planned).
             if let ctx = sequenceContext {
                 SessionSequenceBadge(index: ctx.index)
+                Text("\(session.sport.capitalized) · \(session.type.lowercased())")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                MissedTag()
             }
-            MissedTag()
             Spacer(minLength: 8)
         }
     }
