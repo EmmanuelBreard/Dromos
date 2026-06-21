@@ -468,6 +468,7 @@ struct HomeView: View {
         case .missed:
             TodayMissedCard(
                 session: session,
+                ftp: ftp, vma: vma, css: css, maxHr: maxHr,
                 sequenceContext: sequenceContext
             )
         }
