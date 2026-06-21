@@ -304,8 +304,8 @@ struct HomeView: View {
             )
         } else if daysSessions.count == 1 {
             // Single planned session — always rendered standalone so it keeps its status
-            // tag (CompletedTag / MissedTag / planned CTA + rationale + steps). Any
-            // unscheduled activities stack below it.
+            // treatment (CompletedTag / missed red-border+dim / planned CTA + rationale +
+            // steps). Any unscheduled activities stack below it.
             //
             // DRO-305 QA fix: this previously routed into the numbered `multiSessionStack`
             // whenever an unscheduled activity was present, which swapped the planned card's

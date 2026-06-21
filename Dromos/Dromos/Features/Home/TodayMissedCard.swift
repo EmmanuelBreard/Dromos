@@ -14,7 +14,7 @@ import SwiftUI
 /// what was planned even though they didn't complete it.
 ///
 /// The missed state is conveyed exactly like the Calendar tab's session cards: a red
-/// leading border plus dimmed (0.5 opacity) content. No `MissedTag` pill — the border +
+/// leading border plus dimmed (0.5 opacity) content. No status-tag pill — the border +
 /// dim carry the signal, matching CalendarView for a consistent cross-tab treatment.
 struct TodayMissedCard: View {
     let session: PlanSession

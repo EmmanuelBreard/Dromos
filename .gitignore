@@ -3,6 +3,9 @@ build/
 DerivedData/
 *.xcuserstate
 *.xcuserdatad/
+
+# Playwright MCP scratch output (transient — large .dmg/.yml artifacts)
+.playwright-mcp/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 
