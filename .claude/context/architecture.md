@@ -21,8 +21,8 @@ Dromos/Dromos/
 │   │   ├── TrainingPlan.swift        # TrainingPlan, PlanWeek, PlanSession, Weekday, DayInfo
 │   │   ├── User.swift               # User profile + RaceObjective enum
 │   │   ├── WorkoutTemplate.swift     # WorkoutTemplate, WorkoutSegment, WorkoutLibrary, FlatSegment, StepSummary
-│   │   ├── StravaModels.swift        # StravaActivity, SyncResult (Equatable), SyncResponse
-│   │   ├── SessionCompletionStatus.swift # SessionCompletionStatus enum + SessionMatcher (client-side matching engine)
+│   │   ├── StravaModels.swift        # StravaActivity (+ sportIcon / displayName helpers — DRO-305), SyncResult (Equatable), SyncResponse
+│   │   ├── SessionCompletionStatus.swift # SessionCompletionStatus enum + SessionMatcher (client-side matching engine) + SessionMatchResult / matchWithUnscheduled() which also surfaces unmatched swim/bike/run activities by day (DRO-305)
 │   │   ├── StravaLap.swift           # Codable/Identifiable model mapping `strava_activity_laps` rows (DRO-223)
 │   │   ├── OnboardingData.swift      # Per-screen onboarding structs
 │   │   └── ChatMessage.swift          # ChatMessage (Codable, Identifiable) + ChatResponse edge function DTO
@@ -39,19 +39,21 @@ Dromos/Dromos/
 │   ├── Auth/                         # Login + SignUp views
 │   ├── Onboarding/                   # 6-screen onboarding flow
 │   ├── Home/                         # Today screen — sport-progress strip + today hero card(s) + week strip (DRO-231)
-│   │   ├── HomeView.swift            # Composes the Today screen: SportProgressStrip + state-routed today hero (planned/completed/missed/multi/rest/race/empty) + WeekDayStrip; supports horizontal swipe between days on the today hero (DragGesture + .easeInOut(0.25) transition, animation parity with pill taps — DRO-242); lifecycle: .task / Strava-sync listener / homeReset re-tap (sync + scroll-to-top) / pull-to-refresh
+│   │   ├── HomeView.swift            # Composes the Today screen: SportProgressStrip + state-routed today hero (planned/completed/missed/multi/rest/race/empty) + WeekDayStrip; supports horizontal swipe between days on the today hero (DragGesture + .easeInOut(0.25) transition, animation parity with pill taps — DRO-242); lifecycle: .task / Strava-sync listener / homeReset re-tap (sync + scroll-to-top) / pull-to-refresh. DRO-305: surfaces unscheduled (unplanned-but-logged) activities — rest/single-planned days stack UnscheduledActivityCard(s) below the primary card; their minutes fold into SportProgressStrip `done` via PlanService.weeklySportTotals; week pills reflect `.unscheduled`
 │   │   ├── SportProgressStrip.swift  # 3-column SWIM/BIKE/RUN done-vs-planned per week, accent fill bar capped at 100% (DRO-234)
 │   │   ├── TodayPlannedCard.swift    # Planned-state today card: inline `[icon] name - duration` title row + header + rationale + WorkoutShape + WorkoutStepList (DRO-235, title row updated DRO-242)
 │   │   ├── TodayCompletedCard.swift  # Completed-state today card: CompletedTag + inline `[icon] name - duration` title row + CoachFeedbackBlock + ActualMetricsView + CompletedSegmentGraphView (laps fetched via .task) + optional GPS map + planned-workout disclosure (DRO-235, title row updated DRO-242, metrics row updated DRO-263, segment graph wired DRO-275)
-│   │   ├── TodayMissedCard.swift     # Missed-state today card: MissedTag + inline `[icon] name - duration` title row dimmed (no rationale/shape/steps/CTA) (DRO-235, title row updated DRO-242)
+│   │   ├── TodayMissedCard.swift     # Missed-state today card: shows the FULL scheduled workout (title + notes + WorkoutShape + WorkoutStepList, same as TodayPlannedCard) with CalendarView's missed treatment — red leading border + 0.5 dimmed content, no MissedTag pill (DRO-235; reworked DRO-305 to show steps + match Calendar)
 │   │   ├── WorkoutShape.swift        # 56pt-tall horizontal intensity bar wrapper around segment data (DRO-233)
 │   │   ├── WorkoutStepList.swift     # Step list with nested RepeatBlock accent left-border + multiplier prefix (DRO-233)
 │   │   ├── CoachFeedbackBlock.swift  # Soft accent fill block with feedback / silent-skeleton loading / hidden states; honors accessibilityReduceMotion (DRO-233)
 │   │   ├── CompletedTag.swift        # Green ✓ "COMPLETED TODAY" pill (DRO-233)
-│   │   ├── MissedTag.swift           # Red ✗ "NOT COMPLETED" pill using Color.errorStrong (DRO-233)
+│   │   ├── MissedTag.swift           # Red ✗ "NOT COMPLETED" pill using Color.errorStrong (DRO-233). NOTE: no longer rendered after DRO-305 (missed cards use a red border + dim instead); kept as a component
+│   │   ├── UnscheduledActivityCard.swift # Card for a completed Strava activity with no backing PlanSession (DRO-305): UnscheduledTag/badge + title + ActualMetricsView + optional CompletedSegmentGraphView (≥2 laps) + optional StravaRouteMapView. Reuses TodayCompletedCard's PlanSession-free sub-components; no feedback / no plan-vs-actual. Used by both Home and Calendar
+│   │   ├── UnscheduledTag.swift       # Neutral "UNSCHEDULED" pill (bolt glyph, .secondary) — distinct from CompletedTag/MissedTag (DRO-305)
 │   │   ├── SessionSequenceBadge.swift # Numbered circle (1/2) for multi-session days (DRO-233)
 │   │   ├── EmptyHomeHero.swift       # No-plan empty state: Dromos mark + "Generate your first plan" + CTA (DRO-236)
-│   │   ├── WeekDayStrip.swift        # 7-pill week row with PillState (today/completed/planned/missed/rest); pills tappable, today shows green border by default, multi-session pills render multiple SF Symbols side-by-side (DRO-236, extended DRO-242)
+│   │   ├── WeekDayStrip.swift        # 7-pill week row with PillState (today/completed/planned/missed/rest/unscheduled); pills tappable, today shows green border by default, multi-session pills render multiple SF Symbols side-by-side. `.unscheduled` = dashed accent border overlay for a day with an unplanned-but-logged activity (DRO-236, extended DRO-242, DRO-305)
 │   │   ├── SessionCardView.swift     # Legacy rich session card used by Calendar tab; also hosts restyled RestDayCardView + RaceDayCardView (DRO-236 restyles)
 │   │   ├── ActualMetricsView.swift   # Sport-specific metric row used by both Home (TodayCompletedCard) and Calendar (SessionCardView). Adaptive LazyVGrid cells; hides nil values entirely. (DRO-263, closes DRO-240)
 │   │   ├── CompletedSegmentGraphView.swift # Strava-driven horizontal bar chart for completed-session cards: one bar per lap, width by distance share, height by sport-normalized intensity, drag tooltip. Wired into TodayCompletedCard (DRO-223)
@@ -61,7 +63,7 @@ Dromos/Dromos/
 │   │   ├── WorkoutGraphView.swift    # Legacy interactive intensity bar chart with tap-to-reveal popovers (Calendar uses this; Home uses the new WorkoutShape)
 │   │   └── IntensityColorHelper.swift # Color extensions: Color.intensity(for:isRecovery:), Color.phaseColor(for:), Color.errorStrong (auto-synthesized from ErrorStrong.colorset)
 │   ├── Calendar/                     # Single-week paged plan view (formerly Home content)
-│   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering); computes per-week completion status for UI (border colors, edit-mode gating) — feedback generation removed (DRO-278)
+│   │   ├── CalendarView.swift        # Single-week paged view (TabView .page style) with chevron + swipe nav, per-week Strava completion cache, skeleton loading, edit mode (session reordering); computes per-week completion status for UI (border colors, edit-mode gating) — feedback generation removed (DRO-278). DRO-305: caches unscheduled activities per week (unscheduledCacheByWeek, purged in lockstep with completionCacheByWeek) and renders UnscheduledActivityCard(s) per day with a dashed accent border, hidden on race days
 │   │   └── CalendarWeekHeader.swift  # 2-row header: chevron-flanked semantic title (Current/Last/Next Week or Week N/M) + phase badge & date range inline
 │   ├── Plan/                         # Plan generation flow
 │   │   └── PlanGenerationView.swift  # Triggered from RootView when user has no plan yet
