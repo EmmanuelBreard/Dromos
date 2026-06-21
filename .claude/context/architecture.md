@@ -48,9 +48,8 @@ Dromos/Dromos/
 │   │   ├── WorkoutStepList.swift     # Step list with nested RepeatBlock accent left-border + multiplier prefix (DRO-233)
 │   │   ├── CoachFeedbackBlock.swift  # Soft accent fill block with feedback / silent-skeleton loading / hidden states; honors accessibilityReduceMotion (DRO-233)
 │   │   ├── CompletedTag.swift        # Green ✓ "COMPLETED TODAY" pill (DRO-233)
-│   │   ├── MissedTag.swift           # Red ✗ "NOT COMPLETED" pill using Color.errorStrong (DRO-233). NOTE: no longer rendered after DRO-305 (missed cards use a red border + dim instead); kept as a component
 │   │   ├── UnscheduledActivityCard.swift # Card for a completed Strava activity with no backing PlanSession (DRO-305): UnscheduledTag/badge + title + ActualMetricsView + optional CompletedSegmentGraphView (≥2 laps) + optional StravaRouteMapView. Reuses TodayCompletedCard's PlanSession-free sub-components; no feedback / no plan-vs-actual. Used by both Home and Calendar
-│   │   ├── UnscheduledTag.swift       # Neutral "UNSCHEDULED" pill (bolt glyph, .secondary) — distinct from CompletedTag/MissedTag (DRO-305)
+│   │   ├── UnscheduledTag.swift       # Neutral "UNSCHEDULED" pill (bolt glyph, .secondary) — distinct from CompletedTag (DRO-305)
 │   │   ├── SessionSequenceBadge.swift # Numbered circle (1/2) for multi-session days (DRO-233)
 │   │   ├── EmptyHomeHero.swift       # No-plan empty state: Dromos mark + "Generate your first plan" + CTA (DRO-236)
 │   │   ├── WeekDayStrip.swift        # 7-pill week row with PillState (today/completed/planned/missed/rest/unscheduled); pills tappable, today shows green border by default, multi-session pills render multiple SF Symbols side-by-side. `.unscheduled` = dashed accent border overlay for a day with an unplanned-but-logged activity (DRO-236, extended DRO-242, DRO-305)

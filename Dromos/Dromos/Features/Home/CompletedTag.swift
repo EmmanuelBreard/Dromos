@@ -8,8 +8,8 @@
 import SwiftUI
 
 /// Small accent-colored tag that anchors the header of a completed session card.
-/// Uppercase, tracked, with the SF Symbols filled checkmark — same visual weight as
-/// `MissedTag` so the two read as a paired family across Today states.
+/// Uppercase, tracked, with the SF Symbols filled checkmark — same sizing idiom as
+/// `UnscheduledTag` so the Today state badges read as a family.
 ///
 /// Always renders the static `"COMPLETED"` label. The temporal anchor (e.g. "Today",
 /// "Yesterday", "April 29th") is now rendered as an external section header above the

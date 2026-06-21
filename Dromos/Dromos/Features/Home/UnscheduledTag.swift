@@ -10,7 +10,7 @@ import SwiftUI
 
 /// Small secondary-colored tag that anchors the header of an unscheduled-activity card.
 /// Uppercase, tracked, with the SF Symbols "bolt" glyph — visually distinct from
-/// `CompletedTag` (green, checkmark) and `MissedTag` while sharing the same sizing idiom.
+/// `CompletedTag` (green, checkmark) while sharing the same sizing idiom.
 ///
 /// Uses `.secondary` foreground so the badge reads as a neutral informational label
 /// rather than a positive/negative state signal — an unscheduled activity is neither
