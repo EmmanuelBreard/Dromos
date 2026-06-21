@@ -33,6 +33,43 @@ struct StravaActivity: Codable, Identifiable {
     let createdAt: Date
 }
 
+// MARK: - StravaActivity Display Helpers
+
+extension StravaActivity {
+
+    /// SF Symbol name for the activity's sport.
+    /// Mirrors the symbol names used by `PlanSession.sportIcon` so unscheduled and planned
+    /// session cards can share the same icon vocabulary.
+    var sportIcon: String {
+        switch normalizedSport?.lowercased() {
+        case "swim": return "figure.pool.swim"
+        case "bike": return "bicycle"
+        case "run":  return "figure.run"
+        default:     return "figure.run"
+        }
+    }
+
+    /// Human-readable activity name, trimmed of surrounding whitespace.
+    /// Returns the athlete's Strava title verbatim — we deliberately do NOT title-case it,
+    /// because `.capitalized` corrupts the acronyms and unit suffixes common in real activity
+    /// names ("VO2max intervals" → "Vo2max Intervals", "10K TT" → "10k Tt").
+    /// Falls back to a sport label ("Swim" / "Bike" / "Run" / "Activity") when `name`
+    /// is nil or empty — ensures the UI always has something meaningful to display even
+    /// for manually logged activities that may have generic or blank titles.
+    var displayName: String {
+        if let raw = name {
+            let trimmed = raw.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        switch normalizedSport?.lowercased() {
+        case "swim": return "Swim"
+        case "bike": return "Bike"
+        case "run":  return "Run"
+        default:     return "Activity"
+        }
+    }
+}
+
 // MARK: - Sync Result
 
 /// Summary returned by the `strava-sync` Edge Function.

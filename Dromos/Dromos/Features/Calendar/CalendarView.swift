@@ -48,6 +48,11 @@ struct CalendarView: View {
     /// Populated by `loadIfNeeded(weekIndex:plan:)`. Purged on Strava sync completion.
     @State private var completionCacheByWeek: [Int: [UUID: SessionCompletionStatus]] = [:]
 
+    /// Per-week unscheduled activities cache. Key = week index, value = startOfDay → activities map.
+    /// Always populated in lockstep with `completionCacheByWeek` — both are set in the same
+    /// `loadIfNeeded` pass and purged together so they never diverge.
+    @State private var unscheduledCacheByWeek: [Int: [Date: [StravaActivity]]] = [:]
+
     /// Set of week indices whose Strava fetch is currently in flight (drives skeleton).
     @State private var loadingWeeks: Set<Int> = []
 
@@ -169,9 +174,11 @@ struct CalendarView: View {
         // a disabled-animation transaction. The refetch is kicked off after the snap.
         .onChange(of: calendarReset) { _, _ in
             let target = plan.currentWeekIndex()
-            // Re-tap is the iOS "refresh" gesture — purge the cached entry so the
-            // current week refetches. Other cached weeks remain.
+            // Re-tap is the iOS "refresh" gesture — purge both caches for the current
+            // week so it refetches. Other cached weeks remain. Both caches are always
+            // purged together to keep them in sync.
             completionCacheByWeek.removeValue(forKey: target)
+            unscheduledCacheByWeek.removeValue(forKey: target)
             if currentWeekIndex == target {
                 // Already on target — onChange(of: currentWeekIndex) won't fire,
                 // so trigger the refetch explicitly.
@@ -190,8 +197,10 @@ struct CalendarView: View {
         }
         .onChange(of: stravaService.isSyncing) { oldValue, newValue in
             // Re-run matching after a Strava sync completes so newly synced activities are reflected.
+            // Both caches are always cleared together so they never diverge.
             if oldValue && !newValue {
                 completionCacheByWeek.removeAll()
+                unscheduledCacheByWeek.removeAll()
                 Task {
                     await loadIfNeeded(weekIndex: currentWeekIndex, plan: plan)
                 }
@@ -226,16 +235,43 @@ struct CalendarView: View {
     /// A day section with header, session cards, and optional race day indicator.
     /// In edit mode, each session card shows up/down arrows to move between days.
     /// SessionCardView is skeleton-redacted while the week's Strava fetch is in flight.
+    ///
+    /// Unscheduled activities (Strava activities with no matching planned session) are
+    /// rendered **after** the planned-session loop using `UnscheduledActivityCard`. They are:
+    /// - Hidden on race days (seeded race session OR static race-date fallback).
+    /// - Shown on rest days below `RestDayCardView` — the rest branch does not early-return.
+    /// - Never attached to edit-mode move arrows (they are `StravaActivity`, not `PlanSession`).
     private func daySectionView(dayInfo: DayInfo, plan: TrainingPlan, weekIndex: Int) -> some View {
         let week = plan.planWeeks[weekIndex]
         let days = plan.daysForWeek(week)
+
+        // Determine whether this day is a race day:
+        // (a) a seeded "race" session exists in the day's sessions, OR
+        // (b) the static race-date fallback applies (day matches plan.raceDateAsDate and no seeded session).
+        let hasRaceSession = dayInfo.sessions.contains { $0.sport.lowercased() == "race" }
+        let isStaticRaceDay: Bool = {
+            guard let raceDate = plan.raceDateAsDate else { return false }
+            return calendar.isDate(dayInfo.date, inSameDayAs: raceDate)
+                && !hasRaceSession
+        }()
+        let isRaceDay = hasRaceSession || isStaticRaceDay
+
+        // Resolve this day's unscheduled activities from the week cache.
+        // Key is `startOfDay(dayInfo.date)` — mirrors the grouping used in `matchWithUnscheduled`.
+        let dayStart = calendar.startOfDay(for: dayInfo.date)
+        let unscheduledActivities: [StravaActivity] = isRaceDay
+            ? []  // Always hide unscheduled cards on race days — race takeover owns the day.
+            : (unscheduledCacheByWeek[weekIndex] ?? [:])[dayStart] ?? []
+
         return VStack(alignment: .leading, spacing: 12) {
             // Day header with relative label + full date (never redacted)
             Text(dayHeaderLabel(for: dayInfo.date, weekday: dayInfo.weekday))
                 .font(.headline)
                 .foregroundColor(.primary)
 
-            // Content: session cards or rest day
+            // Content: session cards or rest day.
+            // REST DAY: render RestDayCardView unconditionally (do not early-return) so
+            // that unscheduled cards below can still appear on a rest day with activity.
             if dayInfo.sessions.isEmpty {
                 RestDayCardView()
             } else {
@@ -306,10 +342,36 @@ struct CalendarView: View {
 
             // Race Day card (static fallback): shown only when the day is the race date
             // AND no seeded race session already exists — avoids duplicate race cards.
-            if let raceDate = plan.raceDateAsDate,
-               calendar.isDate(dayInfo.date, inSameDayAs: raceDate),
-               !dayInfo.sessions.contains(where: { $0.sport.lowercased() == "race" }) {
+            if isStaticRaceDay {
                 RaceDayCardView(raceObjective: plan.raceObjective)
+            }
+
+            // MARK: Unscheduled activity cards
+            // Rendered after all planned sessions (and the rest-day card if applicable).
+            // Structurally outside the session ForEach so edit-mode move arrows never attach.
+            // Skipped entirely on race days (both seeded race session and static race-date fallback).
+            // Applied skeleton redaction while the week's Strava fetch is in flight.
+            ForEach(unscheduledActivities, id: \.id) { activity in
+                UnscheduledActivityCard(
+                    activity: activity,
+                    ftp: profileService.user?.ftp,
+                    vma: profileService.user?.vma,
+                    css: profileService.user?.cssSecondsPer100m,
+                    maxHr: profileService.user?.maxHr,
+                    sequenceContext: nil
+                )
+                // Skeleton while Strava fetch is in flight (mirrors planned-session treatment).
+                .redacted(reason: loadingWeeks.contains(weekIndex) ? .placeholder : [])
+                // Distinct visual treatment: dashed accent border signals "outside the plan".
+                // Placed as an overlay so it sits outside the card's own background clip,
+                // matching the same pattern used by `PillState.unscheduled` in WeekDayStrip.
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(
+                            style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+                        )
+                        .foregroundColor(.accentColor.opacity(0.5))
+                )
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -437,8 +499,14 @@ struct CalendarView: View {
     /// Fetches Strava activities for the given week and populates the per-week cache.
     ///
     /// - Skips if Strava is not connected (user remains on `.planned`).
-    /// - Skips if the cache already has an entry for this week (instant backtrack).
+    /// - Skips if **both** caches already have an entry for this week (instant backtrack).
+    ///   The guard checks `completionCacheByWeek` (the primary cache); since both caches are
+    ///   always written together, this is sufficient — they will never diverge.
     /// - Skips if a fetch for this week is already in flight.
+    ///
+    /// Uses `SessionMatcher.matchWithUnscheduled` so that a single matching pass populates
+    /// both `completionCacheByWeek[weekIndex]` (session statuses) and
+    /// `unscheduledCacheByWeek[weekIndex]` (leftover activities by calendar day).
     private func loadIfNeeded(weekIndex: Int, plan: TrainingPlan) async {
         guard profileService.user?.isStravaConnected == true else { return }
         guard completionCacheByWeek[weekIndex] == nil else { return }
@@ -468,10 +536,14 @@ struct CalendarView: View {
             }
         }
 
-        completionCacheByWeek[weekIndex] = SessionMatcher.match(
+        // Single matching pass — statuses for planned sessions + leftover (unscheduled) activities.
+        // Both caches are always written together so they are always in sync.
+        let result = SessionMatcher.matchWithUnscheduled(
             sessions: sessionTuples,
             activities: activities
         )
+        completionCacheByWeek[weekIndex] = result.statuses
+        unscheduledCacheByWeek[weekIndex] = result.unscheduledByDay
     }
 
     // MARK: - Edit Mode Actions

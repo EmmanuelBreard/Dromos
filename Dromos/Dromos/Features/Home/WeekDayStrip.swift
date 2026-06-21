@@ -49,6 +49,11 @@ enum PillState {
     case planned
     case missed
     case rest
+    /// DRO-305 / DRO-308: an activity was logged on this day even though no
+    /// session was scheduled. Visually DISTINCT from `.completed` (which signals
+    /// a planned session that was executed). Reads as "bonus effort" or
+    /// "unplanned training" rather than "plan fulfilled".
+    case unscheduled
 }
 
 // MARK: - WeekDayStrip
@@ -82,7 +87,10 @@ struct WeekDayStrip: View {
 
     @ViewBuilder
     private func pillView(for pill: DayPill) -> some View {
-        VStack(spacing: 2) {
+        // Local flag for the dashed-border overlay below — avoids relying on PillState
+        // Equatable and keeps the overlay opacity expression readable.
+        let isUnscheduled: Bool = { if case .unscheduled = pill.state { return true } else { return false } }()
+        return VStack(spacing: 2) {
             // Day-of-week label (Mon/Tue/...)
             // For `.today` we explicitly invert to `cardSurface` because the pill background
             // is `Color.primary`. SwiftUI's HierarchicalShapeStyle does not auto-invert against
@@ -121,6 +129,23 @@ struct WeekDayStrip: View {
         // the default selected pill. The outline + the today solid background
         // together signal "this is today AND it's the previewed day"; tapping
         // a different pill moves the outline off today onto that day.
+        // DRO-305 / DRO-308: dashed accent border for `.unscheduled` days, drawn as an
+        // overlay (outside the clip) so the dash isn't shaved at the corners. Suppressed
+        // when the pill is selected — the solid 2pt outline below already frames it, and
+        // stacking both accent strokes reads as a rendering glitch.
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    Color.accentColor.opacity(0.5),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                )
+                .opacity(isUnscheduled && !pill.isSelected ? 1 : 0)
+        )
+        // Selected pill: 2pt accent outline overlays the state background.
+        // DRO-244: applies to every state — including `.today`, since today is
+        // the default selected pill. The outline + the today solid background
+        // together signal "this is today AND it's the previewed day"; tapping
+        // a different pill moves the outline off today onto that day.
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(
@@ -151,6 +176,11 @@ struct WeekDayStrip: View {
         case .missed:
             Color.errorStrong.opacity(0.12)
         case .rest:
+            Color.cardSurface
+        case .unscheduled:
+            // DRO-305 / DRO-308: plain cardSurface fill. The distinguishing dashed
+            // accent border is drawn as an `.overlay` at the pill level (see `pillView`)
+            // so it sits OUTSIDE the `.clipShape` and isn't shaved at the rounded corners.
             Color.cardSurface
         }
     }
@@ -189,6 +219,10 @@ private struct GlyphTextStyle: ViewModifier {
             content.foregroundStyle(.tertiary)
         case .completed, .planned, .missed:
             content.foregroundStyle(.primary)
+        case .unscheduled:
+            // Matches the accent hint of the dashed border background —
+            // slightly de-emphasised so the dashed outline reads first.
+            content.foregroundStyle(Color.accentColor.opacity(0.7))
         }
     }
 }
@@ -239,6 +273,25 @@ private struct DurationTextStyle: ViewModifier {
         DayPill(weekday: .friday,    glyphs: ["bed.double.fill"],  durationLabel: nil,   state: .rest),
         DayPill(weekday: .saturday,  glyphs: ["figure.run"],       durationLabel: "1h30", state: .planned, isSelected: true),
         DayPill(weekday: .sunday,    glyphs: ["bicycle"],          durationLabel: "2h",  state: .planned)
+    ]
+
+    return WeekDayStrip(days: days, onPillTap: { _ in })
+        .padding()
+        .background(Color.pageSurface)
+}
+
+#Preview("WeekDayStrip — unscheduled vs completed") {
+    // DRO-305 / DRO-308: validates that `.unscheduled` (dashed accent border on
+    // cardSurface) reads as distinct from `.completed` (solid accent tint). Monday
+    // was a bonus swim; Tuesday was a planned-and-executed ride.
+    let days: [DayPill] = [
+        DayPill(weekday: .monday,    glyphs: ["figure.pool.swim"], durationLabel: "30m",  state: .unscheduled),
+        DayPill(weekday: .tuesday,   glyphs: ["bicycle"],          durationLabel: "1h",   state: .completed),
+        DayPill(weekday: .wednesday, glyphs: ["figure.run"],       durationLabel: "40m",  state: .missed),
+        DayPill(weekday: .thursday,  glyphs: ["bicycle"],          durationLabel: "1h",   state: .today, isSelected: true),
+        DayPill(weekday: .friday,    glyphs: ["bed.double.fill"],  durationLabel: nil,    state: .rest),
+        DayPill(weekday: .saturday,  glyphs: ["figure.run"],       durationLabel: "1h30", state: .planned),
+        DayPill(weekday: .sunday,    glyphs: ["figure.pool.swim"], durationLabel: "45m",  state: .unscheduled)
     ]
 
     return WeekDayStrip(days: days, onPillTap: { _ in })

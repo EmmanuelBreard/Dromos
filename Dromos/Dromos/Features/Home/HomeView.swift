@@ -47,6 +47,12 @@ struct HomeView: View {
     /// passes don't re-hit Supabase between completion lookups.
     @State private var activities: [StravaActivity] = []
 
+    /// Unscheduled Strava activities for the current week, grouped by `startOfDay`.
+    /// Populated by `loadCompletionAndTotals()` via `SessionMatcher.matchWithUnscheduled`.
+    /// Only swim / bike / run activities that were NOT matched to a planned session appear here.
+    /// Manual entries are always unscheduled (never consumed by matching) and surface here too.
+    @State private var unscheduledByDay: [Date: [StravaActivity]] = [:]
+
     /// Drives the sheet presentation of `PlanGenerationView` from `EmptyHomeHero`'s CTA.
     /// PlanGenerationView owns its own services and dismisses itself on success — when
     /// generation completes, `planService.trainingPlan` flips to non-nil and the empty
@@ -255,60 +261,142 @@ struct HomeView: View {
     /// Routes the central hero slot to the right card variant based on the
     /// `effectiveSelectedDay` (today by default; any other weekday when the user
     /// has tapped a pill in the WeekDayStrip):
-    /// - empty day → rest
-    /// - race-day flag → race card
-    /// - exactly 1 session → single planned/completed/missed card
-    /// - 2+ sessions → multi-session stack with header + sorted cards
+    /// - empty day + no unscheduled → rest
+    /// - empty day + unscheduled → rest card + unscheduled card(s) below
+    /// - race-day flag → race card (unscheduled hidden — race takeover wins)
+    /// - exactly 1 planned session (no unscheduled) → single planned/completed/missed card
+    /// - exactly 1 planned session + unscheduled → standalone planned card (keeps its tag)
+    ///   + unscheduled card(s) stacked below
+    /// - 2+ planned sessions → multi-session stack with header + sorted cards (unscheduled append)
     @ViewBuilder
     private var todayHero: some View {
         let day = effectiveSelectedDay
         let daysSessions = (currentWeek?.sessionsByDay[day] ?? [])
             .sorted { $0.orderInDay < $1.orderInDay }
+        let dayUnscheduled = unscheduledActivities(for: day)
 
         if daysSessions.isEmpty {
-            // Rest day. The day anchor is rendered by the external day label above
-            // the card, so the rest-day card itself no longer carries a header row.
-            RestDayCardView(notes: nil)
+            // Rest day or unplanned-only day.
+            // Always render the RestDayCardView as the primary card (keeps the
+            // "nice day off" UX cue), then stack unscheduled cards below when present.
+            if dayUnscheduled.isEmpty {
+                // Pure rest day — no activity at all.
+                RestDayCardView(notes: nil)
+            } else {
+                // Trained on a rest day! Show the rest card first, then the bonus activities.
+                VStack(spacing: 12) {
+                    RestDayCardView(notes: nil)
+                    unscheduledCards(dayUnscheduled)
+                }
+            }
         } else if let race = daysSessions.first(where: { $0.sport.lowercased() == "race" }) {
             // Race day card. Coexists with the strip + week-strip — does NOT take over
             // the canvas. raceObjective falls back to the session.type when no plan-level
             // objective is captured (matches CalendarView behavior).
             //
             // Race-day takeover: when the day contains a race session, render the race
-            // card alone. Any co-occurring sessions (e.g., shake-out runs) are
-            // intentionally hidden. Revisit if athletes report missing race-day shake-outs.
+            // card alone. Unscheduled activities are intentionally suppressed — the race
+            // takeover is total (shake-outs, bonus rides, etc. are hidden on race day).
             RaceDayCardView(
                 raceObjective: race.type,
                 template: workoutLibrary.template(for: race.templateId),
                 notes: race.notes
             )
         } else if daysSessions.count == 1 {
-            cardForSession(daysSessions[0], sequenceContext: nil)
+            // Single planned session — always rendered standalone so it keeps its status
+            // tag (CompletedTag / MissedTag / planned CTA + rationale + steps). Any
+            // unscheduled activities stack below it.
+            //
+            // DRO-305 QA fix: this previously routed into the numbered `multiSessionStack`
+            // whenever an unscheduled activity was present, which swapped the planned card's
+            // status tag for a sequence badge — stripping a MISSED session down to a bare
+            // title. Demoting the standalone treatment is exactly the wrong call for the
+            // most common case (planned X, did Y → X missed + Y unscheduled).
+            if dayUnscheduled.isEmpty {
+                cardForSession(daysSessions[0], sequenceContext: nil)
+            } else {
+                VStack(spacing: 12) {
+                    cardForSession(daysSessions[0], sequenceContext: nil)
+                    unscheduledCards(dayUnscheduled)
+                }
+            }
         } else {
-            multiSessionStack(sessions: daysSessions)
+            // 2+ planned sessions → numbered multi-session stack. Unscheduled activities
+            // append in the bottom "already done" bucket with continuing badge indices.
+            multiSessionStack(sessions: daysSessions, unscheduled: dayUnscheduled)
         }
     }
 
-    /// Multi-session day: caption header + sorted card list (planned-on-top, completed-below).
+    /// Returns the unscheduled Strava activities for a given weekday, looked up from
+    /// `unscheduledByDay` using the weekday's resolved calendar date.
+    ///
+    /// Resolution mirrors `loadCompletionAndTotals()`: weekday → calendar date via
+    /// `Weekday.date(relativeTo: weekStart)`, then truncated to `startOfDay` to match
+    /// the key format used by `SessionMatcher.matchWithUnscheduled`.
+    ///
+    /// Returns `[]` when:
+    /// - `currentWeek` is nil (no plan loaded).
+    /// - The weekday's date cannot be resolved (no `weekStart`).
+    /// - No unscheduled activities exist for that day.
+    private func unscheduledActivities(for weekday: Weekday) -> [StravaActivity] {
+        guard let weekStart = currentWeek?.startDateAsDate else { return [] }
+        let date = weekday.date(relativeTo: weekStart)
+        let dayStart = calendar.startOfDay(for: date)
+        return unscheduledByDay[dayStart] ?? []
+    }
+
+    /// Renders unscheduled-activity cards as standalone cards (each with its own
+    /// `UnscheduledTag`, no sequence badge). Used by the rest-day and single-planned-session
+    /// hero layouts where unscheduled cards stack below the primary card.
     @ViewBuilder
-    private func multiSessionStack(sessions: [PlanSession]) -> some View {
+    private func unscheduledCards(_ activities: [StravaActivity]) -> some View {
+        ForEach(activities) { activity in
+            UnscheduledActivityCard(
+                activity: activity,
+                ftp: profileService.user?.ftp,
+                vma: profileService.user?.vma,
+                css: profileService.user?.cssSecondsPer100m,
+                maxHr: profileService.user?.maxHr,
+                sequenceContext: nil
+            )
+        }
+    }
+
+    /// Multi-session day: caption header + sorted card list (planned-on-top, completed-below,
+    /// unscheduled in the bottom "already done" bucket after completed planned cards).
+    ///
+    /// `unscheduled` defaults to `[]` so existing call sites that don't pass it compile unchanged.
+    /// Session count in the header = planned sessions + unscheduled activities.
+    /// Duration in the header = planned minutes + unscheduled `movingTime` minutes.
+    ///
+    /// Badge indices are assigned across the combined ordered list (planned first, then
+    /// completed, then unscheduled), so each card gets a unique `SessionSequenceBadge`.
+    @ViewBuilder
+    private func multiSessionStack(
+        sessions: [PlanSession],
+        unscheduled: [StravaActivity] = []
+    ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
+                // Total count: planned sessions + unscheduled bonus activities.
+                let totalCount = sessions.count + unscheduled.count
                 // Day prefix dropped — the external day label above the hero already
                 // carries the temporal anchor (Today / Yesterday / April 29th).
-                Text("\(sessions.count) SESSIONS")
+                Text("\(totalCount) SESSIONS")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
                     .tracking(1)
                 Spacer()
-                Text("\(formatTotalDuration(sessions)) total")
+                // Total duration = planned minutes + unscheduled movingTime minutes.
+                let unscheduledMinutes = unscheduled.reduce(0) { $0 + Int((Double($1.movingTime) / 60.0).rounded()) }
+                Text("\(formatTotalDuration(sessions, extraMinutes: unscheduledMinutes)) total")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
 
-            // Sort: planned/missed cards above completed cards. Within each bucket,
+            // Sort planned/missed cards above completed cards. Within each bucket,
             // ascending order_in_day. Reads top-to-bottom as "what to do next, then
             // what you've already done".
             let sorted = sessions.sorted { a, b in
@@ -317,12 +405,27 @@ struct HomeView: View {
                 if aCompleted != bCompleted { return !aCompleted }
                 return a.orderInDay < b.orderInDay
             }
-            // Badge index reflects PRESENTATION order (planned-on-top), not session.orderInDay.
+            // Badge index reflects PRESENTATION order (planned-on-top, then unscheduled).
             // See DRO-237 spec: planned/missed cards above completed cards within the day.
+            // DRO-305 (Phase 4): unscheduled cards trail after all planned cards, in the
+            // "already done" bucket, with continuing sequence indices.
+            let grandTotal = sorted.count + unscheduled.count
             ForEach(Array(sorted.enumerated()), id: \.element.id) { index, session in
                 cardForSession(
                     session,
-                    sequenceContext: (index: index + 1, total: sorted.count)
+                    sequenceContext: (index: index + 1, total: grandTotal)
+                )
+            }
+            // Unscheduled activities occupy the bottom of the stack.
+            // Each receives a sequenceContext that continues the numbering from planned cards.
+            ForEach(Array(unscheduled.enumerated()), id: \.element.id) { offset, activity in
+                UnscheduledActivityCard(
+                    activity: activity,
+                    ftp: profileService.user?.ftp,
+                    vma: profileService.user?.vma,
+                    css: profileService.user?.cssSecondsPer100m,
+                    maxHr: profileService.user?.maxHr,
+                    sequenceContext: (index: sorted.count + offset + 1, total: grandTotal)
                 )
             }
         }
@@ -365,6 +468,7 @@ struct HomeView: View {
         case .missed:
             TodayMissedCard(
                 session: session,
+                ftp: ftp, vma: vma, css: css, maxHr: maxHr,
                 sequenceContext: sequenceContext
             )
         }
@@ -407,7 +511,12 @@ struct HomeView: View {
             return (session, weekday.date(relativeTo: weekStart))
         }
 
-        completionStatuses = SessionMatcher.match(sessions: sessionsWithDates, activities: fetched)
+        // DRO-305 (Phase 4): switch to matchWithUnscheduled so we get both the per-session
+        // completion dictionary AND the day-grouped map of leftover activities. The statuses
+        // field is drop-in identical to the former match(...) return value.
+        let result = SessionMatcher.matchWithUnscheduled(sessions: sessionsWithDates, activities: fetched)
+        completionStatuses = result.statuses
+        unscheduledByDay = result.unscheduledByDay
         sportTotals = planService.weeklySportTotals(for: week, with: fetched)
     }
 
@@ -422,6 +531,11 @@ struct HomeView: View {
     /// default. When `selected` is non-nil, the matching pill is marked
     /// `isSelected = true` instead and the border moves there. The today pill
     /// keeps its solid background regardless; the outline overlays it.
+    ///
+    /// DRO-305 (Phase 4): unscheduled activities are resolved per-day from
+    /// `unscheduledByDay` and threaded into `pillState`, `glyphs`, and `durationLabel`
+    /// so rest days with bonus activities show the activity glyph + duration and
+    /// receive the `.unscheduled` pill state.
     private func weekPills(selected: Weekday?) -> [DayPill] {
         let week = currentWeek
         let today = todayWeekday()
@@ -429,15 +543,18 @@ struct HomeView: View {
 
         return Weekday.allCases.map { day in
             let sessions = (sessionsByDay[day] ?? []).sorted { $0.orderInDay < $1.orderInDay }
+            // Resolve the day's unscheduled activities using the same weekStart-relative
+            // date resolution as `unscheduledActivities(for:)` in todayHero.
+            let dayUnscheduled = unscheduledActivities(for: day)
             // DRO-244: nil selection means "today is the previewed day" — today
             // pill gets the accent outline by default. Any non-nil selection
             // moves the outline onto that day.
             let isSelected = (selected == nil) ? (day == today) : (selected == day)
             return DayPill(
                 weekday: day,
-                glyphs: glyphs(for: day, sessions: sessions),
-                durationLabel: durationLabel(for: sessions),
-                state: pillState(for: day, today: today, sessions: sessions),
+                glyphs: glyphs(for: day, sessions: sessions, unscheduled: dayUnscheduled),
+                durationLabel: durationLabel(for: sessions, unscheduled: dayUnscheduled),
+                state: pillState(for: day, today: today, sessions: sessions, unscheduled: dayUnscheduled),
                 isSelected: isSelected
             )
         }
@@ -448,41 +565,89 @@ struct HomeView: View {
     /// other multi-session day. WeekDayStrip renders these side-by-side in an
     /// HStack so two-session days (e.g., swim + run) show two icons inline.
     ///
-    /// Rules:
-    /// - 0 sessions → `["bed.double.fill"]` (rest).
-    /// - any race session → `["flag.checkered"]` (race takeover; matches the
-    ///   race-day card behaviour in `todayHero`).
-    /// - otherwise → `sessions.map(\.sportIcon)` (one glyph per session in
-    ///   `orderInDay` order).
-    private func glyphs(for day: Weekday, sessions: [PlanSession]) -> [String] {
-        if sessions.isEmpty { return ["bed.double.fill"] }
+    /// Rules (in precedence order):
+    /// - any race session → `["flag.checkered"]` (race takeover; matches `todayHero` behaviour).
+    /// - ≥1 planned session → `sessions.map(\.sportIcon)` (one glyph per session in `orderInDay` order).
+    /// - 0 planned sessions + ≥1 unscheduled → `unscheduled.map(\.sportIcon)` (bonus-activity glyphs).
+    /// - 0 sessions AND 0 unscheduled → `["bed.double.fill"]` (pure rest day).
+    ///
+    /// DRO-305 (Phase 4): `unscheduled` lets an otherwise-rest day show the activity glyph(s)
+    /// rather than the bed icon, signalling that the athlete trained even without a plan entry.
+    private func glyphs(
+        for day: Weekday,
+        sessions: [PlanSession],
+        unscheduled: [StravaActivity] = []
+    ) -> [String] {
         if sessions.contains(where: { $0.sport.lowercased() == "race" }) {
             return ["flag.checkered"]
         }
-        return sessions.map(\.sportIcon)
+        if !sessions.isEmpty {
+            return sessions.map(\.sportIcon)
+        }
+        // No planned sessions — show unscheduled glyphs if present, else the rest glyph.
+        if !unscheduled.isEmpty {
+            return unscheduled.map(\.sportIcon)
+        }
+        return ["bed.double.fill"]
     }
 
-    /// Total minutes for the day, formatted compactly. nil for rest days (no sessions)
-    /// so the pill shows just the day label + glyph.
-    private func durationLabel(for sessions: [PlanSession]) -> String? {
-        guard !sessions.isEmpty else { return nil }
-        let total = sessions.reduce(0) { $0 + $1.durationMinutes }
-        return PlanSession.formatCompactDuration(minutes: total)
+    /// Total duration for the day, formatted compactly. Returns `nil` for pure rest days
+    /// (no planned sessions AND no unscheduled activities) so the pill shows only the
+    /// day label + glyph with no duration label.
+    ///
+    /// DRO-305 (Phase 4): when `sessions` is empty but `unscheduled` is not, the duration
+    /// is derived from the sum of `unscheduled[].movingTime` in minutes — an otherwise-rest
+    /// day shows how long the athlete actually trained.
+    private func durationLabel(
+        for sessions: [PlanSession],
+        unscheduled: [StravaActivity] = []
+    ) -> String? {
+        if !sessions.isEmpty {
+            let total = sessions.reduce(0) { $0 + $1.durationMinutes }
+            return PlanSession.formatCompactDuration(minutes: total)
+        }
+        if !unscheduled.isEmpty {
+            let totalMinutes = unscheduled.reduce(0) { $0 + Int((Double($1.movingTime) / 60.0).rounded()) }
+            return PlanSession.formatCompactDuration(minutes: totalMinutes)
+        }
+        return nil
     }
 
-    /// Pill state derived from past/today/future + completion status.
-    /// - today (regardless of count) → .today
-    /// - past + all sessions completed → .completed
-    /// - past + any session missed → .missed
-    /// - past + no sessions → .rest
-    /// - future + no sessions → .rest
-    /// - future + sessions → .planned
-    private func pillState(for day: Weekday, today: Weekday, sessions: [PlanSession]) -> PillState {
+    /// Pill state derived from past/today/future + completion status + unscheduled activity presence.
+    ///
+    /// **Precedence (highest → lowest):**
+    /// 1. `today` — always `.today`, regardless of sessions or unscheduled count.
+    /// 2. Race day — there is no dedicated race branch here: a race day always carries a
+    ///    planned `race` session, so it flows through the non-empty-sessions logic below
+    ///    (rules 3–4) and is therefore never reachable by the unscheduled branch (rule 5).
+    /// 3. Past day with planned sessions where all are completed → `.completed`
+    ///    (planned completion wins even if the athlete also did unscheduled bonus work).
+    /// 4. Past day with planned sessions where any is missed → `.missed`.
+    /// 5. Past / future day with NO planned sessions AND ≥1 unscheduled activity → `.unscheduled`
+    ///    (athlete trained spontaneously; visually distinct from a full rest day).
+    /// 6. Otherwise → `.rest` (future rest day) or `.planned` (future day with sessions).
+    ///
+    /// DRO-305 (Phase 4): `unscheduled` parameter added. Callers that omit it (e.g., future
+    /// planned days) get existing behaviour unchanged via the default `[]` argument.
+    private func pillState(
+        for day: Weekday,
+        today: Weekday,
+        sessions: [PlanSession],
+        unscheduled: [StravaActivity] = []
+    ) -> PillState {
+        // Rule 1: today is always .today.
         if day == today { return .today }
 
         let dayIsPast = isPast(day: day, today: today)
 
-        if sessions.isEmpty { return .rest }
+        if sessions.isEmpty {
+            // No planned sessions — check for unscheduled bonus activity (past days only).
+            // Future rest days never get .unscheduled; we only know about past/today activities.
+            if dayIsPast && !unscheduled.isEmpty {
+                return .unscheduled
+            }
+            return .rest
+        }
 
         if dayIsPast {
             // Inspect each session's matched completion. Missing entries mean the
@@ -493,6 +658,7 @@ struct HomeView: View {
                 return .missed
             }
             if statuses.allSatisfy({ if case .completed = $0 { return true } else { return false } }) {
+                // Rule 3: planned-completion wins — stay .completed even with bonus unscheduled.
                 return .completed
             }
             // Mixed past day with some unmatched sessions — treat as missed to surface
@@ -639,8 +805,11 @@ struct HomeView: View {
     // MARK: - Formatting Helpers
 
     /// "1h 30 min" / "45 min" — used in the multi-session header caption.
-    private func formatTotalDuration(_ sessions: [PlanSession]) -> String {
-        let total = sessions.reduce(0) { $0 + $1.durationMinutes }
+    ///
+    /// DRO-305 (Phase 4): `extraMinutes` adds unscheduled activity duration to the
+    /// planned sessions total so the header reflects the full day's training volume.
+    private func formatTotalDuration(_ sessions: [PlanSession], extraMinutes: Int = 0) -> String {
+        let total = sessions.reduce(0) { $0 + $1.durationMinutes } + extraMinutes
         let hours = total / 60
         let minutes = total % 60
         if hours > 0 && minutes > 0 { return "\(hours)h \(minutes) min" }

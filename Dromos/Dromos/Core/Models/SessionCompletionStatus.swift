@@ -21,18 +21,46 @@ enum SessionCompletionStatus {
     case missed
 }
 
+// MARK: - Session Match Result
+
+/// Combined output of `SessionMatcher.matchWithUnscheduled(sessions:activities:today:)`.
+///
+/// Keeps the existing per-session completion dictionary **and** surfaces the Strava activities
+/// that were not consumed by any planned session, grouped by the calendar day on which
+/// they occurred. Callers that only need `statuses` can use the thin `match(...)` wrapper
+/// to avoid the extra allocation.
+struct SessionMatchResult {
+    /// Per-session completion status, identical to what the legacy `match(...)` returns.
+    let statuses: [UUID: SessionCompletionStatus]
+
+    /// Strava activities that were NOT matched to a planned session, grouped by the
+    /// `startOfDay` of their `startDateLocal`. Only swim / bike / run activities are
+    /// included — other sport types and activities whose `normalizedSport` is nil are
+    /// excluded. Manual entries are never consumed by the matcher, so they always appear
+    /// here, which is intentional (surfacing manual activity logs is a feature).
+    let unscheduledByDay: [Date: [StravaActivity]]
+}
+
 // MARK: - Session Matcher
 
 /// Matches planned training sessions against synced Strava activities to determine completion status.
 ///
 /// Matching rules:
-/// - Manual Strava entries (`isManual == true`) are excluded from matching.
+/// - Manual Strava entries (`isManual == true`) are excluded from matching against planned sessions,
+///   but they ARE surfaced as unscheduled activities (via `matchWithUnscheduled`) because athletes
+///   often log ad-hoc efforts manually and still want them visible.
 /// - Activities are grouped by `(normalizedSport, calendarDay)` using `startDateLocal`.
 /// - A session matches if both sport and calendar day align.
 /// - When multiple activities match, the closest duration (by `movingTime`) wins.
 /// - Each activity can only be matched once — consumed activities are tracked to prevent double-counting.
 /// - Past sessions without a match are marked `.missed`.
 /// - Future/today sessions without a match remain `.planned`.
+///
+/// **Unscheduled semantics** (`matchWithUnscheduled`):
+/// After the matching loop completes, any activity whose `stravaActivityId` was NOT consumed
+/// (i.e., not matched to a planned session) AND whose `normalizedSport` is swim / bike / run
+/// is considered *unscheduled*. These are returned grouped by calendar day so callers can
+/// render them without a second fetch or a separate matching pass.
 struct SessionMatcher {
 
     private static let dayFormatter: ISO8601DateFormatter = {
@@ -41,7 +69,12 @@ struct SessionMatcher {
         return f
     }()
 
+    // MARK: - Public API
+
     /// Matches plan sessions against Strava activities to determine per-session completion status.
+    ///
+    /// Thin wrapper over `matchCore` for backwards compatibility.
+    /// All three existing call sites (HomeView, CalendarView, PlanService) compile unchanged.
     ///
     /// - Parameters:
     ///   - sessions: Tuples of (session, resolvedDate) for each visible planned session.
@@ -53,6 +86,64 @@ struct SessionMatcher {
         activities: [StravaActivity],
         today: Date = Date()
     ) -> [UUID: SessionCompletionStatus] {
+        return matchCore(sessions: sessions, activities: activities, today: today).statuses
+    }
+
+    /// Full matching pass that also surfaces unscheduled activities.
+    ///
+    /// Runs the same consume/dedup loop as `match(...)` and additionally computes which
+    /// activities were NOT consumed, filtering to swim / bike / run only, then groups them
+    /// by `startOfDay(activity.startDateLocal)` for convenient rendering.
+    ///
+    /// - Parameters:
+    ///   - sessions: Tuples of (session, resolvedDate) for each visible planned session.
+    ///   - activities: All Strava activities in the visible date range (may include manual entries).
+    ///   - today: Reference date for the planned vs. missed cutoff. Defaults to `Date()`.
+    /// - Returns: A `SessionMatchResult` with per-session statuses and unscheduled activities by day.
+    static func matchWithUnscheduled(
+        sessions: [(session: PlanSession, date: Date)],
+        activities: [StravaActivity],
+        today: Date = Date()
+    ) -> SessionMatchResult {
+        let calendar = Calendar.current
+        let (statuses, consumedIDs) = matchCore(sessions: sessions, activities: activities, today: today)
+
+        // Sports we surface as unscheduled — mirrors the three sports the app renders.
+        let trackedSports: Set<String> = ["swim", "bike", "run"]
+
+        // Collect activities not consumed by a planned match whose sport is tracked.
+        // Manual entries are never consumed (excluded from the matching pool) so they
+        // naturally appear here — this is intentional behaviour, not a bug.
+        var unscheduledByDay: [Date: [StravaActivity]] = [:]
+        for activity in activities {
+            guard
+                let sport = activity.normalizedSport?.lowercased(),
+                trackedSports.contains(sport),
+                !consumedIDs.contains(activity.stravaActivityId)
+            else { continue }
+
+            let dayStart = calendar.startOfDay(for: activity.startDateLocal)
+            unscheduledByDay[dayStart, default: []].append(activity)
+        }
+
+        return SessionMatchResult(statuses: statuses, unscheduledByDay: unscheduledByDay)
+    }
+
+    // MARK: - Private Core
+
+    /// Shared matching core used by both `match` and `matchWithUnscheduled`.
+    ///
+    /// Executes the consume/dedup loop and returns both the per-session statuses AND
+    /// the set of `stravaActivityId`s that were consumed, so the caller can derive
+    /// unscheduled activities without re-running the loop.
+    ///
+    /// - Returns: Tuple of `(statuses, consumedIDs)` where `consumedIDs` are the
+    ///   `stravaActivityId`s of auto-activities matched to a planned session.
+    private static func matchCore(
+        sessions: [(session: PlanSession, date: Date)],
+        activities: [StravaActivity],
+        today: Date
+    ) -> (statuses: [UUID: SessionCompletionStatus], consumedIDs: Set<Int64>) {
 
         let calendar = Calendar.current
 
@@ -106,7 +197,7 @@ struct SessionMatcher {
             }
         }
 
-        return result
+        return (statuses: result, consumedIDs: consumedActivityIDs)
     }
 
     // MARK: - Private Helpers

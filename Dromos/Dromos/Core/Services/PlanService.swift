@@ -263,12 +263,20 @@ final class PlanService: ObservableObject {
     ///
     /// - `total` = sum of `session.durationMinutes` grouped by `lower(session.sport)`.
     /// - `done`  = sum of `Int(activity.movingTime / 60)` for sessions matched to a Strava
-    ///   activity via `SessionMatcher.match()`.
+    ///   activity via `SessionMatcher.matchWithUnscheduled()`, PLUS unscheduled activity
+    ///   minutes for any swim / bike / run activity not consumed by a planned session match.
+    ///   Unscheduled minutes add to `done` only — `total` (the plan denominator) is unchanged.
+    ///   Overshoot (done > total) is intentional and already handled by `SportProgressStrip`
+    ///   (bar clamps to 100%, numbers display honestly as e.g. "0:30 / 0:00").
     ///
     /// Brick sessions count toward their single `sport` field (no double-counting).
     /// Sports outside swim/bike/run (e.g. strength, race) are intentionally ignored — the
     /// strip only renders SWIM / BIKE / RUN columns. Result keys are always present (zeros
     /// when no planned sessions of that sport exist).
+    ///
+    /// An activity is either matched (planned `.completed`) OR unscheduled — never both.
+    /// `matchWithUnscheduled` guarantees this via the consume/dedup loop; we don't re-add
+    /// matched activities.
     ///
     /// Pure function: no published-state mutation, no I/O.
     // TODO(follow-up): Promote (done, total) to a shared `SportTotals` struct returned directly,
@@ -296,17 +304,35 @@ final class PlanService: ObservableObject {
             }
         }
 
-        let matched = SessionMatcher.match(sessions: sessionsForMatcher, activities: activities)
+        // DRO-305 (Phase 6): switch to matchWithUnscheduled so we can fold unscheduled
+        // activity minutes into the `done` numerator without a second matching pass.
+        let matchResult = SessionMatcher.matchWithUnscheduled(
+            sessions: sessionsForMatcher,
+            activities: activities
+        )
 
+        // Planned sessions: accumulate total minutes and done minutes for completed ones.
         for session in week.planSessions {
             let key = session.sport.lowercased()
             // Explicit allowlist: strip only renders SWIM / BIKE / RUN. Skips strength, race, etc.
             guard ["swim", "bike", "run"].contains(key) else { continue }
             result[key, default: (0, 0)].total += session.durationMinutes
-            if case .completed(let activity) = matched[session.id] ?? .planned {
+            if case .completed(let activity) = matchResult.statuses[session.id] ?? .planned {
                 result[key, default: (0, 0)].done += Int((Double(activity.movingTime) / 60.0).rounded())
             }
         }
+
+        // Unscheduled activities: add their movingTime minutes to `done` only.
+        // These are swim / bike / run activities not consumed by any planned match —
+        // `matchWithUnscheduled` already filters to those three sports and excludes
+        // activities that were matched, so no double-counting is possible here.
+        let trackedSports: Set<String> = ["swim", "bike", "run"]
+        for activity in matchResult.unscheduledByDay.values.flatMap({ $0 }) {
+            guard let sport = activity.normalizedSport?.lowercased(),
+                  trackedSports.contains(sport) else { continue }
+            result[sport, default: (0, 0)].done += Int((Double(activity.movingTime) / 60.0).rounded())
+        }
+
         return result
     }
 
