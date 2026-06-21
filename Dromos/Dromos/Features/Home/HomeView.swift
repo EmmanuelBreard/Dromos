@@ -264,9 +264,10 @@ struct HomeView: View {
     /// - empty day + no unscheduled → rest
     /// - empty day + unscheduled → rest card + unscheduled card(s) below
     /// - race-day flag → race card (unscheduled hidden — race takeover wins)
-    /// - exactly 1 planned session + unscheduled → promote to multi-session path
     /// - exactly 1 planned session (no unscheduled) → single planned/completed/missed card
-    /// - 2+ sessions (or 1 planned + unscheduled) → multi-session stack with header + sorted cards
+    /// - exactly 1 planned session + unscheduled → standalone planned card (keeps its tag)
+    ///   + unscheduled card(s) stacked below
+    /// - 2+ planned sessions → multi-session stack with header + sorted cards (unscheduled append)
     @ViewBuilder
     private var todayHero: some View {
         let day = effectiveSelectedDay
@@ -285,16 +286,7 @@ struct HomeView: View {
                 // Trained on a rest day! Show the rest card first, then the bonus activities.
                 VStack(spacing: 12) {
                     RestDayCardView(notes: nil)
-                    ForEach(dayUnscheduled) { activity in
-                        UnscheduledActivityCard(
-                            activity: activity,
-                            ftp: profileService.user?.ftp,
-                            vma: profileService.user?.vma,
-                            css: profileService.user?.cssSecondsPer100m,
-                            maxHr: profileService.user?.maxHr,
-                            sequenceContext: nil
-                        )
-                    }
+                    unscheduledCards(dayUnscheduled)
                 }
             }
         } else if let race = daysSessions.first(where: { $0.sport.lowercased() == "race" }) {
@@ -310,12 +302,27 @@ struct HomeView: View {
                 template: workoutLibrary.template(for: race.templateId),
                 notes: race.notes
             )
-        } else if daysSessions.count == 1 && dayUnscheduled.isEmpty {
-            // Single planned session, no unscheduled extras — original single-card path.
-            cardForSession(daysSessions[0], sequenceContext: nil)
+        } else if daysSessions.count == 1 {
+            // Single planned session — always rendered standalone so it keeps its status
+            // tag (CompletedTag / MissedTag / planned CTA + rationale + steps). Any
+            // unscheduled activities stack below it.
+            //
+            // DRO-305 QA fix: this previously routed into the numbered `multiSessionStack`
+            // whenever an unscheduled activity was present, which swapped the planned card's
+            // status tag for a sequence badge — stripping a MISSED session down to a bare
+            // title. Demoting the standalone treatment is exactly the wrong call for the
+            // most common case (planned X, did Y → X missed + Y unscheduled).
+            if dayUnscheduled.isEmpty {
+                cardForSession(daysSessions[0], sequenceContext: nil)
+            } else {
+                VStack(spacing: 12) {
+                    cardForSession(daysSessions[0], sequenceContext: nil)
+                    unscheduledCards(dayUnscheduled)
+                }
+            }
         } else {
-            // Multi-session path: either 2+ planned sessions, OR a single planned session
-            // with ≥1 unscheduled activity. Both cases render the ordered-stack layout.
+            // 2+ planned sessions → numbered multi-session stack. Unscheduled activities
+            // append in the bottom "already done" bucket with continuing badge indices.
             multiSessionStack(sessions: daysSessions, unscheduled: dayUnscheduled)
         }
     }
@@ -336,6 +343,23 @@ struct HomeView: View {
         let date = weekday.date(relativeTo: weekStart)
         let dayStart = calendar.startOfDay(for: date)
         return unscheduledByDay[dayStart] ?? []
+    }
+
+    /// Renders unscheduled-activity cards as standalone cards (each with its own
+    /// `UnscheduledTag`, no sequence badge). Used by the rest-day and single-planned-session
+    /// hero layouts where unscheduled cards stack below the primary card.
+    @ViewBuilder
+    private func unscheduledCards(_ activities: [StravaActivity]) -> some View {
+        ForEach(activities) { activity in
+            UnscheduledActivityCard(
+                activity: activity,
+                ftp: profileService.user?.ftp,
+                vma: profileService.user?.vma,
+                css: profileService.user?.cssSecondsPer100m,
+                maxHr: profileService.user?.maxHr,
+                sequenceContext: nil
+            )
+        }
     }
 
     /// Multi-session day: caption header + sorted card list (planned-on-top, completed-below,
