@@ -10,6 +10,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.5",
+    "dotenv": "^17.4.2",
+    "js-yaml": "^5.2.1",
     "promptfoo": "^0.120.19"
   }
 }

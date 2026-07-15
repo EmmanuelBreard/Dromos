@@ -2073,11 +2073,18 @@ Deno.serve(async (req) => {
         console.log(`Plan ${planId} generation complete — status set to active`);
       } catch (bgError) {
         console.error("Background plan generation failed:", bgError);
-        // Mark plan as failed so the iOS app can detect it via polling
+        // Mark plan as failed so the iOS app can detect it via polling.
+        // Persist the error so failures are debuggable instead of silent (DRO-312).
+        const errorMessage =
+          bgError instanceof Error ? bgError.message : String(bgError);
         try {
           await dbClient
             .from("training_plans")
-            .update({ status: "failed" })
+            .update({
+              status: "failed",
+              error_message: errorMessage.slice(0, 2000),
+              failed_at: new Date().toISOString(),
+            })
             .eq("id", planId);
         } catch (updateError) {
           console.error("Failed to mark plan as failed:", updateError);
