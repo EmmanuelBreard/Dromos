@@ -158,6 +158,10 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 | `ai/eval/check-step3-violations.js` | 8-metric violation checker (duration, sport, rest, brick, cluster, same-day, intensity, brick-order) |
 | `ai/eval/run-step3-blocks.js` | Step 3 block orchestrator + all 12 fixers (source of truth) |
 | `ai/eval/batch-eval.sh` | Batch runner: N parallel eval runs → plans + violations + aggregated scores |
+| `ai/eval/poc-generate-e2e.js` | DRO-311 PoC: synthetic user → JWT → invoke deployed `generate-plan` → poll → read → run checker → cleanup. Reference for the full plan-quality eval harness (targets real edge functions, not the shadow `run-step3-blocks.js`). |
+| `ai/eval/db-plan-to-eval-shape.js` | Adapter: DB plan (`training_plans` + nested `plan_weeks`/`plan_sessions`) → the `{weeks: [...]}` shape the checker/rubric consume. |
+| `ai/eval/vars/availability-scenarios.yaml` | DRO-314: availability-focused scenario set (12 entries, Olympic + Ironman 70.3 × weekly-hours/day-pattern/duration-cap/sport-eligibility shapes). Each entry is a full `public.users` profile (real types, not promptfoo string vars) ready for `createTestUser(profile)` — rest days seeded as `0`, translated to `NULL` by the Step-1 eval-supabase client. Primary scenario set for the real-edge-function harness (distinct from `athletes.yaml`, which feeds the promptfoo markdown-pipeline evals). |
+| `ai/eval/lib/yupa-rubric.js` | DRO-314: `reviewPlan(evalPlan, scenarioVars)` — one OpenAI (`gpt-4.1`) call per plan, scored against a rubric derived from `.claude/agents/triathlon-coach.md` (80/20 distribution, ramp rate, recovery cadence, brick placement, taper). Returns `{ verdict: 'SHIP'|'SHIP WITH CHANGES'|'DO NOT SHIP', issues: [{severity, note}], summary }`. Advisory only — never gates a scenario, only throws on an OpenAI API failure. |
 
 ### Workout Library
 - **Canonical file:** `ai/context/workout-library.json`

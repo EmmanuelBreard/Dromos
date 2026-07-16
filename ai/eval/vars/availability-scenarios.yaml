@@ -1,0 +1,287 @@
+# Availability-focused scenario set for DRO-311/DRO-314 (plan-quality eval harness).
+#
+# Unlike vars/athletes.yaml (promptfoo string-vars, consumed by the Step 1/2/3
+# markdown-pipeline evals), every entry here is a FULL `public.users` row shape —
+# same field names/types the DB expects, ready to hand straight to
+# `createTestUser(profile)` (ai/eval/lib/eval-supabase-client.js, DRO-311 Step 1).
+# No `vars:` wrapper, no stringified numbers, day-lists are real JS arrays.
+#
+# PRIMARY axis under test: availability feasibility — does plan generation respect
+# the athlete's actual time/day constraints? We deliberately do NOT vary
+# experience/injury/limiters much; those are covered elsewhere. Each scenario
+# crosses one of the two supported race distances (Olympic, Ironman 70.3 — see
+# DRO-288) with a distinct availability "shape":
+#   - total weekly hours: low / moderate / high
+#   - day pattern: few days vs many, weekday-only vs weekend-only vs scattered,
+#     and how many rest days (0/NULL-duration days) are seeded
+#   - per-day duration caps: even (similar cap every active day) vs
+#     short-weekday/long-weekend (crunched on weekdays, long sessions on weekends)
+#   - per-sport day eligibility: e.g. pool (swim) available only 1-3 days/week,
+#     which is tighter than bike/run eligibility and forces the generator to
+#     schedule swim around a narrow window
+#
+# Rest days: seeded as `0` (not `null`/omitted-key ambiguity) for the *_duration
+# fields on days the athlete is unavailable. The Step-1 client
+# (createTestUser) translates `0` -> `NULL` before writing, because the DB
+# constraint on every `{day}_duration` column is `NULL OR 30..420` (see
+# .claude/context/schema.md — a literal 0 would violate the CHECK).
+#
+# Race dates: this is a static file (no "now" to compute forward from), so
+# dates are fixed comfortably in the future (2027) rather than derived —
+# Olympic scenarios cluster Feb-Jun 2027, Ironman 70.3 scenarios cluster
+# Jun-Oct 2027 (longer runway, matching the longer real-world build a 70.3
+# plan needs). If this file is still in use once "today" gets close to these
+# dates, refresh them forward — a scenario with a past race_date will make
+# generate-plan compute a garbage (zero/negative) total_weeks.
+
+- scenario_name: "olympic-low-4day-weekday-pool2"
+  race_objective: "Olympic"
+  race_date: "2027-03-14T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 1
+  current_weekly_hours: 3
+  ftp: 170
+  vma: 13.5
+  css_seconds_per100m: 135
+  # 4 active days, weekday-only, even 60min caps, 3 rest days (Wed/Sat/Sun)
+  swim_days: ["Monday", "Thursday"] # pool only 2x/week
+  bike_days: ["Tuesday", "Friday"]
+  run_days: ["Monday", "Tuesday", "Thursday", "Friday"]
+  mon_duration: 60
+  tue_duration: 60
+  wed_duration: 0
+  thu_duration: 60
+  fri_duration: 60
+  sat_duration: 0
+  sun_duration: 0
+
+- scenario_name: "olympic-mod-6day-scattered-weekendlong-pool2"
+  race_objective: "Olympic"
+  race_date: "2027-05-09T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 2
+  current_weekly_hours: 5
+  ftp: 190
+  vma: 14.5
+  css_seconds_per100m: 125
+  # 6 active days scattered across the week, short-weekday/long-weekend caps, 1 rest day (Thu)
+  swim_days: ["Tuesday", "Friday"] # pool only 2x/week
+  bike_days: ["Monday", "Wednesday", "Saturday", "Sunday"]
+  run_days: ["Monday", "Tuesday", "Friday", "Saturday", "Sunday"]
+  mon_duration: 45
+  tue_duration: 60
+  wed_duration: 45
+  thu_duration: 0
+  fri_duration: 60
+  sat_duration: 150
+  sun_duration: 120
+
+- scenario_name: "olympic-high-7day-even-pool3"
+  race_objective: "Olympic"
+  race_date: "2027-06-20T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 4
+  current_weekly_hours: 8
+  ftp: 230
+  vma: 16.5
+  css_seconds_per100m: 105
+  # All 7 days active, even 90min caps, 0 rest days -- high-volume athlete
+  swim_days: ["Monday", "Wednesday", "Saturday"] # pool 3x/week
+  bike_days: ["Tuesday", "Thursday", "Saturday", "Sunday"]
+  run_days: ["Monday", "Wednesday", "Thursday", "Friday", "Sunday"]
+  mon_duration: 90
+  tue_duration: 90
+  wed_duration: 90
+  thu_duration: 90
+  fri_duration: 90
+  sat_duration: 90
+  sun_duration: 90
+
+- scenario_name: "olympic-low-3day-weekendheavy-pool1"
+  race_objective: "Olympic"
+  race_date: "2027-04-11T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 0
+  current_weekly_hours: 2
+  ftp: 150
+  vma: 12
+  css_seconds_per100m: 150
+  # Only 3 active days, weekend-heavy, 4 rest days -- tightest availability in the Olympic set
+  swim_days: ["Saturday"] # pool only 1x/week -- hardest swim-scheduling constraint
+  bike_days: ["Wednesday", "Sunday"]
+  run_days: ["Wednesday", "Saturday", "Sunday"]
+  mon_duration: 0
+  tue_duration: 0
+  wed_duration: 60
+  thu_duration: 0
+  fri_duration: 0
+  sat_duration: 150
+  sun_duration: 90
+
+- scenario_name: "olympic-mod-4day-manyrest-even-pool2"
+  race_objective: "Olympic"
+  race_date: "2027-02-21T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 2
+  current_weekly_hours: 4
+  ftp: 200
+  vma: 15
+  css_seconds_per100m: 120
+  # 4 active days, 3 rest days (Mon/Wed/Fri), roughly-even caps (slight weekend bump)
+  swim_days: ["Tuesday", "Saturday"] # pool 2x/week
+  bike_days: ["Thursday", "Sunday"]
+  run_days: ["Tuesday", "Thursday", "Saturday", "Sunday"]
+  mon_duration: 0
+  tue_duration: 90
+  wed_duration: 0
+  thu_duration: 90
+  fri_duration: 0
+  sat_duration: 120
+  sun_duration: 120
+
+- scenario_name: "olympic-high-6day-weekendlong-pool2"
+  race_objective: "Olympic"
+  race_date: "2027-06-06T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 3
+  current_weekly_hours: 7
+  ftp: 215
+  vma: 16
+  css_seconds_per100m: 110
+  # 6 active days, short-weekday/long-weekend caps, 1 rest day (Fri)
+  swim_days: ["Monday", "Thursday"] # pool only 2x/week
+  bike_days: ["Tuesday", "Wednesday", "Saturday", "Sunday"]
+  run_days: ["Monday", "Tuesday", "Thursday", "Saturday", "Sunday"]
+  mon_duration: 60
+  tue_duration: 75
+  wed_duration: 60
+  thu_duration: 75
+  fri_duration: 0
+  sat_duration: 180
+  sun_duration: 150
+
+- scenario_name: "70.3-low-4day-weekday-pool2"
+  race_objective: "Ironman 70.3"
+  race_date: "2027-09-05T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 1
+  current_weekly_hours: 4
+  ftp: 180
+  vma: 13.5
+  css_seconds_per100m: 130
+  # Time-crunched 70.3 athlete: 4 active days, weekday-only, 3 rest days
+  swim_days: ["Monday", "Thursday"] # pool only 2x/week
+  bike_days: ["Tuesday", "Friday"]
+  run_days: ["Monday", "Tuesday", "Thursday", "Friday"]
+  mon_duration: 60
+  tue_duration: 75
+  wed_duration: 0
+  thu_duration: 75
+  fri_duration: 60
+  sat_duration: 0
+  sun_duration: 0
+
+- scenario_name: "70.3-mod-6day-scattered-weekendlong-pool3"
+  race_objective: "Ironman 70.3"
+  race_date: "2027-07-18T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 2
+  current_weekly_hours: 6
+  ftp: 210
+  vma: 15
+  css_seconds_per100m: 115
+  # 6 active days scattered, short-weekday/long-weekend caps, 1 rest day (Thu)
+  swim_days: ["Monday", "Wednesday", "Friday"] # pool 3x/week
+  bike_days: ["Tuesday", "Saturday", "Sunday"]
+  run_days: ["Monday", "Wednesday", "Friday", "Saturday", "Sunday"]
+  mon_duration: 45
+  tue_duration: 60
+  wed_duration: 60
+  thu_duration: 0
+  fri_duration: 60
+  sat_duration: 180
+  sun_duration: 150
+
+- scenario_name: "70.3-high-7day-even-pool3"
+  race_objective: "Ironman 70.3"
+  race_date: "2027-08-15T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 5
+  current_weekly_hours: 10
+  ftp: 260
+  vma: 17.5
+  css_seconds_per100m: 95
+  # All 7 days active, even 120min caps, 0 rest days -- highest-volume scenario in the set
+  swim_days: ["Monday", "Wednesday", "Saturday"] # pool 3x/week
+  bike_days: ["Tuesday", "Thursday", "Saturday", "Sunday"]
+  run_days: ["Monday", "Wednesday", "Thursday", "Friday", "Sunday"]
+  mon_duration: 120
+  tue_duration: 120
+  wed_duration: 120
+  thu_duration: 120
+  fri_duration: 120
+  sat_duration: 120
+  sun_duration: 120
+
+- scenario_name: "70.3-low-3day-weekendheavy-pool1"
+  race_objective: "Ironman 70.3"
+  race_date: "2027-10-10T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 1
+  current_weekly_hours: 3
+  ftp: 165
+  vma: 12.5
+  css_seconds_per100m: 140
+  # Only 3 active days, weekend-heavy, 4 rest days -- tightest availability in the 70.3 set
+  swim_days: ["Saturday"] # pool only 1x/week -- hardest swim-scheduling constraint
+  bike_days: ["Wednesday", "Sunday"]
+  run_days: ["Wednesday", "Saturday", "Sunday"]
+  mon_duration: 0
+  tue_duration: 0
+  wed_duration: 75
+  thu_duration: 0
+  fri_duration: 0
+  sat_duration: 180
+  sun_duration: 150
+
+- scenario_name: "70.3-mod-4day-manyrest-even-pool2"
+  race_objective: "Ironman 70.3"
+  race_date: "2027-06-27T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 2
+  current_weekly_hours: 5
+  ftp: 195
+  vma: 14
+  css_seconds_per100m: 125
+  # 4 active days, 3 rest days (Mon/Wed/Fri), roughly-even caps (slight weekend bump)
+  swim_days: ["Tuesday", "Saturday"] # pool 2x/week
+  bike_days: ["Thursday", "Sunday"]
+  run_days: ["Tuesday", "Thursday", "Saturday", "Sunday"]
+  mon_duration: 0
+  tue_duration: 90
+  wed_duration: 0
+  thu_duration: 90
+  fri_duration: 0
+  sat_duration: 150
+  sun_duration: 150
+
+- scenario_name: "70.3-high-6day-weekendlong-pool2"
+  race_objective: "Ironman 70.3"
+  race_date: "2027-09-26T09:00:00+00:00"
+  onboarding_completed: true
+  experience_years: 4
+  current_weekly_hours: 9
+  ftp: 245
+  vma: 16.5
+  css_seconds_per100m: 100
+  # 6 active days, short-weekday/long-weekend caps, 1 rest day (Fri)
+  swim_days: ["Monday", "Thursday"] # pool only 2x/week
+  bike_days: ["Tuesday", "Wednesday", "Saturday", "Sunday"]
+  run_days: ["Monday", "Tuesday", "Thursday", "Saturday", "Sunday"]
+  mon_duration: 60
+  tue_duration: 90
+  wed_duration: 60
+  thu_duration: 90
+  fri_duration: 0
+  sat_duration: 210
+  sun_duration: 180
