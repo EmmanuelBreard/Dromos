@@ -64,7 +64,10 @@ function parseConstraintsFromVars(vars) {
  *   `vars/athletes.yaml` row's `vars`. NOT read from disk here.
  * @returns {{duration:number, sport:number, rest:number, brick:number, cluster:number, sameday:number, intensity:number, brickorder:number}}
  */
-function scorePlan(evalPlan, scenarioVars) {
+function scorePlan(evalPlan, scenarioVars, { log = false } = {}) {
+  // Detail lines are opt-in: the CLI passes log:true; harness runners call scorePlan
+  // many times and consume the returned summary, so they leave logging off.
+  const emit = log ? (m) => process.stdout.write(m + '\n') : () => {};
   const { dayCaps: caps, sportEligibility: eligible, weeklyHours } = parseConstraintsFromVars(scenarioVars);
 
   let durationViolations = 0;
@@ -88,21 +91,21 @@ function scorePlan(evalPlan, scenarioVars) {
       const cap = caps[day] || 0;
 
       if (cap === 0) {
-        console.log('  W' + w.week_number + ' ' + day + ': REST DAY VIOLATION (' + sessions.length + ' sessions)');
+        emit('  W' + w.week_number + ' ' + day + ': REST DAY VIOLATION (' + sessions.length + ' sessions)');
         restViolations++;
         continue;
       }
 
       const TRIGGER_MARGIN = 1.1; // Match 10% tolerance from fixDurationCaps
       if (total > cap * TRIGGER_MARGIN) {
-        console.log('  W' + w.week_number + ' ' + day + ': ' + total + 'min > ' + Math.round(cap * TRIGGER_MARGIN) + 'min cap+10% (' + sessions.map(s => s.sport + ' ' + s.duration_minutes).join(' + ') + ')');
+        emit('  W' + w.week_number + ' ' + day + ': ' + total + 'min > ' + Math.round(cap * TRIGGER_MARGIN) + 'min cap+10% (' + sessions.map(s => s.sport + ' ' + s.duration_minutes).join(' + ') + ')');
         durationViolations++;
       }
 
       const eligibleSports = eligible[day] || [];
       for (const s of sessions) {
         if (!eligibleSports.includes(s.sport)) {
-          console.log('  W' + w.week_number + ' ' + day + ': ' + s.sport + ' NOT eligible on ' + day + ' (allowed: ' + eligibleSports.join(',') + ')');
+          emit('  W' + w.week_number + ' ' + day + ': ' + s.sport + ' NOT eligible on ' + day + ' (allowed: ' + eligibleSports.join(',') + ')');
           sportViolations++;
         }
       }
@@ -115,7 +118,7 @@ function scorePlan(evalPlan, scenarioVars) {
     if (expectsBrick) {
       const hasBrick = (w.sessions || []).some(s => s.is_brick);
       if (!hasBrick) {
-        console.log('  W' + w.week_number + ' (' + w.phase + '): NO BRICK SESSION (expected in Build/Peak/Base-even)');
+        emit('  W' + w.week_number + ' (' + w.phase + '): NO BRICK SESSION (expected in Build/Peak/Base-even)');
         missingBricks++;
       }
     }
@@ -139,7 +142,7 @@ function scorePlan(evalPlan, scenarioVars) {
           const sport1 = byDay[d1][0].sport;
           const sport2 = byDay[d2][0].sport;
           if (sport1 === sport2) {
-            console.log('  W' + w.week_number + ' ' + d1 + '→' + d2 + ': SPORT CLUSTERING (' + sport1 + ' on consecutive single-session days)');
+            emit('  W' + w.week_number + ' ' + d1 + '→' + d2 + ': SPORT CLUSTERING (' + sport1 + ' on consecutive single-session days)');
             clusterViolations++;
           }
         }
@@ -153,14 +156,14 @@ function scorePlan(evalPlan, scenarioVars) {
       for (const sport of ['bike', 'run']) {
         const sportSessions = sessions.filter(s => s.sport === sport);
         if (sportSessions.length >= 2) {
-          console.log('  W' + w.week_number + ' ' + day + ': SAME-DAY CONFLICT (' + sportSessions.length + ' ' + sport + ' sessions on same day)');
+          emit('  W' + w.week_number + ' ' + day + ': SAME-DAY CONFLICT (' + sportSessions.length + ' ' + sport + ' sessions on same day)');
           sameDayViolations++;
         }
       }
       // Rule 2: Two hard (bike/run) sessions on same day (brick hard sessions count)
       const hardBikeRun = sessions.filter(s => HARD_TYPES_SD.includes(s.type) && ['bike', 'run'].includes(s.sport));
       if (hardBikeRun.length >= 2) {
-        console.log('  W' + w.week_number + ' ' + day + ': DUAL HARD CONFLICT (' + hardBikeRun.map(s => s.sport + ' ' + s.type).join(' + ') + ')');
+        emit('  W' + w.week_number + ' ' + day + ': DUAL HARD CONFLICT (' + hardBikeRun.map(s => s.sport + ' ' + s.type).join(' + ') + ')');
         sameDayViolations++;
       }
       // Brick order: bike must come before run in sessions array
@@ -172,7 +175,7 @@ function scorePlan(evalPlan, scenarioVars) {
           const bikeIdx = (w.sessions || []).indexOf(brickBike);
           const runIdx = (w.sessions || []).indexOf(brickRun);
           if (runIdx < bikeIdx) {
-            console.log('  W' + w.week_number + ' ' + day + ': BRICK ORDER (run before bike)');
+            emit('  W' + w.week_number + ' ' + day + ': BRICK ORDER (run before bike)');
             brickOrderViolations++;
           }
         }
@@ -214,13 +217,13 @@ function scorePlan(evalPlan, scenarioVars) {
           ? 'same sport (' + d1.hardSports.filter(s => d2.hardSports.includes(s)).join(',') + ')'
           : is3Plus ? '3+ consecutive hard days'
           : 'spreadable (' + availableDays + ' days / ' + numHardSessions + ' hard)';
-        console.log('  W' + w.week_number + ' ' + d1.day + '→' + d2.day + ': INTENSITY CLUSTERING (' + reason + ')');
+        emit('  W' + w.week_number + ' ' + d1.day + '→' + d2.day + ': INTENSITY CLUSTERING (' + reason + ')');
         intensityViolations++;
       }
     }
   }
 
-  console.log('  TOTAL: ' + durationViolations + ' duration cap, ' + sportViolations + ' sport eligibility, ' + restViolations + ' rest day, ' + missingBricks + ' missing brick, ' + clusterViolations + ' sport clustering, ' + sameDayViolations + ' same-day conflict, ' + intensityViolations + ' intensity, ' + brickOrderViolations + ' brick order violations');
+  emit('  TOTAL: ' + durationViolations + ' duration cap, ' + sportViolations + ' sport eligibility, ' + restViolations + ' rest day, ' + missingBricks + ' missing brick, ' + clusterViolations + ' sport clustering, ' + sameDayViolations + ' same-day conflict, ' + intensityViolations + ' intensity, ' + brickOrderViolations + ' brick order violations');
 
   return {
     duration: durationViolations,
@@ -256,7 +259,7 @@ function runCli(inputFile) {
     }
 
     console.log('\n=== ' + name + ' ===');
-    summary[name] = scorePlan(plan, vars);
+    summary[name] = scorePlan(plan, vars, { log: true });
   }
 
   // Machine-readable summary for aggregate-violations.js
