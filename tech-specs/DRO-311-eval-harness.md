@@ -1,6 +1,6 @@
 # DRO-311 — Plan-Quality Eval Harness (Full Spec)
 
-**Overall Progress:** `0%`
+**Overall Progress:** `25%`
 
 ## TLDR
 An on-demand Node harness that runs availability-focused test athletes through the **real deployed** `generate-plan` (and `chat-adjust`) edge functions, scores the resulting plans with the existing 8-metric checker (HARD gates / SOFT warns), attaches an advisory coaching verdict, and emits a timestamped markdown report. Answers "did we make plans better or worse?" before shipping mechanism changes. Built on the DRO-311 PoC, which already proved the auth → seed → invoke → poll → read → check → cleanup path end-to-end against prod.
@@ -41,9 +41,9 @@ An on-demand Node harness that runs availability-focused test athletes through t
   - [ ] 🟥 `pollStatus` returns `active` | `{failed, error_message}` | `timeout` (treat stuck-`generating` past timeout as failure)
   - [ ] 🟥 Add `invokeChatAdjust(jwt, turns)` for the adjustment flow
 
-- [ ] 🟥 **Step 2: Availability scenario set** (`vars/availability-scenarios.yaml`)
-  - [ ] 🟥 Define Olympic + 70.3 × availability shapes (weekly hours, day pattern, caps, sport-day eligibility)
-  - [ ] 🟥 Forward-computed race dates; full `users`-table profile per scenario
+- [x] 🟩 **Step 2: Availability scenario set** (`vars/availability-scenarios.yaml`) — DRO-314
+  - [x] 🟩 Define Olympic + 70.3 × availability shapes (weekly hours, day pattern, caps, sport-day eligibility) — 12 scenarios (6/distance), crossing low/mod/high weekly hours, few/many days, weekday-only/weekend-heavy/scattered patterns, even vs short-weekday/long-weekend caps, and 1-3x/week pool eligibility
+  - [x] 🟩 Fixed-forward (2027) race dates per scenario; full `users`-table profile per scenario (real types, not promptfoo string vars), ready for `createTestUser(profile)`
 
 - [ ] 🟥 **Step 3: Scorer refactor** (`check-step3-violations.js`)
   - [ ] 🟥 Export pure `scorePlan(evalPlan, scenarioVars)` returning the 8-metric summary
@@ -55,9 +55,10 @@ An on-demand Node harness that runs availability-focused test athletes through t
   - [ ] 🟥 Aggregate via `aggregate-violations.js`; record generation-reliability failures separately
   - [ ] 🟥 Guaranteed cleanup in `finally` (delete test users)
 
-- [ ] 🟥 **Step 5: Coaching audit (advisory, in-harness OpenAI rubric)** (`ai/eval/lib/yupa-rubric.js`)
-  - [ ] 🟥 Coaching rubric prompt derived from Yupa's 80/20 principles (`.claude/agents/triathlon-coach.md`)
-  - [ ] 🟥 OpenAI call per plan → verdict (SHIP / SHIP WITH CHANGES / DO NOT SHIP) + issues; attach to report, non-gating
+- [~] 🟨 **Step 5: Coaching audit (advisory, in-harness OpenAI rubric)** (`ai/eval/lib/yupa-rubric.js`) — DRO-314 (module built; report wiring pending Step 7)
+  - [x] 🟩 Coaching rubric prompt derived from Yupa's 80/20 principles (`.claude/agents/triathlon-coach.md`)
+  - [x] 🟩 `reviewPlan(evalPlan, scenarioVars)`: one OpenAI (`gpt-4.1`, temp 0.2, strict JSON schema) call per plan → verdict (SHIP / SHIP WITH CHANGES / DO NOT SHIP) + issues + summary. Verified against the PoC sample plan (`results/poc-generate.json`) — well-formed output, advisory only, never throws on a bad plan.
+  - [ ] 🟥 Attach to report, non-gating (blocked on Step 4/7's runner + report existing)
 
 - [ ] 🟥 **Step 6: Adjustment eval runner** (`run-adjustment-eval.js`)
   - [ ] 🟥 Drive `chat-adjust` per `adjust-step1/2-scenarios.yaml` case (multi-turn)
