@@ -155,9 +155,11 @@ Production `.ts` files in `supabase/functions/generate-plan/prompts/` are **auto
 | `ai/eval/assertions/validate-macro-plan.js` | Step 1 output validation |
 | `ai/eval/assertions/validate-macro-plan-md.js` | Step 1 markdown format validation |
 | `ai/eval/assertions/validate-workout-selection.js` | Step 3 output validation |
-| `ai/eval/check-step3-violations.js` | 8-metric violation checker (duration, sport, rest, brick, cluster, same-day, intensity, brick-order) |
+| `ai/eval/check-step3-violations.js` | 8-metric violation checker (duration, sport, rest, brick, cluster, same-day, intensity, brick-order). Exports pure `scorePlan(evalPlan, scenarioVars)` + `HARD_VIOLATIONS`/`SOFT_VIOLATIONS` constants (DRO-313); CLI (`node check-step3-violations.js <file>`) is a thin wrapper that resolves vars from `athletes.yaml` by `athlete_name` and prints as before. |
 | `ai/eval/run-step3-blocks.js` | Step 3 block orchestrator + all 12 fixers (source of truth) |
 | `ai/eval/batch-eval.sh` | Batch runner: N parallel eval runs → plans + violations + aggregated scores |
+| `ai/eval/db-plan-to-eval-shape.js` | Adapter: DB `training_plans`+`plan_weeks`+`plan_sessions` → `{weeks:[...]}` shape `scorePlan` consumes (DRO-311 PoC) |
+| `ai/eval/lib/eval-supabase-client.js` | DRO-311 plan-quality eval harness (DRO-313, Phase 1): reusable Supabase plumbing — `createTestUser` (anon signUp + profile seed, rest-day `0`/absent → `NULL` translation), `signIn`, `invokeGeneratePlan`, `pollStatus` (`'active' \| {status:'failed', error_message} \| 'timeout'`), `readPlan`, `deleteTestUser` (needs `SUPABASE_SERVICE_ROLE_KEY`; without it, logs the manual cleanup SQL), `invokeChatAdjust` (stub — Phase 4). Runs against production + strict cleanup (settled env choice from the DRO-311 PoC). |
 
 ### Workout Library
 - **Canonical file:** `ai/context/workout-library.json`
