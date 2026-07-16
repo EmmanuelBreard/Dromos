@@ -2,8 +2,10 @@
 
 **Overall Progress:** `25%`
 
+> **SCOPE UPDATE (2026-07-16): generation-only for v1.** The adjustment eval (Phase 4 / Step 6) is **dropped** — the deployed `chat-adjust` is advisory Coach Chat V0 (no plan modification, SSE-streamed, gated to one email), so the `adjust-step*-scenarios.yaml` (plan-adjustment) flow it targets is not live. Revisit when a real plan-adjustment flow ships. The `invokeChatAdjust` stub in the client stays as a harmless placeholder.
+
 ## TLDR
-An on-demand Node harness that runs availability-focused test athletes through the **real deployed** `generate-plan` (and `chat-adjust`) edge functions, scores the resulting plans with the existing 8-metric checker (HARD gates / SOFT warns), attaches an advisory coaching verdict, and emits a timestamped markdown report. Answers "did we make plans better or worse?" before shipping mechanism changes. Built on the DRO-311 PoC, which already proved the auth → seed → invoke → poll → read → check → cleanup path end-to-end against prod.
+An on-demand Node harness that runs availability-focused test athletes through the **real deployed** `generate-plan` edge function, scores the resulting plans with the existing 8-metric checker (HARD gates / SOFT warns), attaches an advisory coaching verdict, and emits a timestamped markdown report. Answers "did we make plans better or worse?" before shipping mechanism changes. Built on the DRO-311 PoC, which already proved the auth → seed → invoke → poll → read → check → cleanup path end-to-end against prod.
 
 ## Critical Decisions
 - **Target = real deployed edge functions** (not the shadow `run-step3-blocks.js`). Proven in the PoC; catches regressions in shipped code, not a re-implementation.
@@ -23,10 +25,10 @@ An on-demand Node harness that runs availability-focused test athletes through t
 | `ai/eval/check-step3-violations.js` | MODIFY | Extract a pure `scorePlan(evalPlan, scenarioVars)` that returns the 8-metric summary (keep the CLI wrapper). Add a `HARD_VIOLATIONS`/`SOFT_VIOLATIONS` classification constant. Make constraints come from passed `scenarioVars` (not only `athletes.yaml`). |
 | `ai/eval/vars/availability-scenarios.yaml` | CREATE | Availability-focused scenario set: Olympic + 70.3 × availability shapes (weekly-hours low/mid/high, day patterns, per-day caps, per-sport day eligibility). Each entry = a full `users`-table profile + `scenario_name`. Race dates are computed forward from run date (avoid past-date scenarios). |
 | `ai/eval/run-generation-eval.js` | CREATE | Orchestrator: for each scenario × N=3 → seed → invoke → poll → read → adapt → `scorePlan` → classify HARD/SOFT → aggregate (reuse `aggregate-violations.js` labels) → `finally` cleanup. Records generation-reliability failures separately. |
-| `ai/eval/run-adjustment-eval.js` | CREATE | Drives the deployed `chat-adjust` turn-by-turn for each `adjust-step1/2-scenarios.yaml` case; checks `expected_status` + the existing per-scenario `validation` blocks. |
+| ~~`ai/eval/run-adjustment-eval.js`~~ | ~~CREATE~~ | **DROPPED (v1)** — deployed `chat-adjust` is advisory, not plan-adjustment. Deferred until a real adjustment flow ships. |
 | `ai/eval/aggregate-violations.js` | REUSE | Existing CLEAN/VARIANCE/INVESTIGATE/SYSTEMATIC labeling across N runs. |
 | `ai/eval/lib/report.js` | CREATE | Builds the timestamped markdown report (per-scenario PASS/FAIL, HARD/SOFT breakdown per run, generation-reliability, advisory verdict) + console summary. |
-| `ai/eval/run-eval.sh` | CREATE | Single entry point: runs generation + adjustment evals and writes the report to `ai/eval/results/eval-report-<stamp>.md`. |
+| `ai/eval/run-eval.sh` | CREATE | Single entry point: runs the generation eval and writes the report to `ai/eval/results/eval-report-<stamp>.md`. |
 | `ai/eval/poc-generate-e2e.js` | REUSE | Kept as the minimal reference/smoke test. |
 
 ## Context Doc Updates
@@ -60,13 +62,13 @@ An on-demand Node harness that runs availability-focused test athletes through t
   - [x] 🟩 `reviewPlan(evalPlan, scenarioVars)`: one OpenAI (`gpt-4.1`, temp 0.2, strict JSON schema) call per plan → verdict (SHIP / SHIP WITH CHANGES / DO NOT SHIP) + issues + summary. Verified against the PoC sample plan (`results/poc-generate.json`) — well-formed output, advisory only, never throws on a bad plan.
   - [ ] 🟥 Attach to report, non-gating (blocked on Step 4/7's runner + report existing)
 
-- [ ] 🟥 **Step 6: Adjustment eval runner** (`run-adjustment-eval.js`)
-  - [ ] 🟥 Drive `chat-adjust` per `adjust-step1/2-scenarios.yaml` case (multi-turn)
+- [x] ⬛ **Step 6: Adjustment eval runner — DROPPED (v1)** — deployed `chat-adjust` is advisory Coach Chat V0, not plan-adjustment. Deferred.
+  - Original intent: drive `chat-adjust` per `adjust-step1/2-scenarios.yaml` case (multi-turn)
   - [ ] 🟥 Assert `expected_status` + existing `validation` blocks
 
 - [ ] 🟥 **Step 7: Report + entry point** (`lib/report.js`, `run-eval.sh`)
   - [ ] 🟥 Markdown report in `ai/eval/results/eval-report-<stamp>.md` + console summary
-  - [ ] 🟥 `run-eval.sh` runs generation + adjustment and writes the report
+  - [ ] 🟥 `run-eval.sh` runs the generation eval and writes the report
 
 - [ ] 🟥 **Step 8: Docs**
   - [ ] 🟥 Update `ai-pipeline.md` (+ `architecture.md`) with the harness
