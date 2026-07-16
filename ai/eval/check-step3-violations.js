@@ -1,16 +1,29 @@
-// Check Step 3 outputs for constraint violations
+// check-step3-violations.js — Step 3 (final plan) constraint checker
+//
+// Exports a pure `scorePlan(evalPlan, scenarioVars)` — the 8-metric violation scorer
+// used by both the CLI (batch promptfoo output files) and the DRO-311 eval harness
+// runners (which score DB-materialized plans via `db-plan-to-eval-shape.js`).
+// scorePlan takes constraints entirely from the passed `scenarioVars` (the same
+// `vars` shape as `vars/athletes.yaml` rows: day durations, swim/bike/run_days as
+// comma-separated day-name strings, weekly_hours) — it never reads athletes.yaml
+// itself, so it works identically for promptfoo-config scenarios and for harness-
+// generated ones that never touch that file.
+//
+// CLI usage (unchanged): `node check-step3-violations.js <file>` — reads a batch
+// output file (array of `{ output, athlete_name }`), resolves each record's vars
+// from vars/athletes.yaml by athlete_name, and prints per-athlete violation detail
+// plus a machine-readable `__SUMMARY_JSON__` summary line for aggregate-violations.js.
+
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 
-const inputFile = process.argv[2] || path.join(__dirname, 'results', 'step3-blocks.json');
-const data = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
-
-// Load athletes.yaml and parse constraints dynamically (replaces hardcoded maps)
-const athletesRaw = fs.readFileSync(path.join(__dirname, 'vars', 'athletes.yaml'), 'utf8');
-const athleteProfiles = yaml.load(athletesRaw);
-
 const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// Hard violations block a plan from being usable (safety/schedule-breaking).
+// Soft violations degrade quality but don't make the plan unfollowable.
+const HARD_VIOLATIONS = ['duration', 'sport', 'rest', 'sameday', 'brickorder'];
+const SOFT_VIOLATIONS = ['brick', 'cluster', 'intensity'];
 
 function parseConstraintsFromVars(vars) {
   const durationFields = ['mon_duration', 'tue_duration', 'wed_duration', 'thu_duration', 'fri_duration', 'sat_duration', 'sun_duration'];
@@ -38,24 +51,22 @@ function parseConstraintsFromVars(vars) {
   return { dayCaps, sportEligibility, weeklyHours: parseInt(vars.weekly_hours || '0', 10) };
 }
 
-// Build constraint maps keyed by athlete name
-const allDayCaps = {};
-const allSportEligibility = {};
-const allWeeklyHours = {};
-for (const a of athleteProfiles) {
-  const { dayCaps, sportEligibility, weeklyHours } = parseConstraintsFromVars(a.vars);
-  allDayCaps[a.vars.athlete_name] = dayCaps;
-  allSportEligibility[a.vars.athlete_name] = sportEligibility;
-  allWeeklyHours[a.vars.athlete_name] = weeklyHours;
-}
+/**
+ * Pure scoring function: given one eval-shaped plan and its athlete's scenario vars,
+ * returns the 8-metric violation-count summary (same keys as the legacy
+ * __SUMMARY_JSON__ output). Prints the same per-violation detail lines + a per-plan
+ * TOTAL line as the original inline checker did, so CLI output is unchanged.
+ *
+ * @param {{weeks: Array}} evalPlan - `{ weeks: [{ week_number, phase, sessions: [{ day, sport, type, duration_minutes, is_brick }] }] }`
+ *   (the shape both `run-step3-blocks.js` output and `db-plan-to-eval-shape.js` produce)
+ * @param {object} scenarioVars - the athlete's `vars` (day durations, swim/bike/run_days
+ *   as comma-separated day-name strings, weekly_hours) — same shape as an
+ *   `vars/athletes.yaml` row's `vars`. NOT read from disk here.
+ * @returns {{duration:number, sport:number, rest:number, brick:number, cluster:number, sameday:number, intensity:number, brickorder:number}}
+ */
+function scorePlan(evalPlan, scenarioVars) {
+  const { dayCaps: caps, sportEligibility: eligible, weeklyHours } = parseConstraintsFromVars(scenarioVars);
 
-const summary = {};
-
-for (const r of data) {
-  const plan = JSON.parse(r.output);
-  const name = r.athlete_name;
-  const caps = allDayCaps[name];
-  const eligible = allSportEligibility[name];
   let durationViolations = 0;
   let sportViolations = 0;
   let restViolations = 0;
@@ -65,9 +76,7 @@ for (const r of data) {
   let intensityViolations = 0;
   let brickOrderViolations = 0;
 
-  console.log('\n=== ' + name + ' ===');
-
-  for (const w of plan.weeks) {
+  for (const w of evalPlan.weeks) {
     const byDay = {};
     for (const s of w.sessions || []) {
       byDay[s.day] = byDay[s.day] || [];
@@ -113,7 +122,7 @@ for (const r of data) {
 
     // Check for sport clustering on single-session days
     // Skip for high-volume athletes (>= 8h/week) — consecutive same-sport days are expected
-    if ((allWeeklyHours[name] || 0) < 8) {
+    if ((weeklyHours || 0) < 8) {
       const singleSessionDays = dayNames.filter(day => {
         const cap = caps[day] || 0;
         const daySessions = byDay[day] || [];
@@ -210,9 +219,10 @@ for (const r of data) {
       }
     }
   }
+
   console.log('  TOTAL: ' + durationViolations + ' duration cap, ' + sportViolations + ' sport eligibility, ' + restViolations + ' rest day, ' + missingBricks + ' missing brick, ' + clusterViolations + ' sport clustering, ' + sameDayViolations + ' same-day conflict, ' + intensityViolations + ' intensity, ' + brickOrderViolations + ' brick order violations');
 
-  summary[name] = {
+  return {
     duration: durationViolations,
     sport: sportViolations,
     rest: restViolations,
@@ -220,9 +230,42 @@ for (const r of data) {
     cluster: clusterViolations,
     sameday: sameDayViolations,
     intensity: intensityViolations,
-    brickorder: brickOrderViolations
+    brickorder: brickOrderViolations,
   };
 }
 
-// Machine-readable summary for aggregate-violations.js
-console.log('\n__SUMMARY_JSON__' + JSON.stringify(summary));
+// ─── CLI wrapper (unchanged behavior): reads a batch file, resolves each record's
+//     vars from vars/athletes.yaml by athlete_name, calls scorePlan, prints as before ───
+function runCli(inputFile) {
+  const data = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
+
+  const athletesRaw = fs.readFileSync(path.join(__dirname, 'vars', 'athletes.yaml'), 'utf8');
+  const athleteProfiles = yaml.load(athletesRaw);
+  const varsByName = {};
+  for (const a of athleteProfiles) varsByName[a.vars.athlete_name] = a.vars;
+
+  const summary = {};
+
+  for (const r of data) {
+    const plan = JSON.parse(r.output);
+    const name = r.athlete_name;
+    const vars = varsByName[name];
+    if (!vars) {
+      console.warn(`No vars/athletes.yaml entry found for athlete_name="${name}" — skipping`);
+      continue;
+    }
+
+    console.log('\n=== ' + name + ' ===');
+    summary[name] = scorePlan(plan, vars);
+  }
+
+  // Machine-readable summary for aggregate-violations.js
+  console.log('\n__SUMMARY_JSON__' + JSON.stringify(summary));
+}
+
+if (require.main === module) {
+  const inputFile = process.argv[2] || path.join(__dirname, 'results', 'step3-blocks.json');
+  runCli(inputFile);
+}
+
+module.exports = { scorePlan, HARD_VIOLATIONS, SOFT_VIOLATIONS };
