@@ -334,6 +334,10 @@ All services follow:
 
 See `ai-pipeline.md` for `generate-plan` pipeline documentation.
 
+## Eval Harness (`ai/eval/lib/`)
+
+The DRO-311 plan-quality harness (`ai/eval/lib/`, `run-generation-eval.js`, `run-eval.sh`) evaluates the **real deployed** `generate-plan` — not a shadow re-implementation. Pattern: programmatic auth + a **prod-with-cleanup test-user lifecycle** (`lib/eval-supabase-client.js` creates an anon user, seeds its profile, invokes the live edge function, reads the materialized DB plan, then always deletes the user in a `finally` with a crash-safety sweep) → deterministic HARD/SOFT scoring (the gate) plus an inline advisory LLM coaching audit (`lib/yupa-rubric.js`, non-gating) → an **on-demand markdown report** (`lib/report.js`, pure/offline; also re-renderable from a saved results JSON via `run-generation-eval.js --report`). See `ai-pipeline.md` → Eval Framework for the file-by-file breakdown.
+
 ## Strava Integration
 
 **Auth flow**: `StravaService.startOAuth()` → `ASWebAuthenticationSession` (ephemeral, `prefersEphemeralWebBrowserSession = true`) → `/oauth/authorize` (web endpoint, NOT `/oauth/mobile/authorize` which opens native Strava app and breaks callback interception) → callback → `exchangeCode()` → `strava-auth` Edge Function. `isConnecting` is set to `true` before the browser launches and cleared via `defer` inside `exchangeCode`.
