@@ -1,6 +1,6 @@
 # DRO-311 — Plan-Quality Eval Harness (Full Spec)
 
-**Overall Progress:** `25%`
+**Overall Progress:** `60%`
 
 > **SCOPE UPDATE (2026-07-16): generation-only for v1.** The adjustment eval (Phase 4 / Step 6) is **dropped** — the deployed `chat-adjust` is advisory Coach Chat V0 (no plan modification, SSE-streamed, gated to one email), so the `adjust-step*-scenarios.yaml` (plan-adjustment) flow it targets is not live. Revisit when a real plan-adjustment flow ships. The `invokeChatAdjust` stub in the client stays as a harmless placeholder.
 
@@ -38,24 +38,25 @@ An on-demand Node harness that runs availability-focused test athletes through t
 
 ## Tasks:
 
-- [ ] 🟥 **Step 1: Eval Supabase client library**
-  - [ ] 🟥 Extract PoC logic into `ai/eval/lib/eval-supabase-client.js` (createTestUser + `0→NULL`, signIn, invoke, poll, read, delete)
-  - [ ] 🟥 `pollStatus` returns `active` | `{failed, error_message}` | `timeout` (treat stuck-`generating` past timeout as failure)
-  - [ ] 🟥 Add `invokeChatAdjust(jwt, turns)` for the adjustment flow
+- [x] 🟩 **Step 1: Eval Supabase client library** — DRO-313 (merged)
+  - [x] 🟩 Extract PoC logic into `ai/eval/lib/eval-supabase-client.js` (createTestUser + `0→NULL`, signIn, invoke, poll, read, delete). DRO-315: createTestUser now self-cleans its partial auth user if the profile seed fails (no orphaned `auth.users` row on a seed error).
+  - [x] 🟩 `pollStatus` returns `active` | `{failed, error_message}` | `timeout` (treat stuck-`generating` past timeout as failure)
+  - [x] 🟩 Add `invokeChatAdjust(jwt, turns)` stub (Phase 4 flow dropped for v1)
 
 - [x] 🟩 **Step 2: Availability scenario set** (`vars/availability-scenarios.yaml`) — DRO-314
   - [x] 🟩 Define Olympic + 70.3 × availability shapes (weekly hours, day pattern, caps, sport-day eligibility) — 12 scenarios (6/distance), crossing low/mod/high weekly hours, few/many days, weekday-only/weekend-heavy/scattered patterns, even vs short-weekday/long-weekend caps, and 1-3x/week pool eligibility
   - [x] 🟩 Fixed-forward (2027) race dates per scenario; full `users`-table profile per scenario (real types, not promptfoo string vars), ready for `createTestUser(profile)`
 
-- [ ] 🟥 **Step 3: Scorer refactor** (`check-step3-violations.js`)
-  - [ ] 🟥 Export pure `scorePlan(evalPlan, scenarioVars)` returning the 8-metric summary
-  - [ ] 🟥 Add `HARD_VIOLATIONS` / `SOFT_VIOLATIONS` classification
-  - [ ] 🟥 Source constraints from `scenarioVars` (decouple from `athletes.yaml`)
+- [x] 🟩 **Step 3: Scorer refactor** (`check-step3-violations.js`) — DRO-313 (merged)
+  - [x] 🟩 Export pure `scorePlan(evalPlan, scenarioVars)` returning the 8-metric summary
+  - [x] 🟩 Add `HARD_VIOLATIONS` / `SOFT_VIOLATIONS` classification
+  - [x] 🟩 Source constraints from `scenarioVars` (decouple from `athletes.yaml`)
 
-- [ ] 🟥 **Step 4: Generation eval runner** (`run-generation-eval.js`)
-  - [ ] 🟥 Loop scenarios × N=3: seed → invoke → poll → read → adapt → score → classify
-  - [ ] 🟥 Aggregate via `aggregate-violations.js`; record generation-reliability failures separately
-  - [ ] 🟥 Guaranteed cleanup in `finally` (delete test users)
+- [x] 🟩 **Step 4: Generation eval runner** (`run-generation-eval.js`) — DRO-315
+  - [x] 🟩 Loop scenarios × N=3: seed → invoke → poll → read → adapt → score → classify (in-runner adapter bridges DB-shaped scenario → scorePlan vars; `scenario_name` stripped before seeding)
+  - [x] 🟩 Aggregate via `aggregate-violations.js` (shared `labelStability`); record generation-reliability failures separately
+  - [x] 🟩 Guaranteed cleanup in `finally` (delete test users) + module-level crash-safety sweep
+  - [x] 🟩 CLI flags `--scenarios <N>` / `--runs <N>` / `--label <tag>` for cheap-subset vs full-matrix runs
 
 - [~] 🟨 **Step 5: Coaching audit (advisory, in-harness OpenAI rubric)** (`ai/eval/lib/yupa-rubric.js`) — DRO-314 (module built; report wiring pending Step 7)
   - [x] 🟩 Coaching rubric prompt derived from Yupa's 80/20 principles (`.claude/agents/triathlon-coach.md`)
