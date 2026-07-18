@@ -16,7 +16,11 @@ const { createClient } = require("@supabase/supabase-js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Admin key for programmatic test-user teardown. Accepts either the legacy
+// service_role JWT (SUPABASE_SERVICE_ROLE_KEY) or the modern secret key
+// (SUPABASE_SECRET_KEY, format sb_secret_...). Either grants Auth admin access.
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(
@@ -202,7 +206,7 @@ async function readPlan(planId, jwt) {
 async function deleteTestUser(userId) {
   if (!SUPABASE_SERVICE_ROLE_KEY) {
     console.warn(
-      `deleteTestUser: no SUPABASE_SERVICE_ROLE_KEY in env — cannot delete auth user programmatically.\n` +
+      `deleteTestUser: no SUPABASE_SERVICE_ROLE_KEY / SUPABASE_SECRET_KEY in env — cannot delete auth user programmatically.\n` +
         `  Clean up manually (e.g. via the Supabase MCP execute_sql tool):\n` +
         `    DELETE FROM auth.users WHERE id='${userId}';\n` +
         `  (CASCADEs to public.users → training_plans → plan_weeks → plan_sessions.)`
