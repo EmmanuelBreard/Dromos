@@ -106,6 +106,18 @@ async function createTestUser(profile) {
   const authed = clientForJwt(jwt);
   const { error: updateErr } = await authed.from("users").update(seedFields).eq("id", userId);
   if (updateErr) {
+    // The auth user already exists at this point (signUp succeeded) but the caller
+    // never receives its id when we throw here — so it would leak with no way for the
+    // caller to clean it up. Best-effort self-clean the partial user before re-throwing
+    // so a seed failure never orphans an auth.users row.
+    try {
+      await deleteTestUser(userId);
+    } catch (cleanupErr) {
+      console.warn(
+        `createTestUser: seed failed AND partial-user cleanup failed for ${userId}: ${cleanupErr.message}\n` +
+          `  Clean up manually: DELETE FROM auth.users WHERE id='${userId}';`
+      );
+    }
     throw new Error(`createTestUser: profile seed failed (RLS?): ${updateErr.message}`);
   }
 
