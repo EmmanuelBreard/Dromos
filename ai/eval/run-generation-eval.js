@@ -20,9 +20,16 @@
  * but never gate. Per-metric stability across the scored runs is labeled with
  * aggregate-violations.js's shared CLEAN/VARIANCE/INVESTIGATE/SYSTEMATIC buckets.
  *
+ * After scoring, each scored run also gets an advisory coaching audit (Yupa/gpt-4.1,
+ * `lib/yupa-rubric.js`) attached as `run.coaching`. This is strictly non-gating and
+ * fault-tolerant: an OpenAI failure only downgrades that run's `coaching.verdict` to
+ * 'UNKNOWN' — it never changes PASS/FAIL. It runs inline while the plan still exists
+ * (the plan row is deleted during cleanup).
+ *
  * Output: a structured results object, written to
  *   ai/eval/results/generation-eval-<runlabel>.json
- * plus a concise per-scenario console summary. (The pretty markdown report is Phase 5.)
+ * plus a concise per-scenario console summary AND a reviewable markdown report
+ * (`lib/report.js`) at ai/eval/results/eval-report-<runlabel>.md.
  *
  * ⚠️  COST: each run is a real prod `generate-plan` call (~1-2 min, costs OpenAI).
  *     Use the flags to run a cheap subset — do NOT default-run the full 12×N matrix
@@ -32,22 +39,22 @@
  *   node ai/eval/run-generation-eval.js                    # all scenarios, N=3
  *   node ai/eval/run-generation-eval.js --scenarios 1 --runs 1   # cheap smoke test
  *   node ai/eval/run-generation-eval.js --label pre-fix    # custom output filename tag
+ *   node ai/eval/run-generation-eval.js --report results/generation-eval-x.json  # re-render report only (offline, no cost)
  */
 
 const path = require("path");
 const fs = require("fs");
 const yaml = require("js-yaml");
 
-const {
-  createTestUser,
-  invokeGeneratePlan,
-  pollStatus,
-  readPlan,
-  deleteTestUser,
-} = require("./lib/eval-supabase-client");
+// NOTE: `lib/eval-supabase-client` validates SUPABASE_URL/ANON_KEY at import time and
+// throws if they're absent. It is therefore loaded lazily (inside runScenario) so the
+// pure, offline `--report` re-render mode — which touches neither DB nor OpenAI — can
+// run without any Supabase credentials configured.
 const { dbPlanToEvalShape } = require("./db-plan-to-eval-shape");
 const { scorePlan, HARD_VIOLATIONS, SOFT_VIOLATIONS } = require("./check-step3-violations");
 const { labelStability } = require("./aggregate-violations");
+const { reviewPlan } = require("./lib/yupa-rubric");
+const { writeReport } = require("./lib/report");
 
 const SCENARIOS_FILE = path.join(__dirname, "vars", "availability-scenarios.yaml");
 const RESULTS_DIR = path.join(__dirname, "results");
@@ -62,13 +69,17 @@ const DAY_DURATION_FIELDS = [
 
 // ── CLI flag parsing ──────────────────────────────────────────────────────────
 function parseArgs(argv) {
-  const args = { scenarios: null, runs: DEFAULT_RUNS, label: null };
+  const args = { scenarios: null, runs: DEFAULT_RUNS, label: null, report: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--scenarios") args.scenarios = parseInt(argv[++i], 10);
     else if (a === "--runs") args.runs = parseInt(argv[++i], 10);
     else if (a === "--label") args.label = argv[++i];
+    else if (a === "--report") args.report = argv[++i];
   }
+  // --report is a pure, offline re-render of a prior results JSON — no eval, no cost.
+  // It short-circuits main() before any DB/OpenAI work, so skip the run-flag validation.
+  if (args.report) return args;
   if (args.scenarios !== null && (!Number.isFinite(args.scenarios) || args.scenarios < 1)) {
     throw new Error("--scenarios must be a positive integer");
   }
@@ -105,13 +116,21 @@ function scenarioToScoringVars(profile) {
   return vars;
 }
 
+// Memoized lazy accessor for the Supabase eval client. Deferred so that the pure
+// `--report` re-render never triggers its import-time SUPABASE_URL/ANON_KEY check.
+let _client = null;
+function client() {
+  if (!_client) _client = require("./lib/eval-supabase-client");
+  return _client;
+}
+
 // ── Cleanup tracking: every created user is registered here and removed once
 //    confirmed deleted. Swept again in main()'s finally as a crash safety net. ──
 const createdUsers = new Set();
 
 async function cleanupUser(userId, notDeleted) {
   try {
-    const res = await deleteTestUser(userId);
+    const res = await client().deleteTestUser(userId);
     if (res.deleted) {
       createdUsers.delete(userId);
     } else {
@@ -130,6 +149,7 @@ async function runScenario(profile, runs, notDeleted) {
   // `scenario_name` is a harness-only label, not a public.users column — strip it so
   // createTestUser's profile-seed UPDATE only touches real DB columns.
   const { scenario_name, ...seedProfile } = profile;
+  const { createTestUser, invokeGeneratePlan, pollStatus, readPlan } = client();
   const runResults = [];
 
   for (let r = 1; r <= runs; r++) {
@@ -149,7 +169,20 @@ async function runScenario(profile, runs, notDeleted) {
         const metrics = scorePlan(evalPlan, scoringVars); // { log:false } default — stays quiet
         const hard = HARD_VIOLATIONS.filter((m) => (metrics[m] || 0) > 0);
         const soft = SOFT_VIOLATIONS.filter((m) => (metrics[m] || 0) > 0);
-        runResults.push({ run: r, planId, outcome: "scored", metrics, hard, soft });
+
+        // Advisory coaching audit (Yupa/gpt-4.1). Runs INLINE while the plan still
+        // exists (it's deleted at cleanup). Strictly non-gating: the deterministic
+        // HARD/SOFT checker above is the sole arbiter of PASS/FAIL. Any failure of
+        // the OpenAI call is swallowed here so it can never flip a verdict or fail a
+        // run — it only downgrades this one run's advisory verdict to UNKNOWN.
+        let coaching;
+        try {
+          coaching = await reviewPlan(evalPlan, scoringVars);
+        } catch (err) {
+          coaching = { verdict: "UNKNOWN", error: err.message };
+        }
+
+        runResults.push({ run: r, planId, outcome: "scored", metrics, hard, soft, coaching });
         console.log(
           `    ${label}: scored — ${hard.length ? "HARD[" + hard.join(",") + "]" : "no hard"}` +
             `${soft.length ? " SOFT[" + soft.join(",") + "]" : ""}`
@@ -219,6 +252,15 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR, { recursive: true });
+
+  // ── Offline re-render mode: rebuild the markdown report from an existing
+  //    results JSON without running any generations (no DB, no OpenAI). ──
+  if (args.report) {
+    const results = JSON.parse(fs.readFileSync(args.report, "utf8"));
+    const reportPath = writeReport(results, RESULTS_DIR);
+    console.log(`Report written to ${path.relative(process.cwd(), reportPath)}`);
+    return results;
+  }
 
   const allScenarios = yaml.load(fs.readFileSync(SCENARIOS_FILE, "utf8"));
   if (!Array.isArray(allScenarios) || allScenarios.length === 0) {
@@ -305,6 +347,12 @@ async function main() {
     console.log("All test users cleaned up.");
   }
   console.log(`\nResults written to ${path.relative(process.cwd(), outFile)}`);
+
+  // ── Markdown report (Phase 5): render the same results object into the
+  //    reviewable per-scenario report. Pure string-building, no extra I/O beyond
+  //    the file write. ──
+  const reportPath = writeReport(results, RESULTS_DIR);
+  console.log(`Report written to ${path.relative(process.cwd(), reportPath)}`);
 
   return results;
 }
