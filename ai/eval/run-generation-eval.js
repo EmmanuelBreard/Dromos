@@ -146,9 +146,15 @@ async function cleanupUser(userId, notDeleted) {
 // ── One scenario: N runs → classified verdict ──────────────────────────────────
 async function runScenario(profile, runs, notDeleted) {
   const scoringVars = scenarioToScoringVars(profile);
-  // `scenario_name` is a harness-only label, not a public.users column — strip it so
-  // createTestUser's profile-seed UPDATE only touches real DB columns.
-  const { scenario_name, ...seedProfile } = profile;
+  // `scenario_name` and `weeks_out` are harness-only fields, not public.users columns —
+  // strip them so createTestUser's profile-seed UPDATE only touches real DB columns.
+  const { scenario_name, weeks_out, ...seedProfile } = profile;
+  // Derive race_date from weeks_out (weeks from today) when provided, so the scenario set
+  // spans a realistic spread of plan lengths — short (4-6wk) / medium (10-14wk) /
+  // long (>1yr) — without a fixed date going stale. Falls back to the yaml race_date.
+  if (weeks_out != null) {
+    seedProfile.race_date = new Date(Date.now() + weeks_out * 7 * 86400000).toISOString();
+  }
   const { createTestUser, invokeGeneratePlan, pollStatus, readPlan } = client();
   const runResults = [];
 
