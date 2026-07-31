@@ -69,13 +69,16 @@ const DAY_DURATION_FIELDS = [
 
 // ── CLI flag parsing ──────────────────────────────────────────────────────────
 function parseArgs(argv) {
-  const args = { scenarios: null, runs: DEFAULT_RUNS, label: null, report: null };
+  const args = { scenarios: null, runs: DEFAULT_RUNS, label: null, report: null, maxWeeks: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--scenarios") args.scenarios = parseInt(argv[++i], 10);
     else if (a === "--runs") args.runs = parseInt(argv[++i], 10);
     else if (a === "--label") args.label = argv[++i];
     else if (a === "--report") args.report = argv[++i];
+    // --max-weeks N: only run scenarios whose weeks_out <= N (e.g. skip the long
+    // >1yr plans that currently time out on generate-plan latency, DRO-312).
+    else if (a === "--max-weeks") args.maxWeeks = parseInt(argv[++i], 10);
   }
   // --report is a pure, offline re-render of a prior results JSON — no eval, no cost.
   // It short-circuits main() before any DB/OpenAI work, so skip the run-flag validation.
@@ -272,8 +275,14 @@ async function main() {
   if (!Array.isArray(allScenarios) || allScenarios.length === 0) {
     throw new Error(`No scenarios found in ${SCENARIOS_FILE}`);
   }
+  // --max-weeks filter first (skip long plans that outrun the edge wall-clock),
+  // then the --scenarios first-N cap.
+  const eligible =
+    args.maxWeeks !== null
+      ? allScenarios.filter((s) => (s.weeks_out ?? Infinity) <= args.maxWeeks)
+      : allScenarios;
   const scenarios =
-    args.scenarios !== null ? allScenarios.slice(0, args.scenarios) : allScenarios;
+    args.scenarios !== null ? eligible.slice(0, args.scenarios) : eligible;
 
   const runLabel =
     args.label || new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
