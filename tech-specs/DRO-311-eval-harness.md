@@ -1,6 +1,6 @@
 # DRO-311 — Plan-Quality Eval Harness (Full Spec)
 
-**Overall Progress:** `60%`
+**Overall Progress:** `100%` — shipped to `main` (PR #135). Generation-only v1 complete: client, scenarios, scorer, runner, advisory Yupa audit, report + `run-eval.sh`. QA passed (green end-to-end run, self-cleaned). Follow-ups tracked on DRO-312 (generate-plan latency/quota + zombie sweep) and a plan-quality volume-ramp ticket.
 
 > **SCOPE UPDATE (2026-07-16): generation-only for v1.** The adjustment eval (Phase 4 / Step 6) is **dropped** — the deployed `chat-adjust` is advisory Coach Chat V0 (no plan modification, SSE-streamed, gated to one email), so the `adjust-step*-scenarios.yaml` (plan-adjustment) flow it targets is not live. Revisit when a real plan-adjustment flow ships. The `invokeChatAdjust` stub in the client stays as a harmless placeholder.
 
