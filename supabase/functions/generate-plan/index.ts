@@ -1944,6 +1944,12 @@ Deno.serve(async (req) => {
     const VALID_PHASES = ["Base", "Build", "Peak", "Taper", "Recovery"];
     const VALID_SPORTS = ["swim", "bike", "run"];
     const VALID_TYPES = ["Easy", "Tempo", "Intervals"];
+    // DRO-318: the LLM sometimes labels the race week's phase "Race" (not a valid week
+    // phase — the race week is effectively part of the taper). Normalize it to Taper so
+    // it doesn't fail generation; the race itself is represented as a session, not a phase.
+    for (const week of allBlockWeeks) {
+      if (week.phase === "Race") week.phase = "Taper";
+    }
     for (const week of allBlockWeeks) {
       if (!VALID_PHASES.includes(week.phase)) {
         throw new Error(`Invalid phase "${week.phase}" in week ${week.week_number}. Expected: ${VALID_PHASES.join(", ")}`);

@@ -32,6 +32,7 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 - Progressive overload: ~5-10% load increase per loading week
 - Session types must match the training phase — see Intensity by phase below
 - Taper in final 1-2 weeks before race
+- The race week itself uses the **Taper** phase — NEVER put "Race" in a week's phase field (the race is a session, not a phase). Valid phase values are ONLY: Base, Build, Peak, Taper, Recovery.
 
 ### Recovery (CRITICAL)
 - Every 3-4 loading weeks, insert a Recovery week — label it "Recovery" in the phase field
