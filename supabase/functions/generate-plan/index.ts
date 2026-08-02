@@ -1497,6 +1497,44 @@ function downgradeSessionToEasy(session: any, workoutLibrary: any): void {
   }
 }
 
+// Post-processing: relocate sessions scheduled on a day where their sport is not
+// eligible (a HARD sport-eligibility violation — e.g. a run placed on a swim-only day).
+// The LLM occasionally ignores the per-sport day lists; no earlier fixer specifically
+// repairs this. Reuses tryRelocateSession, which only ever moves a session to an eligible
+// day with capacity and never introduces same-sport/dual-hard conflicts. Last resort: if
+// no eligible day has room, drop the session (it cannot be placed legally for this
+// athlete). Brick sessions are left to the brick fixers to avoid splitting a pair.
+function fixSportEligibility(
+  planWeeks: any[],
+  dayCaps: Record<string, number>,
+  sportEligibility: Record<string, string[]>,
+  workoutLibrary: any
+): number {
+  let fixes = 0;
+  for (const week of planWeeks) {
+    const byDay: Record<string, any[]> = {};
+    for (const session of week.sessions || []) {
+      const d = normDay(session.day);
+      byDay[d] = byDay[d] || [];
+      byDay[d].push(session);
+    }
+    // Snapshot: we may relocate or drop sessions while iterating.
+    for (const session of [...(week.sessions || [])]) {
+      if (session.is_brick) continue; // brick placement handled by the brick fixers
+      const day = normDay(session.day);
+      if ((sportEligibility[day] || []).includes(session.sport)) continue; // already legal
+      if (tryRelocateSession(session, day, week, byDay, dayCaps, sportEligibility, workoutLibrary)) {
+        fixes++;
+        continue;
+      }
+      // No eligible day has capacity — the session cannot be legally placed; drop it.
+      removeSessionFromWeek(week, byDay, day, session);
+      fixes++;
+    }
+  }
+  return fixes;
+}
+
 // Post-processing: fix same-day hard session conflicts
 // Rule 1: Max 1 bike and max 1 run per day (brick sessions count)
 // Rule 2: No two hard (bike/run) sessions on same day (brick hard sessions count)
@@ -2268,6 +2306,10 @@ Deno.serve(async (req) => {
     fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
     fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
+    // Relocate sessions off sport-ineligible days (HARD sport-eligibility gate) before
+    // brick/volume passes build on the placements. Downstream fixers only ever move
+    // sessions to eligible days, so a single pass here suffices.
+    fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
     fixMissingBricks(allBlockWeeks, workoutLibrary, dayCaps, sportEligibility);
     fixBrickRunDuration(allBlockWeeks, workoutLibrary);
     fixBrickOrder(allBlockWeeks);
