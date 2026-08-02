@@ -39,20 +39,57 @@ Generate a {{total_weeks}}-week macro training plan starting {{plan_start_date}}
 - Recovery weeks: drop volume 30-50% from the previous week, keep frequency, reduce intensity
 - NEVER have more than 4 consecutive non-Recovery weeks
 
-### Intensity by phase (CRITICAL — scales with weekly hours)
+### Intensity by phase (HARD CONSTRAINT — the plan MUST contain true \`Intervals\` work)
+The single most common failure mode is a plan that is 100% Easy + Tempo with ZERO \`Intervals\` sessions. This is a coaching failure: without Zone 4-5 (VO2/threshold) work an athlete cannot develop race speed. Tempo is NOT a substitute for Intervals. You MUST emit sessions with the literal type \`Intervals\` (not just Tempo) wherever the rules below require them.
+
 The number of high-intensity slots (Tempo or Intervals) for bike and run depends on the weekly hour budget:
-- ≤5h/week: 1 Tempo session/week — pick bike or run, alternate each week
-- 5-8h/week: 2 intensity slots/week — one sport gets Intervals, the other gets Tempo. Alternate which gets which between blocks.
-- 8-12h/week: 3-4 slots/week — can have Intervals + Tempo in the same sport, or spread across both
-- >12h/week: up to 4 slots/week — Intervals AND Tempo in both bike and run simultaneously is fine
+- ≤5h/week: 1 intensity session/week — pick bike or run, alternate each week. In Base use Tempo; in Build/Peak this session MUST become \`Intervals\`.
+- 5-8h/week: 2 intensity slots/week — one sport gets \`Intervals\`, the other gets Tempo. Alternate which gets which between blocks.
+- 8-12h/week: 3-4 slots/week — \`Intervals\` + Tempo in the same sport, or spread across both. At least 2 of these slots must be \`Intervals\` in Build/Peak.
+- >12h/week: up to 4 slots/week — \`Intervals\` AND Tempo in both bike and run simultaneously is fine.
 
 Apply these slots per phase:
-- **Base**: primarily Easy, but MUST include at least 1 Tempo session/week in bike or run starting W2. These are moderate efforts — the goal is aerobic threshold, not pure slow distance.
-- **Build**: increase intensity slots to the budget maximum. Alternate which sport gets Intervals vs Tempo between blocks (e.g., block 1: bike Intervals + run Tempo; block 2: run Intervals + bike Tempo).
-- **Peak**: highest intensity density — use Intervals and Race-pace. Every sport should have intensity work.
-- **Taper/Recovery**: drop back to mostly Easy, with at most 1 short Tempo to stay sharp.
+- **Base**: primarily Easy, but MUST include at least 1 Tempo session/week in bike or run starting W2. These are moderate efforts — the goal is aerobic threshold, not pure slow distance. \`Intervals\` are optional in Base.
+- **Build**: at least 1 \`Intervals\` session EVERY week (bike or run), in addition to Tempo where the budget allows. Alternate which sport gets \`Intervals\` vs Tempo between blocks (e.g., block 1: bike \`Intervals\` + run Tempo; block 2: run \`Intervals\` + bike Tempo). A Build week with zero \`Intervals\` sessions is INVALID.
+- **Peak**: highest intensity density — at least 1 \`Intervals\` session EVERY week, and every sport should carry intensity work (\`Intervals\` or Tempo). A Peak week with zero \`Intervals\` sessions is INVALID.
+- **Taper/Recovery**: drop back to mostly Easy, with at most 1 short Tempo to stay sharp. No \`Intervals\`.
 
-Swim intensity: swim MUST include Tempo or Intervals in Build and Peak phases (at least 1/week). In Base, swim can remain Easy-only.
+### Short plans (CRITICAL — when {{total_weeks}} ≤ 8)
+A short-runway plan is a **sharpening / race-prep block**, NOT a miniature full periodization. You cannot build an aerobic base in a few weeks — the athlete races on the base they arrive with. Do not waste weeks on Base or leave the plan intensity-free.
+
+**If {{total_weeks}} ≤ 5 (very short):**
+- No Base phase and no Recovery/deload week.
+- Race-specific from week 1: threshold/VO2 \`Intervals\` + race-pace bricks.
+- **Flat weekly volume** — hold total hours roughly constant across weeks (week-over-week change ≤ ~10%). Do NOT ramp volume; a large jump in a 4-week plan is dangerous. Progress the *intensity dose* instead (more or longer work intervals week to week), trimming Easy volume to compensate.
+- Dose week 1 lightly as an on-ramp: label it **Build** but give it only ~1 quality (Intervals/Tempo) session. Weeks 2+ carry 2 quality sessions.
+- Example (4 weeks): \`W1 Build (on-ramp, 1 quality) → W2 Peak → W3 Peak → W4 Taper (race week)\`.
+
+**If {{total_weeks}} is 6-8:**
+- One light **Base** intro week to settle routine, then Build → Build → Peak.
+- Insert **one Recovery/deload week** (MANDATORY at 8 weeks) so hard weeks follow a 3:1 pattern, then a final Peak block and the race week.
+- A modest volume ramp (≤ 8-10%/week) is allowed here because the deload absorbs it.
+- Example (8 weeks): \`W1 Base → W2 Build → W3 Build → W4 Peak → W5 Recovery → W6 Peak → W7 Peak → W8 Taper\`.
+
+**Race week (the final Taper week) — structure it as a race week, NOT a full easy week:**
+- Volume ~40-50% of a normal week; keep intensity, cut volume.
+- Early week: mostly Easy plus ONE short quality touch.
+- **2 days before the race**, schedule a short primer session: an \`Easy\` session with a few short race-pace pickups inside it. Its session \`type\` is still \`Easy\` (there is no "opener" or "primer" type — valid types are only Easy/Tempo/Intervals). This late-week priming is what matters; do NOT put it at the very start of the week or the athlete goes flat by race day.
+- Day before the race: rest, or a short \`Easy\` shakeout.
+- For **Ironman 70.3**, also soften the *penultimate* Peak week so the effective taper is ~10 days (you cannot spend two of a few weeks fully tapering).
+
+Swim intensity: swim MUST include Tempo or \`Intervals\` in Build and Peak phases (at least 1/week). In Base, swim can remain Easy-only.
+
+### Zone distribution targets (80/20 polarized — calibrate the Build/Peak intensity mix)
+Across the Build/Peak weeks, aim for roughly this time-in-zone split (Z1-2 = Easy, Z3 = Tempo, Z4-5 = Intervals):
+- **Olympic**: ~78% Easy / **<10% Tempo** / ~15% Intervals — target **2 Intervals sessions/week** (e.g. 1 threshold + 1 VO2/race-pace), spaced ≥48h apart. Tempo above 10% is gray-zone junk for Olympic — convert excess Tempo to Easy or Intervals.
+- **Ironman 70.3**: ~80% Easy / ~12-15% Tempo / ~7% Intervals — target **1 Intervals + 1 race-pace Tempo brick/week**. The higher Tempo is allowed ONLY as race-pace bike/brick work (70.3 race pace genuinely lives at sweet-spot/low-Z3); do not grant this Tempo allowance to Olympic.
+
+### Intensity self-check (MANDATORY — run before outputting the plan)
+Before finalizing, scan every week and verify:
+1. Every **Build** and **Peak** week contains at least one session with type \`Intervals\` (in bike or run, budget permitting). If a Build/Peak week has none, convert its least-critical Tempo session to \`Intervals\`.
+2. For short plans ({{total_weeks}} ≤ 8), the plan follows the Short-plans structure above (race-specific from W1, flat volume, race-week taper) and its Build/Peak weeks contain \`Intervals\` work.
+3. The plan as a whole is NOT 100% Easy + Tempo. If no week anywhere contains \`Intervals\`, the plan is INVALID — fix it before outputting.
+4. Tempo is not overused: for an **Olympic** plan, no more than ~10% of total time is Tempo (Z3). If Tempo dominates the intensity, convert the excess to \`Intervals\` (for sharpening) or \`Easy\` (to protect the 80% base).
 
 ### Intensity distribution
 - No back-to-back high-intensity days in the same sport

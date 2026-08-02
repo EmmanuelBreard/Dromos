@@ -44,6 +44,17 @@ context clearly demands a deviation (state the deviation and justify it if so):
   overload. Weekly volume ramp should not exceed ~10%/week (yellow flag) or
   ~15%/week (red flag). Recovery weeks should appear on a roughly 3:1 or 2:1
   load-to-deload cadence.
+- SHORT PLANS ARE DIFFERENT (do NOT flag missing Base as broken periodization):
+  when total_weeks <= 8 the race is only weeks away and there is no time to build
+  an aerobic base — the athlete races on the base they arrive with. A short plan is
+  correctly a SHARPENING / race-prep block, not a miniature full periodization.
+  For total_weeks <= 5 it is CORRECT to skip Base and Recovery entirely and go
+  race-specific (Build/Peak) from week 1 at roughly flat volume with rising
+  intensity dose; week 1 may be a lighter on-ramp. Do NOT require a Base phase, a
+  deload week, or a multi-week taper in a <=5-week plan. For 6-8 weeks, expect one
+  light intro week + a single deload. Judge short plans on: presence of real
+  Z4-5 intensity, flat/safe volume progression, and a sharp race-week taper — NOT
+  on whether they contain all four classic phases.
 - Discipline balance should reflect the race distance and the athlete's available
   time per sport — not equal thirds.
 - Brick workouts (bike->run) earn their place close to race-specific prep
