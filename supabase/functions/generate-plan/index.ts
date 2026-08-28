@@ -392,6 +392,94 @@ function extractLastUsed(blockResult: any): any[] {
   return Object.values(lastUsed);
 }
 
+// Non-standard session types the LLM occasionally emits (as a `type` value or baked
+// into an invented template_id like RUN_OPENER_01), mapped onto the 3 valid types.
+// Mirrors the DRO-318 phase normalization (Race -> Taper). Keys are lower-cased.
+const TYPE_ALIASES: Record<string, string> = {
+  brick: "Easy", // brick transition run — the is_brick flag carries the brick-ness
+  opener: "Easy", // race-week primer: short easy + a few surges
+  openers: "Easy",
+  primer: "Easy",
+  shakeout: "Easy",
+  recovery: "Easy",
+  endurance: "Easy",
+  long: "Easy",
+  aerobic: "Easy",
+  race: "Tempo", // "Race" / "Race-pace" effort maps to Tempo
+  racepace: "Tempo",
+  "race-pace": "Tempo",
+  threshold: "Tempo",
+  sweetspot: "Tempo",
+  "sweet-spot": "Tempo",
+  vo2: "Intervals",
+  vo2max: "Intervals",
+  interval: "Intervals",
+  speed: "Intervals",
+  hard: "Intervals",
+};
+
+// Post-processing: normalize any non-standard session type onto {Easy,Tempo,Intervals}
+// BEFORE fixTypes/validation, and repair the template_id so it points at a real library
+// template of the resolved (sport, type). This is the deterministic guard that stops a
+// stray LLM type (e.g. "OPENER", "BRICK") from crashing generation at the validation gate
+// (DRO-320 + follow-ups). Runs first in the fixer chain so everything downstream sees
+// valid types/templates.
+function normalizeSessionTypes(
+  planWeeks: any[],
+  workoutLibrary: any,
+  durationMap: Record<string, number>
+): number {
+  const VALID = new Set(["Easy", "Tempo", "Intervals"]);
+  // catalog: `${sport}_${type}` -> [{ id, dur }] for template repair
+  const catalog: Record<string, { id: string; dur: number }[]> = {};
+  for (const sport of ["swim", "bike", "run"]) {
+    for (const t of workoutLibrary[sport] || []) {
+      const seg = t.template_id.split("_")[1];
+      const key = `${sport}_${seg}`;
+      (catalog[key] = catalog[key] || []).push({
+        id: t.template_id,
+        dur: durationMap[t.template_id] || t.duration_minutes || 0,
+      });
+    }
+  }
+
+  let fixes = 0;
+  for (const week of planWeeks) {
+    for (const s of week.sessions || []) {
+      const tidSeg = s.template_id ? s.template_id.split("_")[1] : undefined;
+      // Resolve the intended valid type: trust a valid template segment first, else
+      // alias the declared type, else fall back to Easy (the safe, lowest-stress default).
+      let type: string;
+      if (tidSeg && VALID.has(tidSeg)) {
+        type = tidSeg;
+      } else if (VALID.has(s.type)) {
+        type = s.type;
+      } else {
+        type = TYPE_ALIASES[String(s.type || "").toLowerCase().trim()] || "Easy";
+      }
+
+      // Repair the template_id if it doesn't resolve or its type segment disagrees.
+      const tidResolves =
+        s.template_id && durationMap[s.template_id] !== undefined && tidSeg === type;
+      if (!tidResolves) {
+        const opts = catalog[`${s.sport}_${type}`] || [];
+        if (opts.length > 0) {
+          const want = s.duration_minutes || opts[0].dur;
+          opts.sort((a, b) => Math.abs(a.dur - want) - Math.abs(b.dur - want));
+          s.template_id = opts[0].id;
+          s.duration_minutes = opts[0].dur;
+        }
+      }
+
+      if (s.type !== type) {
+        s.type = type;
+        fixes++;
+      }
+    }
+  }
+  return fixes;
+}
+
 // Post-processing: fix type from template_id (source of truth)
 function fixTypes(planWeeks: any[]): number {
   let fixes = 0;
@@ -1379,10 +1467,125 @@ function fixBrickOrder(planWeeks: any[]): number {
   return fixes;
 }
 
+// Remove a session from both the week and the byDay index.
+function removeSessionFromWeek(
+  week: any,
+  byDay: Record<string, any[]>,
+  day: string,
+  session: any
+): void {
+  const idx = (week.sessions || []).indexOf(session);
+  if (idx >= 0) week.sessions.splice(idx, 1);
+  byDay[normDay(day)] = (byDay[normDay(day)] || []).filter((s: any) => s !== session);
+}
+
+// Downgrade a hard (Tempo/Intervals) session to Easy in place — swaps to the closest-
+// duration Easy template of the same sport. Used as the LAST RESORT for an unrelocatable
+// same-day dual-hard conflict: keeps the session (and its volume) but removes the hard
+// clash. Losing one intensity slot on a tight-availability week is the correct trade
+// against shipping an illegal plan.
+function downgradeSessionToEasy(session: any, workoutLibrary: any): void {
+  const dur = session.duration_minutes || 0;
+  const alt = (workoutLibrary[session.sport] || [])
+    .filter((t: any) => t.template_id.includes("_Easy_"))
+    .map((t: any) => ({ id: t.template_id, d: t.duration_minutes || 0 }))
+    .sort((a: any, b: any) => Math.abs(a.d - dur) - Math.abs(b.d - dur))[0];
+  session.type = "Easy";
+  if (alt) {
+    session.template_id = alt.id;
+    session.duration_minutes = alt.d;
+  }
+}
+
+// Post-processing: relocate sessions scheduled on a day where their sport is not
+// eligible (a HARD sport-eligibility violation — e.g. a run placed on a swim-only day).
+// The LLM occasionally ignores the per-sport day lists; no earlier fixer specifically
+// repairs this. Reuses tryRelocateSession, which only ever moves a session to an eligible
+// day with capacity and never introduces same-sport/dual-hard conflicts. Last resort: if
+// no eligible day has room, drop the session (it cannot be placed legally for this
+// athlete). Brick sessions are left to the brick fixers to avoid splitting a pair.
+function fixSportEligibility(
+  planWeeks: any[],
+  dayCaps: Record<string, number>,
+  sportEligibility: Record<string, string[]>,
+  workoutLibrary: any
+): number {
+  let fixes = 0;
+  for (const week of planWeeks) {
+    const byDay: Record<string, any[]> = {};
+    for (const session of week.sessions || []) {
+      const d = normDay(session.day);
+      byDay[d] = byDay[d] || [];
+      byDay[d].push(session);
+    }
+
+    // --- Pass A: brick pairs on a day not eligible for BOTH sports ---
+    // A brick (bike+run same day) needs a day eligible for every sport in the pair.
+    // Relocate the whole pair to such a day with room; if none exists, dissolve the
+    // brick (clear is_brick) so Pass B can place each half individually.
+    const brickDays = new Set<string>();
+    for (const s of week.sessions || []) if (s.is_brick) brickDays.add(normDay(s.day));
+    for (const bday of brickDays) {
+      const bricks = (byDay[bday] || []).filter((s: any) => s.is_brick);
+      if (bricks.length === 0) continue;
+      const sports = [...new Set(bricks.map((s: any) => s.sport))];
+      const elig = sportEligibility[bday] || [];
+      if (sports.every((sp) => elig.includes(sp))) continue; // brick day is legal
+
+      const totalDur = bricks.reduce((a: number, s: any) => a + (s.duration_minutes || 0), 0);
+      let target: string | null = null;
+      for (const td of ALL_DAYS) {
+        if (normDay(td) === bday) continue;
+        const te = sportEligibility[td] || [];
+        if (!sports.every((sp) => te.includes(sp))) continue;
+        const tsessions = byDay[normDay(td)] || [];
+        // Keep the brick on its own day pair — skip targets already holding a bike/run.
+        if (tsessions.some((s: any) => ["bike", "run"].includes(s.sport))) continue;
+        const used = tsessions.reduce((a: number, s: any) => a + (s.duration_minutes || 0), 0);
+        if (used + totalDur > (dayCaps[td] || 0)) continue;
+        target = normDay(td);
+        break;
+      }
+
+      if (target) {
+        for (const s of bricks) {
+          byDay[bday] = (byDay[bday] || []).filter((x: any) => x !== s);
+          s.day = target;
+          byDay[target] = byDay[target] || [];
+          byDay[target].push(s);
+        }
+        fixes++;
+      } else {
+        // No day supports the brick — dissolve it; Pass B relocates/drops each half.
+        for (const s of bricks) s.is_brick = false;
+      }
+    }
+
+    // --- Pass B: individual (non-brick) sessions on a sport-ineligible day ---
+    // Snapshot: we may relocate or drop sessions while iterating.
+    for (const session of [...(week.sessions || [])]) {
+      if (session.is_brick) continue; // preserved bricks were handled in Pass A
+      const day = normDay(session.day);
+      if ((sportEligibility[day] || []).includes(session.sport)) continue; // already legal
+      if (tryRelocateSession(session, day, week, byDay, dayCaps, sportEligibility, workoutLibrary)) {
+        fixes++;
+        continue;
+      }
+      // No eligible day has capacity — the session cannot be legally placed; drop it.
+      removeSessionFromWeek(week, byDay, day, session);
+      fixes++;
+    }
+  }
+  return fixes;
+}
+
 // Post-processing: fix same-day hard session conflicts
 // Rule 1: Max 1 bike and max 1 run per day (brick sessions count)
 // Rule 2: No two hard (bike/run) sessions on same day (brick hard sessions count)
 // Swim is exempt from both rules.
+// When a conflicting session cannot be relocated (tight availability), a deterministic
+// LAST RESORT is applied so the violation never ships: Rule 1 merges two Easy duplicates
+// (or drops the lower-priority one); Rule 2 downgrades one hard session to Easy.
 function fixSameDayHardConflicts(
   planWeeks: any[],
   dayCaps: Record<string, number>,
@@ -1400,7 +1603,14 @@ function fixSameDayHardConflicts(
       byDay[d].push(session);
     }
 
-    for (const day of ALL_DAYS) {
+    // Repeat the day-scan until stable: a relocation or last-resort can drop a session
+    // onto an already-scanned day; loop so that newly-introduced conflict is re-resolved
+    // in a later pass (bounded — the last-resort guarantees convergence).
+    let sdPass = 0;
+    let sdPrevFixes = -1;
+    while (fixes !== sdPrevFixes && sdPass < 6) {
+      sdPrevFixes = fixes;
+      for (const day of ALL_DAYS) {
       // Rule 1: Max 1 bike and max 1 run per day (brick sessions count)
       for (const sport of ['bike', 'run']) {
         const sportSessions = (byDay[normDay(day)] || []).filter((s: any) => s.sport === sport);
@@ -1415,7 +1625,33 @@ function fixSameDayHardConflicts(
         for (const session of toMove) {
           if (tryRelocateSession(session, day, week, byDay, dayCaps, sportEligibility, workoutLibrary)) {
             fixes++;
+            continue;
           }
+          // Last resort: cannot relocate this same-sport duplicate. If both it and the
+          // keeper are Easy, fold its minutes into the keeper (up to the day cap) before
+          // dropping it, so volume is preserved; otherwise just drop the duplicate. Never
+          // drop a brick session.
+          if (session.is_brick) continue;
+          removeSessionFromWeek(week, byDay, day, session);
+          if (session.type === "Easy" && keeper.type === "Easy" && !keeper.is_brick) {
+            const cap = dayCaps[day] || 0;
+            const dayUsedAfter = (byDay[normDay(day)] || []).reduce(
+              (sum: number, s: any) => sum + (s.duration_minutes || 0),
+              0
+            );
+            const target = Math.min(
+              (keeper.duration_minutes || 0) + (session.duration_minutes || 0),
+              (keeper.duration_minutes || 0) + (cap - dayUsedAfter)
+            );
+            const grown = (workoutLibrary[sport] || [])
+              .filter((t: any) => t.template_id.includes("_Easy_") && (t.duration_minutes || 0) <= target && (t.duration_minutes || 0) > (keeper.duration_minutes || 0))
+              .sort((a: any, b: any) => (b.duration_minutes || 0) - (a.duration_minutes || 0))[0];
+            if (grown) {
+              keeper.template_id = grown.template_id;
+              keeper.duration_minutes = grown.duration_minutes;
+            }
+          }
+          fixes++;
         }
       }
 
@@ -1433,8 +1669,16 @@ function fixSameDayHardConflicts(
           : hardBikeRun.sort((a: any, b: any) => (a.duration_minutes || 0) - (b.duration_minutes || 0))[0];
         if (tryRelocateSession(toMove, day, week, byDay, dayCaps, sportEligibility, workoutLibrary)) {
           fixes++;
+        } else {
+          // Last resort: cannot relocate the second hard session (tight availability).
+          // Downgrade it to Easy so the day no longer has two hard bike/run sessions.
+          // Keeps the session and its volume; sacrifices one intensity slot to stay legal.
+          downgradeSessionToEasy(toMove, workoutLibrary);
+          fixes++;
         }
       }
+      }
+      sdPass++;
     }
   }
 
@@ -1684,6 +1928,194 @@ function fixVolumeGaps(
   return fixes;
 }
 
+// Post-processing: smooth week-to-week volume ramp (injury safety).
+// Text instructions can't hold a flat/progressive volume curve reliably, so this
+// deterministic pass clamps each LOADING week (Base/Build/Peak) into a ±10% band
+// around a progressive baseline. Recovery/Taper weeks are EXEMPT (their volume drop
+// is intentional) and do NOT reset the baseline — so the week resuming load after a
+// deload references the pre-deload plateau, not the deload week (avoids a false
+// "+24% after recovery" spike). Only Easy volume is moved: quality sessions
+// (Tempo/Intervals) and the weekly long run (longest Easy run, ≥75min) are never cut.
+function fixVolumeRamp(
+  planWeeks: any[],
+  durationMap: Record<string, number>,
+  dayCaps: Record<string, number>,
+  sportEligibility: Record<string, string[]>,
+  workoutLibrary: any,
+  startVolumeMinutes: number
+): number {
+  const MAX_RAMP = 0.1; // a loading week may exceed the baseline by at most +10%
+  const MAX_DROP = 0.1; // ...or fall below it by at most -10%
+  const MIN_SESSION = 30; // DB floor for {day}_duration
+  const LONG_RUN_MIN = 75; // never trim the weekly long run below this
+  const TAPER_MAX = 0.6; // a Taper week must sit at or below 60% of the plateau
+  const RECOVERY_MAX = 0.7; // a Recovery week must sit at or below 70% of the plateau
+
+  // Easy template catalog per sport, ascending by duration (for down/up swaps).
+  const easyBySport: Record<string, { id: string; dur: number }[]> = {};
+  for (const sport of ["swim", "bike", "run"]) {
+    easyBySport[sport] = (workoutLibrary[sport] || [])
+      .filter((t: any) => t.template_id.includes("_Easy_"))
+      .map((t: any) => ({ id: t.template_id, dur: durationMap[t.template_id] || t.duration_minutes || 0 }))
+      .filter((t: any) => t.dur > 0)
+      .sort((a: any, b: any) => a.dur - b.dur);
+  }
+
+  const weekTotal = (wk: any): number =>
+    (wk.sessions || []).reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0);
+  const isLoading = (phase: string) => phase === "Base" || phase === "Build" || phase === "Peak";
+
+  const sorted = [...planWeeks].sort((a, b) => (a.week_number || 0) - (b.week_number || 0));
+  if (sorted.length === 0) return 0;
+
+  let fixes = 0;
+  // Anchor the baseline to the athlete's CURRENT weekly volume so an inflated
+  // week-1 from Step 1 can't set the bar for the whole plan.
+  let baseline = startVolumeMinutes > 0 ? startVolumeMinutes : weekTotal(sorted[0]);
+  if (baseline <= 0) return 0;
+
+  for (const week of sorted) {
+    const total = weekTotal(week);
+
+    if (isLoading(week.phase)) {
+      // Loading week: clamp into the ±band around the progressive plateau.
+      const upper = Math.round(baseline * (1 + MAX_RAMP));
+      const lower = Math.round(baseline * (1 - MAX_DROP));
+      if (total > upper) {
+        fixes += trimWeekVolume(week, total - upper, easyBySport, LONG_RUN_MIN, MIN_SESSION);
+      } else if (total < lower) {
+        fixes += padWeekVolume(week, lower - total, easyBySport, dayCaps, sportEligibility);
+      }
+      baseline = weekTotal(week); // ratchet to the (clamped) actual → smooth progression
+    } else {
+      // Recovery/Taper: the volume drop is intentional — enforce a ceiling BELOW the
+      // plateau so a too-heavy deload/taper week is pulled down. "Keep intensity, cut
+      // volume": trim Easy only; the long-run floor does NOT apply here (long runs are
+      // deliberately shortened in a deload). The plateau (baseline) is NOT updated, so
+      // load resuming afterward references the pre-deload plateau, not this low week.
+      const ceiling = Math.round(baseline * (week.phase === "Taper" ? TAPER_MAX : RECOVERY_MAX));
+      if (total > ceiling) {
+        fixes += trimWeekVolume(week, total - ceiling, easyBySport, MIN_SESSION, MIN_SESSION);
+      }
+    }
+  }
+
+  return fixes;
+}
+
+// Reduce a week's total minutes by ~excess, cutting only Easy volume via shorter
+// Easy-template swaps. Protects the weekly long run (never below LONG_RUN_MIN) and
+// never touches Tempo/Intervals. Returns the number of session mutations made.
+function trimWeekVolume(
+  week: any,
+  excess: number,
+  easyBySport: Record<string, { id: string; dur: number }[]>,
+  longRunMin: number,
+  minSession: number
+): number {
+  let fixes = 0;
+  // Identify the week's long run (longest Easy run) to protect below longRunMin.
+  let longRun: any = null;
+  for (const s of week.sessions || []) {
+    if (s.sport === "run" && s.type === "Easy") {
+      if (!longRun || (s.duration_minutes || 0) > (longRun.duration_minutes || 0)) longRun = s;
+    }
+  }
+
+  let guard = 0;
+  while (excess > 0 && guard < 50) {
+    guard++;
+    const floorFor = (s: any) => (s === longRun ? longRunMin : minSession);
+
+    // Easy sessions that still have a strictly-shorter Easy template at/above their floor.
+    const candidates = (week.sessions || []).filter((s: any) => {
+      if (s.type !== "Easy") return false;
+      const floor = floorFor(s);
+      const cur = s.duration_minutes || 0;
+      if (cur <= floor) return false;
+      return (easyBySport[s.sport] || []).some((o) => o.dur < cur && o.dur >= floor);
+    });
+    if (candidates.length === 0) break;
+
+    // Trim the largest session first (most slack).
+    candidates.sort((a: any, b: any) => (b.duration_minutes || 0) - (a.duration_minutes || 0));
+    const s = candidates[0];
+    const floor = floorFor(s);
+    const cur = s.duration_minutes || 0;
+    const desired = Math.max(cur - excess, floor);
+
+    const opts = (easyBySport[s.sport] || []).filter((o) => o.dur < cur && o.dur >= floor);
+    // Prefer the smallest template >= desired (reduce without overshooting the excess);
+    // if none qualifies, take the largest available (reduces the least → minimal overshoot).
+    const atOrAbove = opts.filter((o) => o.dur >= desired);
+    const chosen = atOrAbove.length > 0 ? atOrAbove[0] : opts[opts.length - 1];
+
+    excess -= cur - chosen.dur;
+    s.duration_minutes = chosen.dur;
+    s.template_id = chosen.id;
+    fixes++;
+  }
+
+  return fixes;
+}
+
+// Raise a week's total minutes by ~deficit, adding only Easy volume by swapping
+// existing Easy sessions UP to longer Easy templates — always within the session's
+// day cap. Availability-bound: if caps are full it pads as far as possible and
+// accepts the shortfall (never invents time). Returns session mutations made.
+function padWeekVolume(
+  week: any,
+  deficit: number,
+  easyBySport: Record<string, { id: string; dur: number }[]>,
+  dayCaps: Record<string, number>,
+  sportEligibility: Record<string, string[]>
+): number {
+  let fixes = 0;
+  const usedByDay: Record<string, number> = {};
+  for (const s of week.sessions || []) {
+    const d = normDay(s.day);
+    usedByDay[d] = (usedByDay[d] || 0) + (s.duration_minutes || 0);
+  }
+
+  let guard = 0;
+  while (deficit > 0 && guard < 50) {
+    guard++;
+    let grew = false;
+
+    // Grow the Easy session whose day has the most remaining headroom.
+    const easySessions = (week.sessions || []).filter((s: any) => s.type === "Easy");
+    easySessions.sort((a: any, b: any) => {
+      const ha = (dayCaps[normDay(a.day)] || 0) - (usedByDay[normDay(a.day)] || 0);
+      const hb = (dayCaps[normDay(b.day)] || 0) - (usedByDay[normDay(b.day)] || 0);
+      return hb - ha;
+    });
+
+    for (const s of easySessions) {
+      const d = normDay(s.day);
+      const headroom = (dayCaps[d] || 0) - (usedByDay[d] || 0);
+      if (headroom <= 0) continue;
+      const cur = s.duration_minutes || 0;
+      const ceiling = cur + headroom;
+      // Longest Easy template that is longer than current and still fits the day cap.
+      const opts = (easyBySport[s.sport] || []).filter((o) => o.dur > cur && o.dur <= ceiling);
+      if (opts.length === 0) continue;
+      const chosen = opts[opts.length - 1];
+      const added = chosen.dur - cur;
+      s.duration_minutes = chosen.dur;
+      s.template_id = chosen.id;
+      usedByDay[d] += added;
+      deficit -= added;
+      fixes++;
+      grew = true;
+      break;
+    }
+
+    if (!grew) break; // no session can grow within caps — availability-bound, accept shortfall
+  }
+
+  return fixes;
+}
+
 // Main handler
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -1921,11 +2353,16 @@ Deno.serve(async (req) => {
     const templateMap = buildTemplateMap(workoutLibrary);
     const { dayCaps, sportEligibility } = parseConstraints(userProfile);
 
+    normalizeSessionTypes(allBlockWeeks, workoutLibrary, templateDurationMap);
     fixTypes(allBlockWeeks);
     fixBrickPairs(allBlockWeeks);
     fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
     fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
+    // Relocate sessions off sport-ineligible days (HARD sport-eligibility gate) before
+    // brick/volume passes build on the placements. Downstream fixers only ever move
+    // sessions to eligible days, so a single pass here suffices.
+    fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
     fixMissingBricks(allBlockWeeks, workoutLibrary, dayCaps, sportEligibility);
     fixBrickRunDuration(allBlockWeeks, workoutLibrary);
     fixBrickOrder(allBlockWeeks);
@@ -1933,8 +2370,21 @@ Deno.serve(async (req) => {
     fixIntensitySpread(allBlockWeeks, dayCaps, sportEligibility);
     fixSportClustering(allBlockWeeks, dayCaps, sportEligibility, weeklyHours);
     fixVolumeGaps(allBlockWeeks, weeks, dayCaps, sportEligibility, workoutLibrary);
+    // Smooth week-to-week volume ramp (injury safety) on the post-gap-fill volumes.
+    // Anchored to the athlete's current weekly volume so an inflated week-1 can't set the bar.
+    fixVolumeRamp(
+      allBlockWeeks,
+      templateDurationMap,
+      dayCaps,
+      sportEligibility,
+      workoutLibrary,
+      (userProfile.current_weekly_hours || 0) * 60
+    );
     // Re-run duration caps after all changes to catch any new violations
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
+    // Re-run sport eligibility — fixMissingBricks/volume passes may have added a brick or
+    // session on an ineligible day; this final pass guarantees the sport HARD gate is clean.
+    fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
     // Re-run same-day conflicts — volume gaps or cap fixes may have introduced new ones
     fixSameDayHardConflicts(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
     // Final brick order pass — catch any bricks reordered by later fixers
