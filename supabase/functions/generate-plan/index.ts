@@ -1518,9 +1518,53 @@ function fixSportEligibility(
       byDay[d] = byDay[d] || [];
       byDay[d].push(session);
     }
+
+    // --- Pass A: brick pairs on a day not eligible for BOTH sports ---
+    // A brick (bike+run same day) needs a day eligible for every sport in the pair.
+    // Relocate the whole pair to such a day with room; if none exists, dissolve the
+    // brick (clear is_brick) so Pass B can place each half individually.
+    const brickDays = new Set<string>();
+    for (const s of week.sessions || []) if (s.is_brick) brickDays.add(normDay(s.day));
+    for (const bday of brickDays) {
+      const bricks = (byDay[bday] || []).filter((s: any) => s.is_brick);
+      if (bricks.length === 0) continue;
+      const sports = [...new Set(bricks.map((s: any) => s.sport))];
+      const elig = sportEligibility[bday] || [];
+      if (sports.every((sp) => elig.includes(sp))) continue; // brick day is legal
+
+      const totalDur = bricks.reduce((a: number, s: any) => a + (s.duration_minutes || 0), 0);
+      let target: string | null = null;
+      for (const td of ALL_DAYS) {
+        if (normDay(td) === bday) continue;
+        const te = sportEligibility[td] || [];
+        if (!sports.every((sp) => te.includes(sp))) continue;
+        const tsessions = byDay[normDay(td)] || [];
+        // Keep the brick on its own day pair — skip targets already holding a bike/run.
+        if (tsessions.some((s: any) => ["bike", "run"].includes(s.sport))) continue;
+        const used = tsessions.reduce((a: number, s: any) => a + (s.duration_minutes || 0), 0);
+        if (used + totalDur > (dayCaps[td] || 0)) continue;
+        target = normDay(td);
+        break;
+      }
+
+      if (target) {
+        for (const s of bricks) {
+          byDay[bday] = (byDay[bday] || []).filter((x: any) => x !== s);
+          s.day = target;
+          byDay[target] = byDay[target] || [];
+          byDay[target].push(s);
+        }
+        fixes++;
+      } else {
+        // No day supports the brick — dissolve it; Pass B relocates/drops each half.
+        for (const s of bricks) s.is_brick = false;
+      }
+    }
+
+    // --- Pass B: individual (non-brick) sessions on a sport-ineligible day ---
     // Snapshot: we may relocate or drop sessions while iterating.
     for (const session of [...(week.sessions || [])]) {
-      if (session.is_brick) continue; // brick placement handled by the brick fixers
+      if (session.is_brick) continue; // preserved bricks were handled in Pass A
       const day = normDay(session.day);
       if ((sportEligibility[day] || []).includes(session.sport)) continue; // already legal
       if (tryRelocateSession(session, day, week, byDay, dayCaps, sportEligibility, workoutLibrary)) {
@@ -2329,6 +2373,9 @@ Deno.serve(async (req) => {
     );
     // Re-run duration caps after all changes to catch any new violations
     fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
+    // Re-run sport eligibility — fixMissingBricks/volume passes may have added a brick or
+    // session on an ineligible day; this final pass guarantees the sport HARD gate is clean.
+    fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
     // Re-run same-day conflicts — volume gaps or cap fixes may have introduced new ones
     fixSameDayHardConflicts(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
     // Final brick order pass — catch any bricks reordered by later fixers
