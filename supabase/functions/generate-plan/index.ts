@@ -1603,7 +1603,14 @@ function fixSameDayHardConflicts(
       byDay[d].push(session);
     }
 
-    for (const day of ALL_DAYS) {
+    // Repeat the day-scan until stable: a relocation or last-resort can drop a session
+    // onto an already-scanned day; loop so that newly-introduced conflict is re-resolved
+    // in a later pass (bounded — the last-resort guarantees convergence).
+    let sdPass = 0;
+    let sdPrevFixes = -1;
+    while (fixes !== sdPrevFixes && sdPass < 6) {
+      sdPrevFixes = fixes;
+      for (const day of ALL_DAYS) {
       // Rule 1: Max 1 bike and max 1 run per day (brick sessions count)
       for (const sport of ['bike', 'run']) {
         const sportSessions = (byDay[normDay(day)] || []).filter((s: any) => s.sport === sport);
@@ -1670,6 +1677,8 @@ function fixSameDayHardConflicts(
           fixes++;
         }
       }
+      }
+      sdPass++;
     }
   }
 
