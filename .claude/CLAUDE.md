@@ -33,7 +33,7 @@ Code-assist agent (Mamma Aiuto Gang) is available and can run migrations or gene
 
 **Sub-agents:**
 - For heavy research (debugging across many files, investigating broad questions, exploring unfamiliar areas), use the Task tool to dispatch parallel Explore agents (model: sonnet) instead of reading files serially.
-- Architecture context docs live in `.claude/context/` (schema.md, architecture.md, ai-pipeline.md) — read these first before exploring the codebase.
+- Current project facts live in the repo-root `AGENTS.md`. Read that before `.claude/context/` (`schema.md`, `architecture.md`, `ai-pipeline.md`). Those notes are historical and can disagree with the code.
 
 **Our workflow:**
 1. [Issue Capture] `/create-issue` — Quick capture of a bug/feature/improvement into Linear. Brief Q&A, then create the ticket.

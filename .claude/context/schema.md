@@ -1,5 +1,7 @@
 # Database Schema Reference
 
+> **Historical.** Repo-root `AGENTS.md` is the current schema map. This note predates `training_plans.status = 'failed'` (migration `20260715_allow_failed_plan_status.sql`) and can disagree with the database.
+
 > Last updated: 2026-06-06 | Migrations: 001-016 + summary_polyline + 20260405_align-swim-templates + 20260425_session_structure_and_max_hr + 017_plan_snapshots + 018_revoke_import_plan_atomic_from_public
 
 ## Tables Overview
