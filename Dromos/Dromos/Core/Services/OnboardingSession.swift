@@ -6,6 +6,7 @@
 //  react or parse free text, and fall back to a written line if that call fails.
 //
 
+import Combine
 import Foundation
 import Supabase
 
@@ -380,25 +381,29 @@ final class OnboardingSession: ObservableObject {
             message: String(message.prefix(1000)),
             answers: CoachWireAnswers(answers: state.answers)
         )
-        return try await withThrowingTaskGroup(of: CoachWireResponse?.self) { group in
-            group.addTask { [client] in
-                let response: CoachWireResponse = try await client.functions.invoke(
-                    "onboarding-coach",
-                    options: FunctionInvokeOptions(body: request)
-                )
-                return response
-            }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: 12_000_000_000)
-                return nil
-            }
-            let first = try await group.next()
-            group.cancelAll()
-            while (try? await group.next()) != nil {}
-            if let response = first ?? nil {
-                return response
-            }
+        // Stay on the main actor. A detached task group would have to send the
+        // Supabase client across isolation, which this target rejects.
+        let invoke = Task { () -> CoachWireResponse in
+            try await client.functions.invoke(
+                "onboarding-coach",
+                options: FunctionInvokeOptions(body: request)
+            )
+        }
+        let timeout = Task {
+            try? await Task.sleep(nanoseconds: 12_000_000_000)
+            guard !Task.isCancelled else { return }
+            invoke.cancel()
+        }
+        do {
+            let response = try await invoke.value
+            timeout.cancel()
+            return response
+        } catch is CancellationError {
+            timeout.cancel()
             throw CoachCallError.timedOut
+        } catch {
+            timeout.cancel()
+            throw error
         }
     }
 

@@ -70,22 +70,16 @@ enum OnboardingSport: String, Equatable {
     }
 }
 
-enum Weekday {
-    static let ordered = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    static let weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    static let weekend = ["Saturday", "Sunday"]
+extension Weekday {
+    /// Full English names, Monday through Sunday. Profile columns store these strings.
+    static var ordered: [String] { allCases.map(\.fullName) }
+    static var weekdays: [String] {
+        [Weekday.monday, .tuesday, .wednesday, .thursday, .friday].map(\.fullName)
+    }
+    static var weekend: [String] { [Weekday.saturday, .sunday].map(\.fullName) }
 
     static func short(_ day: String) -> String {
-        switch day {
-        case "Monday": return "Mon"
-        case "Tuesday": return "Tue"
-        case "Wednesday": return "Wed"
-        case "Thursday": return "Thu"
-        case "Friday": return "Fri"
-        case "Saturday": return "Sat"
-        case "Sunday": return "Sun"
-        default: return day
-        }
+        Weekday(fullName: day)?.abbreviation ?? day
     }
 
     static func union(_ groups: [String]...) -> [String] {
