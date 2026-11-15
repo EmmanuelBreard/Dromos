@@ -2,10 +2,37 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import OpenAI from "npm:openai@4";
 
+// The edge runtime provides this global. The imported .d.ts only declares a namespace.
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
+
 // Shared materializer — pure function, no Supabase/Deno.env deps.
 // Converts a WorkoutTemplate from workout-library.json into the SessionStructure
 // JSON shape stored in plan_sessions.structure.
 import { materialize, type WorkoutTemplate } from "../_shared/materialize-structure.ts";
+import {
+  isRetryableError,
+  PlanInputError,
+  publicErrorMessage,
+  retryable,
+  withRetry,
+} from "./lib/errors.ts";
+import {
+  assertGeneratable,
+  computePlanHorizon,
+  shouldRestartPlan,
+  toAthletePlanInput,
+  weeklyTrainingMinutes,
+  type AthletePlanInput,
+} from "./lib/input.ts";
+import { fillTemplate } from "./lib/prompt.ts";
+import {
+  extractWeekArray,
+  macroPlanFromMarkdown,
+  parseModelJson,
+  splitMarkdownWeeks,
+  type MacroPlan,
+} from "./lib/macro-plan.ts";
+import { alignBlockWeeks, preparePlanWeeks } from "./lib/sanitize.ts";
 
 // Static assets (bundled as TS modules for CLI deploy)
 import STEP1_MACRO_PLAN_PROMPT from "./prompts/step1-macro-plan-prompt.ts";
@@ -31,7 +58,36 @@ const MODEL_STEP3 = "gpt-4.1";
 const TEMPERATURE = 0.2;
 const MAX_TOKENS_STEP1 = 16384;
 const MAX_TOKENS_STEP2 = 16384;
-const MAX_TOKENS_STEP3 = 4096;
+// A 4-week block of workouts is often larger than 4k tokens once pretty-printed.
+// Truncation used to throw at JSON.parse and fail the whole plan.
+const MAX_TOKENS_STEP3 = 16384;
+
+// Plans still running when the isolate is killed (wall-clock). One listener for
+// the warm worker; each request registers its plan id.
+const inflightPlans = new Map<string, { db: any; settled: boolean }>();
+
+if (typeof addEventListener === "function") {
+  addEventListener("beforeunload", (ev: Event) => {
+    const reason = (ev as Event & { detail?: { reason?: string } }).detail?.reason ?? "shutdown";
+    for (const [id, job] of inflightPlans) {
+      if (job.settled) continue;
+      const pending = job.db
+        .from("training_plans")
+        .update({
+          status: "failed",
+          error_message: `Plan generation was interrupted (${reason}). Please try again.`.slice(0, 300),
+          failed_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("status", "generating");
+      try {
+        EdgeRuntime.waitUntil(Promise.resolve(pending));
+      } catch {
+        // The isolate is already going away.
+      }
+    }
+  });
+}
 
 // Day normalization (for post-processing)
 const DAY_NORM: Record<string, string> = {
@@ -73,12 +129,6 @@ function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-// Helper: Calculate days between two dates
-function daysBetween(date1: Date, date2: Date): number {
-  const diff = date2.getTime() - date1.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
-
 // Helper: Add days to a date
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
@@ -114,24 +164,6 @@ function formatCSS(cssSecondsPer100m: number | null): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-// Helper: Calculate weekly hours from daily durations
-function calculateWeeklyHours(user: any): number {
-  const durations = [
-    user.mon_duration,
-    user.tue_duration,
-    user.wed_duration,
-    user.thu_duration,
-    user.fri_duration,
-    user.sat_duration,
-    user.sun_duration,
-  ];
-  const totalMinutes = durations.reduce(
-    (sum: number, d: number | null) => sum + (d || 0),
-    0
-  );
-  return Math.round((totalMinutes / 60) * 10) / 10; // Round to 1 decimal
-}
-
 // Helper: Compute per-session duration caps for weekdays and weekends
 // Weekday cap = smallest non-null Mon-Fri duration (conservative: fits any weekday)
 // Weekend cap = largest non-null Sat-Sun duration (generous: allows long sessions)
@@ -164,7 +196,19 @@ function getOpenAIClient(): OpenAI {
   return new OpenAI({ apiKey });
 }
 
-// Call OpenAI API
+function modelOutputCap(model: string): number {
+  // gpt-4o-mini rejects completions above 16,384. gpt-4.1 allows 32,768.
+  if (model.includes("gpt-4o")) return 16384;
+  return 32768;
+}
+
+function isUnsupportedMaxTokens(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /max_tokens/i.test(message) && /unsupported|not supported|max_completion_tokens/i.test(message);
+}
+
+// Call OpenAI. Retries transient failures and a too-small token budget.
+// Returns finishReason so callers can tell a truncated JSON blob from a finished one.
 async function callOpenAI(
   client: OpenAI,
   model: string,
@@ -172,87 +216,96 @@ async function callOpenAI(
   temperature: number,
   maxTokens: number,
   responseFormat?: { type: "json_object" }
-): Promise<string> {
-  const response = await client.chat.completions.create({
-    model,
-    messages: [{ role: "user", content: prompt }],
-    temperature,
-    max_tokens: maxTokens,
-    ...(responseFormat && { response_format: responseFormat }),
-  });
+): Promise<{ content: string; finishReason: string | null }> {
+  const cap = modelOutputCap(model);
+  let tokens = Math.min(maxTokens, cap);
+  let useCompletionTokens = false;
+  let lastError: unknown;
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error("Empty response from OpenAI");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const tokenLimit = useCompletionTokens
+        ? { max_completion_tokens: tokens }
+        : { max_tokens: tokens };
+      const response = await client.chat.completions.create({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        temperature,
+        ...tokenLimit,
+        ...(responseFormat && { response_format: responseFormat }),
+      });
+
+      const choice = response.choices[0];
+      const content = choice?.message?.content?.trim() ?? "";
+      const finishReason = choice?.finish_reason ?? null;
+      if (!content) throw retryable("The model returned an empty response.");
+      if (finishReason === "length" && tokens < cap && attempt < 2) {
+        tokens = Math.min(cap, tokens * 2);
+        throw retryable("The model response was cut off.");
+      }
+      return { content, finishReason };
+    } catch (error) {
+      lastError = error;
+      if (!useCompletionTokens && isUnsupportedMaxTokens(error)) {
+        useCompletionTokens = true;
+        attempt -= 1;
+        continue;
+      }
+      if (!isRetryableError(error) || attempt === 2) break;
+      await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** attempt));
+    }
   }
-  return content;
+
+  throw lastError instanceof Error ? lastError : new Error("The plan generator hit a temporary error.");
 }
 
-// Build prompt for Step 1 (macro plan)
-function buildStep1Prompt(user: any, vars: any): string {
-  let prompt = STEP1_MACRO_PLAN_PROMPT;
-  prompt = prompt.replace("{{training_philosophy}}", TRAINING_PHILOSOPHY);
-  prompt = prompt.replace(
-    "{{experience_level}}",
-    mapExperienceLevel(user.experience_years)
-  );
-  prompt = prompt.replace(
-    "{{race_distance}}",
-    expandRaceObjective(user.race_objective)
-  );
-  prompt = prompt.replace("{{race_date}}", vars.raceDate);
-  prompt = prompt.replace("{{plan_start_date}}", vars.planStartDate);
-  prompt = prompt.replace("{{total_weeks}}", vars.totalWeeks.toString());
-  prompt = prompt.replace("{{weekly_hours}}", vars.weeklyHours.toString());
-  prompt = prompt.replace(
-    "{{ftp_watts}}",
-    user.ftp ? user.ftp.toString() : "not provided"
-  );
-  prompt = prompt.replace(
-    "{{mas_kmh}}",
-    user.vma ? user.vma.toString() : "not provided"
-  );
-  prompt = prompt.replace(
-    "{{swim_css}}",
-    formatCSS(user.css_seconds_per100m)
-  );
-  // Limiters column not yet in users table — defaults to "none" until onboarding captures it
-  const limitersValue = (user.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
-  prompt = prompt.replace("{{limiters}}", limitersValue);
-
-  // Current training volume (athlete's baseline for progressive overload)
-  prompt = prompt.replace(
-    "{{current_weekly_hours}}",
-    user.current_weekly_hours != null
-      ? user.current_weekly_hours.toString()
-      : "not provided"
-  );
-
-  // Session duration caps (derived from per-day availability)
+// Build prompt for Step 1 (macro plan).
+// Every placeholder is replaced, including the ones the rules repeat
+// (`{{total_weeks}}`, `{{weekly_hours}}`). A single String.replace left those
+// literal, so the short-plan and volume rules never saw the athlete's numbers.
+function buildStep1Prompt(
+  user: AthletePlanInput,
+  vars: { raceDate: string; planStartDate: string; totalWeeks: number; weeklyHours: number },
+): string {
   const caps = calculateSessionDurationCaps(user);
-  prompt = prompt.replace("{{max_weekday_minutes}}", caps.maxWeekday.toString());
-  prompt = prompt.replace("{{max_weekend_minutes}}", caps.maxWeekend.toString());
-
-  // Sport day availability counts (how many weekdays/weekend days each sport can use)
   const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const weekendDays = ["Saturday", "Sunday"];
   const swimDays = new Set(user.swim_days || []);
   const bikeDays = new Set(user.bike_days || []);
   const runDays = new Set(user.run_days || []);
+  const count = (days: Set<string>, pool: string[]) =>
+    pool.filter((day) => days.has(day)).length.toString();
 
-  prompt = prompt.replace("{{swim_weekday_count}}", weekdays.filter(d => swimDays.has(d)).length.toString());
-  prompt = prompt.replace("{{swim_weekend_count}}", weekendDays.filter(d => swimDays.has(d)).length.toString());
-  prompt = prompt.replace("{{bike_weekday_count}}", weekdays.filter(d => bikeDays.has(d)).length.toString());
-  prompt = prompt.replace("{{bike_weekend_count}}", weekendDays.filter(d => bikeDays.has(d)).length.toString());
-  prompt = prompt.replace("{{run_weekday_count}}", weekdays.filter(d => runDays.has(d)).length.toString());
-  prompt = prompt.replace("{{run_weekend_count}}", weekendDays.filter(d => runDays.has(d)).length.toString());
-
-  return prompt;
+  return fillTemplate(STEP1_MACRO_PLAN_PROMPT, {
+    training_philosophy: TRAINING_PHILOSOPHY,
+    experience_level: mapExperienceLevel(user.experience_years),
+    race_distance: expandRaceObjective(user.race_objective),
+    race_date: vars.raceDate,
+    plan_start_date: vars.planStartDate,
+    total_weeks: vars.totalWeeks.toString(),
+    weekly_hours: vars.weeklyHours.toString(),
+    current_weekly_hours: user.current_weekly_hours != null
+      ? user.current_weekly_hours.toString()
+      : "not provided",
+    ftp_watts: user.ftp ? user.ftp.toString() : "not provided",
+    mas_kmh: user.vma ? user.vma.toString() : "not provided",
+    swim_css: formatCSS(user.css_seconds_per100m),
+    limiters: (user.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200),
+    max_weekday_minutes: caps.maxWeekday.toString(),
+    max_weekend_minutes: caps.maxWeekend.toString(),
+    swim_weekday_count: count(swimDays, weekdays),
+    swim_weekend_count: count(swimDays, weekendDays),
+    bike_weekday_count: count(bikeDays, weekdays),
+    bike_weekend_count: count(bikeDays, weekendDays),
+    run_weekday_count: count(runDays, weekdays),
+    run_weekend_count: count(runDays, weekendDays),
+  });
 }
 
-// Build prompt for Step 2 (MD → JSON)
+// Build prompt for Step 2 (MD → JSON). Function replacement so a `$` in the
+// markdown cannot be eaten as a replacement pattern.
 function buildStep2Prompt(step1Output: string): string {
-  return STEP2_MD_TO_JSON_PROMPT.replace("{{step1_output}}", step1Output);
+  return fillTemplate(STEP2_MD_TO_JSON_PROMPT, { step1_output: step1Output });
 }
 
 // Build constraint string from user profile
@@ -434,6 +487,7 @@ function normalizeSessionTypes(
   const catalog: Record<string, { id: string; dur: number }[]> = {};
   for (const sport of ["swim", "bike", "run"]) {
     for (const t of workoutLibrary[sport] || []) {
+      if (typeof t.template_id !== "string" || !t.template_id) continue;
       const seg = t.template_id.split("_")[1];
       const key = `${sport}_${seg}`;
       (catalog[key] = catalog[key] || []).push({
@@ -541,6 +595,7 @@ function fixConsecutiveRepeats(
   for (const sport of ["swim", "bike", "run"]) {
     if (workoutLibrary[sport]) {
       for (const w of workoutLibrary[sport]) {
+        if (typeof w.template_id !== "string" || !w.template_id) continue;
         const type = w.template_id.split("_")[1];
         const cat = `${sport}_${type}`;
         if (!catalog[cat]) catalog[cat] = [];
@@ -609,6 +664,7 @@ function fixDurationCaps(
   const catalog: Record<string, string[]> = {};
   for (const sport of ["swim", "bike", "run"]) {
     for (const w of workoutLibrary[sport] || []) {
+      if (typeof w.template_id !== "string" || !w.template_id) continue;
       const type = w.template_id.split("_")[1];
       const cat = `${sport}_${type}`;
       if (!catalog[cat]) catalog[cat] = [];
@@ -1779,7 +1835,7 @@ function tryRelocateSession(
       if (targetRemaining >= 30) {
         const shorterTemplates = (workoutLibrary[sport] || [])
           .filter((t: any) => {
-            const tType = t.template_id.split('_')[1];
+            const tType = typeof t.template_id === "string" ? t.template_id.split("_")[1] : "";
             return tType === session.type &&
               (t.duration_minutes || 0) <= targetRemaining &&
               (t.duration_minutes || 0) >= 30;
@@ -2116,6 +2172,279 @@ function padWeekVolume(
   return fixes;
 }
 
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+};
+
+function jsonResponse(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+}
+
+async function loadWorkoutLibrary(): Promise<any> {
+  return await withRetry(async () => {
+    const response = await fetch(getWorkoutLibraryUrl());
+    if (!response.ok) {
+      const error = new Error(`Failed to fetch workout library (${response.status}).`);
+      (error as Error & { retryable: boolean }).retryable = response.status >= 500 || response.status === 429;
+      throw error;
+    }
+    return await response.json();
+  }, { attempts: 3 });
+}
+
+async function convertMarkdownChunk(
+  openai: OpenAI,
+  chunk: string,
+  depth = 0,
+): Promise<Record<string, unknown>[]> {
+  try {
+    return await withRetry(async () => {
+      const raw = await callOpenAI(
+        openai,
+        MODEL_STEP2,
+        buildStep2Prompt(chunk),
+        0,
+        MAX_TOKENS_STEP2,
+        { type: "json_object" },
+      );
+      if (raw.finishReason === "length") {
+        const error = new Error("The plan conversion was cut off.");
+        (error as Error & { truncated: boolean; retryable: boolean }).truncated = true;
+        (error as Error & { retryable: boolean }).retryable = false;
+        throw error;
+      }
+      let parsed: unknown;
+      try {
+        parsed = parseModelJson(raw.content);
+      } catch (error) {
+        throw retryable(error instanceof Error ? error.message : "Model returned invalid JSON");
+      }
+      const weeks = extractWeekArray(parsed);
+      if (weeks.length === 0) throw retryable("The plan conversion returned no weeks.");
+      return weeks;
+    }, { attempts: 2 });
+  } catch (error) {
+    const truncated = (error as { truncated?: boolean }).truncated === true;
+    if (truncated && depth < 2) {
+      const smaller = splitMarkdownWeeks(chunk, 3);
+      if (smaller.length > 1) {
+        const nested = await Promise.all(
+          smaller.map((part) => convertMarkdownChunk(openai, part, depth + 1)),
+        );
+        return nested.flat();
+      }
+    }
+    throw error;
+  }
+}
+
+async function macroPlanViaModel(openai: OpenAI, markdown: string): Promise<MacroPlan> {
+  const chunks = splitMarkdownWeeks(markdown, 8);
+  const groups = await Promise.all(chunks.map((chunk) => convertMarkdownChunk(openai, chunk)));
+  const byNumber = new Map<number, Record<string, unknown>>();
+  for (const week of groups.flat()) {
+    const n = Number(week.week_number);
+    if (Number.isFinite(n) && n > 0) byNumber.set(n, week);
+  }
+  const weeks = [...byNumber.values()].sort(
+    (a, b) => Number(a.week_number) - Number(b.week_number),
+  );
+  if (weeks.length === 0) {
+    throw new Error("Could not turn the training plan into a schedule. Please try again.");
+  }
+  return {
+    plan_summary: { total_weeks: weeks.length },
+    weeks: weeks as unknown as MacroPlan["weeks"],
+  };
+}
+
+function step3Prompt(
+  block: unknown,
+  simplifiedLibrary: string,
+  limiters: string,
+  constraints: string,
+): string {
+  return fillTemplate(STEP3_WORKOUT_BLOCK_PROMPT, {
+    workout_library: simplifiedLibrary,
+    block_weeks_json: JSON.stringify(block, null, 2),
+    limiters,
+    constraints,
+    previously_used: "None — blocks are processed in parallel.",
+  });
+}
+
+async function runStep3Block(
+  openai: OpenAI,
+  block: any[],
+  prompt: string,
+): Promise<any[]> {
+  try {
+    return await withRetry(async () => {
+      const raw = await callOpenAI(
+        openai,
+        MODEL_STEP3,
+        prompt,
+        TEMPERATURE,
+        MAX_TOKENS_STEP3,
+        { type: "json_object" },
+      );
+      // callOpenAI already raised the token budget once. Another attempt would
+      // repeat a multi-thousand-token call and blow the wall-clock limit.
+      if (raw.finishReason === "length") {
+        const error = new Error("Workout block response was cut off.");
+        (error as Error & { retryable: boolean }).retryable = false;
+        throw error;
+      }
+      let parsed: unknown;
+      try {
+        parsed = parseModelJson(raw.content);
+      } catch (error) {
+        throw retryable(error instanceof Error ? error.message : "Model returned invalid JSON");
+      }
+      const aligned = alignBlockWeeks(parsed, block);
+      if (aligned.length === 0) throw retryable("Workout block returned no weeks.");
+      return aligned;
+    }, { attempts: 3 });
+  } catch (error) {
+    console.warn("[generate-plan] step 3 block failed; scheduling from the macro plan:", error);
+    return block;
+  }
+}
+
+/**
+ * Run the 3-step pipeline and the fixer chain.
+ * `AthletePlanInput` is the stable input: onboarding fills it today, and a
+ * conversational onboarding can pass the same object.
+ */
+async function buildScheduledPlan(
+  openai: OpenAI,
+  athlete: AthletePlanInput,
+  vars: { raceDate: string; planStartDate: string; totalWeeks: number; weeklyHours: number },
+): Promise<{ allBlockWeeks: any[]; macroWeeks: any[]; templateMap: Record<string, WorkoutTemplate> }> {
+  const started = Date.now();
+  const step1 = await callOpenAI(
+    openai,
+    MODEL_STEP1,
+    buildStep1Prompt(athlete, vars),
+    TEMPERATURE,
+    MAX_TOKENS_STEP1,
+  );
+  console.log(JSON.stringify({
+    event: "generate-plan",
+    step: "step1",
+    ms: Date.now() - started,
+    finish: step1.finishReason,
+    chars: step1.content.length,
+  }));
+
+  let macroPlan = macroPlanFromMarkdown(step1.content, vars.totalWeeks);
+  if (macroPlan) {
+    console.log(JSON.stringify({
+      event: "generate-plan",
+      step: "step2",
+      source: "parser",
+      weeks: macroPlan.weeks.length,
+    }));
+  } else {
+    const step2Started = Date.now();
+    macroPlan = await macroPlanViaModel(openai, step1.content);
+    console.log(JSON.stringify({
+      event: "generate-plan",
+      step: "step2",
+      source: "model",
+      ms: Date.now() - step2Started,
+      weeks: macroPlan.weeks.length,
+    }));
+  }
+
+  const macroWeeks = macroPlan.weeks;
+  if (!Array.isArray(macroWeeks) || macroWeeks.length === 0) {
+    throw new Error("The training plan came back empty. Please try again.");
+  }
+
+  const workoutLibrary = await loadWorkoutLibrary();
+  const blocks: any[][] = [];
+  for (let j = 0; j < macroWeeks.length; j += BLOCK_SIZE) {
+    blocks.push(macroWeeks.slice(j, j + BLOCK_SIZE));
+  }
+
+  const constraintString = buildConstraintString(athlete);
+  const simplifiedLibrary = buildSimplifiedLibrary(workoutLibrary);
+  const limitersStep3 = (athlete.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
+  const step3Started = Date.now();
+
+  const blockResults = await Promise.all(
+    blocks.map((block) =>
+      runStep3Block(openai, block, step3Prompt(block, simplifiedLibrary, limitersStep3, constraintString))
+    ),
+  );
+  console.log(JSON.stringify({
+    event: "generate-plan",
+    step: "step3",
+    ms: Date.now() - step3Started,
+    blocks: blocks.length,
+  }));
+
+  const templateDurationMap = buildTemplateDurationMap(workoutLibrary);
+  const templateMap = buildTemplateMap(workoutLibrary);
+  const { dayCaps, sportEligibility } = parseConstraints(athlete);
+
+  let allBlockWeeks = preparePlanWeeks(
+    blockResults.flat(),
+    macroWeeks as unknown as Array<Record<string, unknown>>,
+    workoutLibrary,
+    { dayCaps, sportEligibility },
+  );
+
+  normalizeSessionTypes(allBlockWeeks, workoutLibrary, templateDurationMap);
+  fixTypes(allBlockWeeks);
+  fixBrickPairs(allBlockWeeks);
+  fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
+  fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
+  fixRestDays(allBlockWeeks, macroWeeks, dayCaps, sportEligibility);
+  fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
+  fixMissingBricks(allBlockWeeks, workoutLibrary, dayCaps, sportEligibility);
+  fixBrickRunDuration(allBlockWeeks, workoutLibrary);
+  fixBrickOrder(allBlockWeeks);
+  fixSameDayHardConflicts(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
+  fixIntensitySpread(allBlockWeeks, dayCaps, sportEligibility);
+  fixSportClustering(allBlockWeeks, dayCaps, sportEligibility, vars.weeklyHours);
+  fixVolumeGaps(allBlockWeeks, macroWeeks, dayCaps, sportEligibility, workoutLibrary);
+  fixVolumeRamp(
+    allBlockWeeks,
+    templateDurationMap,
+    dayCaps,
+    sportEligibility,
+    workoutLibrary,
+    (athlete.current_weekly_hours || 0) * 60,
+  );
+  fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
+  fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
+  fixSameDayHardConflicts(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
+  fixBrickOrder(allBlockWeeks);
+
+  // One last repair pass. Fixers can leave a stray phase or type; do not throw
+  // the whole plan away for a label the database would reject.
+  allBlockWeeks = preparePlanWeeks(
+    allBlockWeeks,
+    macroWeeks as unknown as Array<Record<string, unknown>>,
+    workoutLibrary,
+    { dayCaps, sportEligibility },
+    { preserveDays: true, fillGaps: false },
+  );
+
+  const sessionCount = allBlockWeeks.reduce(
+    (sum, week) => sum + ((week.sessions as unknown[] | undefined)?.length ?? 0),
+    0,
+  );
+  if (sessionCount === 0) {
+    throw new Error("The plan generator could not schedule any workouts. Please try again.");
+  }
+
+  return { allBlockWeeks, macroWeeks, templateMap };
+}
+
 // Main handler
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -2216,206 +2545,85 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calculate plan variables
-    const planStartDate = new Date(Date.now() + 86400000); // Tomorrow
-    const raceDate = new Date(userProfile.race_date);
-    const totalWeeks = Math.ceil(daysBetween(planStartDate, raceDate) / 7);
-    const weeklyHours = calculateWeeklyHours(userProfile);
-
+    // AthletePlanInput is the generation contract. Onboarding writes these
+    // fields today; a conversational onboarding can build the same object.
+    const athlete = toAthletePlanInput(userProfile);
+    assertGeneratable(athlete);
+    const horizon = computePlanHorizon(athlete.race_date);
+    const weeklyHours = Math.round((weeklyTrainingMinutes(athlete) / 60) * 10) / 10;
     const vars = {
-      raceDate: formatDate(raceDate),
-      planStartDate: formatDate(planStartDate),
-      totalWeeks,
+      raceDate: horizon.raceISO,
+      planStartDate: horizon.planStartISO,
+      totalWeeks: horizon.totalWeeks,
       weeklyHours,
     };
+    const planStartDate = horizon.planStartDate;
 
-    // Delete existing plan (CASCADE deletes weeks + sessions)
-    const { error: deleteError } = await dbClient
+    const { data: existingPlan, error: existingError } = await dbClient
       .from("training_plans")
-      .delete()
-      .eq("user_id", userId);
-
-    if (deleteError) {
-      throw new Error(`Failed to delete existing plan: ${deleteError.message}`);
+      .select("id, status, created_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (existingError) {
+      throw new Error(`Failed to read the current plan: ${existingError.message}`);
     }
 
-    // Create new training_plans row with status 'generating'
+    // A retry while the first run is still going must not delete that row.
+    const decision = shouldRestartPlan(existingPlan, Date.now());
+    if (decision === "attach" && existingPlan) {
+      console.log(`[generate-plan] attaching to in-flight plan ${existingPlan.id}`);
+      return jsonResponse({ planId: existingPlan.id }, 200);
+    }
+    if (decision === "replace") {
+      const { error: deleteError } = await dbClient
+        .from("training_plans")
+        .delete()
+        .eq("user_id", userId);
+      if (deleteError) {
+        throw new Error(`Failed to delete existing plan: ${deleteError.message}`);
+      }
+    }
+
     const { data: plan, error: planError } = await dbClient
       .from("training_plans")
       .insert({
         user_id: userId,
         status: "generating",
-        race_date: formatDate(raceDate),
-        race_objective: userProfile.race_objective,
-        total_weeks: totalWeeks,
-        start_date: formatDate(planStartDate),
+        race_date: horizon.raceISO,
+        race_objective: athlete.race_objective,
+        total_weeks: horizon.totalWeeks,
+        start_date: horizon.planStartISO,
       })
       .select()
       .single();
 
     if (planError || !plan) {
+      // Two requests raced to create the single plan row. Use the winner.
+      if (planError?.code === "23505") {
+        const { data: winner } = await dbClient
+          .from("training_plans")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (winner?.id) return jsonResponse({ planId: winner.id }, 200);
+      }
       throw new Error(`Failed to create training plan: ${planError?.message}`);
     }
 
-    planId = plan.id;
+    planId = String(plan.id);
+    const activePlanId = planId;
+    inflightPlans.set(activePlanId, { db: dbClient, settled: false });
 
     // Respond immediately — plan generation continues as a background task.
     // The iOS app polls training_plans.status for 'active' or 'failed'.
     EdgeRuntime.waitUntil((async () => {
+      const planId = activePlanId;
       try {
-        // Initialize OpenAI client
         const openai = getOpenAIClient();
-
-    // Step 1: Generate macro plan (markdown)
-    const step1Prompt = buildStep1Prompt(userProfile, vars);
-    const step1Output = await callOpenAI(
-      openai,
-      MODEL_STEP1,
-      step1Prompt,
-      TEMPERATURE,
-      MAX_TOKENS_STEP1
-    );
-
-    // Step 2: Convert markdown to JSON
-    const step2Prompt = buildStep2Prompt(step1Output);
-    const step2Output = await callOpenAI(
-      openai,
-      MODEL_STEP2,
-      step2Prompt,
-      0, // Temperature 0 for deterministic JSON conversion
-      MAX_TOKENS_STEP2,
-      { type: "json_object" }
-    );
-
-    // Parse Step 2 output
-    const step2Json = step2Output.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const macroPlan = JSON.parse(step2Json);
-
-    if (!macroPlan.weeks || !Array.isArray(macroPlan.weeks) || macroPlan.weeks.length === 0) {
-      throw new Error("Invalid macro plan structure from Step 2");
-    }
-
-    // Step 3: Process blocks
-    // Fetch workout library from Supabase Storage at runtime
-    const wlResponse = await fetch(getWorkoutLibraryUrl());
-    if (!wlResponse.ok) {
-      throw new Error(`Failed to fetch workout library: ${wlResponse.status}`);
-    }
-    const workoutLibrary = await wlResponse.json();
-
-    const weeks = macroPlan.weeks;
-    const blocks = [];
-    for (let j = 0; j < weeks.length; j += BLOCK_SIZE) {
-      blocks.push(weeks.slice(j, j + BLOCK_SIZE));
-    }
-
-    // Build constraint string once (same for all blocks)
-    const constraintString = buildConstraintString(userProfile);
-
-    // Build simplified library for Step 3 (strips segment details, keeps only template matching info)
-    const simplifiedLibrary = buildSimplifiedLibrary(workoutLibrary);
-
-    // Run all blocks in parallel — cuts step 3 from O(blocks) sequential calls to O(1).
-    // previouslyUsed cross-block deduplication is dropped; fixConsecutiveRepeats post-processing
-    // handles adjacent repeats, and intra-block variety is preserved.
-    const limitersStep3 = (userProfile.limiters || "none").toString().replace(/[\n\r]/g, " ").slice(0, 200);
-
-    const blockResults = await Promise.all(
-      blocks.map(async (block) => {
-        let finalPrompt = STEP3_WORKOUT_BLOCK_PROMPT;
-        finalPrompt = finalPrompt.replace("{{workout_library}}", simplifiedLibrary);
-        finalPrompt = finalPrompt.replace("{{block_weeks_json}}", JSON.stringify(block, null, 2));
-        finalPrompt = finalPrompt.replace("{{limiters}}", limitersStep3);
-        finalPrompt = finalPrompt.replace("{{constraints}}", constraintString);
-        finalPrompt = finalPrompt.replace("{{previously_used}}", "None — blocks are processed in parallel.");
-
-        const blockResponse = await callOpenAI(
-          openai,
-          MODEL_STEP3,
-          finalPrompt,
-          TEMPERATURE,
-          MAX_TOKENS_STEP3,
-          { type: "json_object" }
-        );
-
-        const blockJson = blockResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        return JSON.parse(blockJson);
-      })
-    );
-
-    const allBlockWeeks = blockResults.flatMap((r) => r.weeks || []);
-
-    // Post-processing
-    const templateDurationMap = buildTemplateDurationMap(workoutLibrary);
-    // Template map for insert-time materialisation (template_id → full WorkoutTemplate).
-    // Built once here; fixers mutate session.template_id BEFORE the insert site so the
-    // correct (post-fix) template is always resolved at insertion — no re-materialisation needed.
-    const templateMap = buildTemplateMap(workoutLibrary);
-    const { dayCaps, sportEligibility } = parseConstraints(userProfile);
-
-    normalizeSessionTypes(allBlockWeeks, workoutLibrary, templateDurationMap);
-    fixTypes(allBlockWeeks);
-    fixBrickPairs(allBlockWeeks);
-    fixConsecutiveRepeats(allBlockWeeks, workoutLibrary, templateDurationMap);
-    fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
-    fixRestDays(allBlockWeeks, weeks, dayCaps, sportEligibility);
-    // Relocate sessions off sport-ineligible days (HARD sport-eligibility gate) before
-    // brick/volume passes build on the placements. Downstream fixers only ever move
-    // sessions to eligible days, so a single pass here suffices.
-    fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
-    fixMissingBricks(allBlockWeeks, workoutLibrary, dayCaps, sportEligibility);
-    fixBrickRunDuration(allBlockWeeks, workoutLibrary);
-    fixBrickOrder(allBlockWeeks);
-    fixSameDayHardConflicts(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
-    fixIntensitySpread(allBlockWeeks, dayCaps, sportEligibility);
-    fixSportClustering(allBlockWeeks, dayCaps, sportEligibility, weeklyHours);
-    fixVolumeGaps(allBlockWeeks, weeks, dayCaps, sportEligibility, workoutLibrary);
-    // Smooth week-to-week volume ramp (injury safety) on the post-gap-fill volumes.
-    // Anchored to the athlete's current weekly volume so an inflated week-1 can't set the bar.
-    fixVolumeRamp(
-      allBlockWeeks,
-      templateDurationMap,
-      dayCaps,
-      sportEligibility,
-      workoutLibrary,
-      (userProfile.current_weekly_hours || 0) * 60
-    );
-    // Re-run duration caps after all changes to catch any new violations
-    fixDurationCaps(allBlockWeeks, workoutLibrary, templateDurationMap, dayCaps, sportEligibility);
-    // Re-run sport eligibility — fixMissingBricks/volume passes may have added a brick or
-    // session on an ineligible day; this final pass guarantees the sport HARD gate is clean.
-    fixSportEligibility(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
-    // Re-run same-day conflicts — volume gaps or cap fixes may have introduced new ones
-    fixSameDayHardConflicts(allBlockWeeks, dayCaps, sportEligibility, workoutLibrary);
-    // Final brick order pass — catch any bricks reordered by later fixers
-    fixBrickOrder(allBlockWeeks);
-
-    // Validate LLM output before DB writes
-    const VALID_PHASES = ["Base", "Build", "Peak", "Taper", "Recovery"];
-    const VALID_SPORTS = ["swim", "bike", "run"];
-    const VALID_TYPES = ["Easy", "Tempo", "Intervals"];
-    // DRO-318: the LLM sometimes labels the race week's phase "Race" (not a valid week
-    // phase — the race week is effectively part of the taper). Normalize it to Taper so
-    // it doesn't fail generation; the race itself is represented as a session, not a phase.
-    for (const week of allBlockWeeks) {
-      if (week.phase === "Race") week.phase = "Taper";
-    }
-    for (const week of allBlockWeeks) {
-      if (!VALID_PHASES.includes(week.phase)) {
-        throw new Error(`Invalid phase "${week.phase}" in week ${week.week_number}. Expected: ${VALID_PHASES.join(", ")}`);
-      }
-      for (const session of week.sessions || []) {
-        if (!VALID_SPORTS.includes(session.sport)) {
-          throw new Error(`Invalid sport "${session.sport}" in week ${week.week_number}. Expected: ${VALID_SPORTS.join(", ")}`);
-        }
-        if (!VALID_TYPES.includes(session.type)) {
-          throw new Error(`Invalid type "${session.type}" in week ${week.week_number}. Expected: ${VALID_TYPES.join(", ")}`);
-        }
-        if (!session.duration_minutes || session.duration_minutes <= 0) {
-          throw new Error(`Invalid duration ${session.duration_minutes} in week ${week.week_number}`);
-        }
-      }
-    }
+        const scheduled = await buildScheduledPlan(openai, athlete, vars);
+        const allBlockWeeks = scheduled.allBlockWeeks;
+        const weeks = scheduled.macroWeeks;
+        const templateMap = scheduled.templateMap;
 
     // Write to database
     const weekIds: Record<number, string> = {};
@@ -2455,11 +2663,12 @@ Deno.serve(async (req) => {
       const sessionsByDay: Record<string, any[]> = {};
       for (const session of week.sessions || []) {
         const day = normDay(session.day);
+        if (!ALL_DAYS.includes(day)) continue;
         if (!sessionsByDay[day]) sessionsByDay[day] = [];
         sessionsByDay[day].push(session);
       }
 
-      // Insert sessions
+      const sessionRows = [];
       for (const [day, daySessions] of Object.entries(sessionsByDay)) {
         // Sort sessions: brick bike first (order 0), then brick run (order 1), then others
         daySessions.sort((a, b) => {
@@ -2474,40 +2683,60 @@ Deno.serve(async (req) => {
 
         for (let i = 0; i < daySessions.length; i++) {
           const session = daySessions[i];
+          if (typeof session.template_id !== "string" || !session.template_id) {
+            console.warn(
+              `[generate-plan] Week ${week.week_number} ${day} session has no template_id — skipping`,
+            );
+            continue;
+          }
           let orderInDay = i;
           if (session.is_brick) {
             orderInDay = session.sport === "bike" ? 0 : 1;
           }
 
-          // Materialise the structure column from the resolved template.
-          //
-          // Design note: all post-processing fixers (fixConsecutiveRepeats, fixDurationCaps,
-          // fixMissingBricks, etc.) mutate session.template_id BEFORE this insert site runs.
-          // Materialisation therefore happens exactly once — here — always against the
-          // final post-fix template. Fixers do NOT call materialize() themselves.
-          if (!session.template_id) {
-            console.warn(
-              `[generate-plan] Session at index ${i} has no template_id — skipping structure materialization`
-            );
-          }
-          const template = session.template_id ? templateMap[session.template_id] : undefined;
-          const structure = template ? materialize(template) : null;
-          if (!structure && session.template_id) {
+          // Materialise once, against the post-fixer template. A bad template
+          // must not abort the plan; the session still saves and the renderer
+          // falls back when structure is null.
+          const template = templateMap[session.template_id];
+          let structure = null;
+          if (template) {
+            try {
+              structure = materialize(template);
+            } catch (materializeError) {
+              console.warn(
+                `[generate-plan] materialize failed for ${session.template_id}:`,
+                materializeError,
+              );
+              unknownTemplateIds.add(session.template_id);
+            }
+          } else {
             unknownTemplateIds.add(session.template_id);
           }
 
-          await dbClient.from("plan_sessions").insert({
+          const duration = Math.round(Number(session.duration_minutes));
+          if (!Number.isFinite(duration) || duration <= 0) continue;
+
+          sessionRows.push({
             week_id: weekRow.id,
-            day: normDay(session.day),
+            day,
             sport: session.sport,
             type: session.type,
             template_id: session.template_id,
-            duration_minutes: session.duration_minutes,
+            duration_minutes: duration,
             is_brick: session.is_brick || false,
             notes: null,
             order_in_day: orderInDay,
             structure,
           });
+        }
+      }
+
+      if (sessionRows.length > 0) {
+        const { error: sessionError } = await dbClient.from("plan_sessions").insert(sessionRows);
+        if (sessionError) {
+          throw new Error(
+            `Failed to save workouts for week ${week.week_number}: ${sessionError.message}`,
+          );
         }
       }
     }
@@ -2520,31 +2749,37 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Update plan status to 'active'
-        await dbClient
+        const { error: activeError } = await dbClient
           .from("training_plans")
-          .update({ status: "active" })
+          .update({ status: "active", error_message: null })
           .eq("id", planId);
+        if (activeError) {
+          throw new Error(`Failed to activate the plan: ${activeError.message}`);
+        }
 
+        const job = inflightPlans.get(planId);
+        if (job) job.settled = true;
         console.log(`Plan ${planId} generation complete — status set to active`);
       } catch (bgError) {
         console.error("Background plan generation failed:", bgError);
-        // Mark plan as failed so the iOS app can detect it via polling.
-        // Persist the error so failures are debuggable instead of silent (DRO-312).
-        const errorMessage =
-          bgError instanceof Error ? bgError.message : String(bgError);
+        const job = planId ? inflightPlans.get(planId) : undefined;
+        if (job) job.settled = true;
+        // Persist a short, secret-free reason so the app can show it (DRO-312).
+        const errorMessage = publicErrorMessage(bgError);
         try {
           await dbClient
             .from("training_plans")
             .update({
               status: "failed",
-              error_message: errorMessage.slice(0, 2000),
+              error_message: errorMessage,
               failed_at: new Date().toISOString(),
             })
             .eq("id", planId);
         } catch (updateError) {
           console.error("Failed to mark plan as failed:", updateError);
         }
+      } finally {
+        if (planId) inflightPlans.delete(planId);
       }
     })());
 
@@ -2561,22 +2796,11 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Plan generation setup failed:", error);
-
-    const message =
-      error instanceof Error
-        ? `Plan generation failed: ${error.message}`
-        : "Plan generation failed. Please try again.";
-
-    return new Response(
-      JSON.stringify({ error: message }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    const status = error instanceof PlanInputError ? 400 : 500;
+    const message = error instanceof PlanInputError
+      ? error.message
+      : publicErrorMessage(error);
+    return jsonResponse({ error: message }, status);
   }
 });
 
