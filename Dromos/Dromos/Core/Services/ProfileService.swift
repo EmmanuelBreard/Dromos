@@ -198,6 +198,26 @@ final class ProfileService: ObservableObject {
         }
     }
 
+    /// Writes only the columns in `patch`. Other profile fields stay as they are,
+    /// so closing the app mid-chat can resume from what was already saved.
+    func saveOnboardingPatch(_ patch: OnboardingPatch, userId: UUID) async throws {
+        guard !patch.isEmpty else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await client
+                .from("users")
+                .update(OnboardingPatchPayload(patch: patch))
+                .eq("id", value: userId.uuidString)
+                .execute()
+        } catch {
+            errorMessage = "Failed to save onboarding data"
+            throw error
+        }
+    }
+
     /// Mark onboarding as complete for a user.
     /// - Parameter userId: The user's ID
     /// - Throws: Error if update fails
@@ -232,5 +252,67 @@ final class ProfileService: ObservableObject {
     func clearProfile() {
         user = nil
         errorMessage = nil
+    }
+}
+
+/// Encodes one onboarding answer. Omitted keys are not updated. Duration saves
+/// write null for days that are no longer available.
+private struct OnboardingPatchPayload: Encodable {
+    let patch: OnboardingPatch
+
+    enum CodingKeys: String, CodingKey {
+        case raceObjective, raceDate, timeObjectiveMinutes, experienceYears, currentWeeklyHours
+        case vma, cssSecondsPer100m, ftp, maxHr, birthYear, metricsSource
+        case swimDays, bikeDays, runDays
+        case monDuration, tueDuration, wedDuration, thuDuration, friDuration, satDuration, sunDuration
+        case limiters
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let race = patch.raceObjective {
+            try container.encode(race.rawValue, forKey: .raceObjective)
+        }
+        if let date = patch.raceDate {
+            try container.encode(PlanHorizon.isoString(date), forKey: .raceDate)
+        }
+        if patch.clearTimeObjective {
+            try container.encodeNil(forKey: .timeObjectiveMinutes)
+        } else {
+            try container.encodeIfPresent(patch.timeObjectiveMinutes, forKey: .timeObjectiveMinutes)
+        }
+        try container.encodeIfPresent(patch.experienceYears, forKey: .experienceYears)
+        try container.encodeIfPresent(patch.currentWeeklyHours, forKey: .currentWeeklyHours)
+        try container.encodeIfPresent(patch.vma, forKey: .vma)
+        try container.encodeIfPresent(patch.cssSecondsPer100m, forKey: .cssSecondsPer100m)
+        try container.encodeIfPresent(patch.ftp, forKey: .ftp)
+        try container.encodeIfPresent(patch.maxHr, forKey: .maxHr)
+        try container.encodeIfPresent(patch.birthYear, forKey: .birthYear)
+        try container.encodeIfPresent(patch.metrics, forKey: .metricsSource)
+        try container.encodeIfPresent(patch.swimDays, forKey: .swimDays)
+        try container.encodeIfPresent(patch.bikeDays, forKey: .bikeDays)
+        try container.encodeIfPresent(patch.runDays, forKey: .runDays)
+        if patch.replaceDurations {
+            try encodeDuration(patch.monDuration, forKey: .monDuration, in: &container)
+            try encodeDuration(patch.tueDuration, forKey: .tueDuration, in: &container)
+            try encodeDuration(patch.wedDuration, forKey: .wedDuration, in: &container)
+            try encodeDuration(patch.thuDuration, forKey: .thuDuration, in: &container)
+            try encodeDuration(patch.friDuration, forKey: .friDuration, in: &container)
+            try encodeDuration(patch.satDuration, forKey: .satDuration, in: &container)
+            try encodeDuration(patch.sunDuration, forKey: .sunDuration, in: &container)
+        }
+        try container.encodeIfPresent(patch.limiters, forKey: .limiters)
+    }
+
+    private func encodeDuration(
+        _ minutes: Int?,
+        forKey key: CodingKeys,
+        in container: inout KeyedEncodingContainer<CodingKeys>
+    ) throws {
+        if let minutes {
+            try container.encode(minutes, forKey: key)
+        } else {
+            try container.encodeNil(forKey: key)
+        }
     }
 }

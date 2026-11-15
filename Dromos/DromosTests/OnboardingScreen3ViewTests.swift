@@ -14,13 +14,12 @@ import XCTest
 
 // MARK: - Max HR Formula Tests
 //
-// All tests call OnboardingScreen3View.computeMaxHr directly so the view's actual
-// formula is exercised, not a shadow copy.
+// The formula lives on MetricEstimates now that the form screen is gone.
 
 final class OnboardingMaxHrFormulaTests: XCTestCase {
 
     private func formula(birthYear: Int, currentYear: Int) -> Int {
-        OnboardingScreen3View.computeMaxHr(birthYear: birthYear, currentYear: currentYear)
+        MetricEstimates.maxHeartRate(birthYear: birthYear, currentYear: currentYear)
     }
 
     // MARK: - Core formula
@@ -111,7 +110,7 @@ final class OnboardingMetricsDataTests: XCTestCase {
 
         // Step 1: formula applied for birthYear=1990, currentYear=2026
         metrics.birthYear = 1990
-        metrics.maxHr = OnboardingScreen3View.computeMaxHr(birthYear: 1990, currentYear: 2026) // 184
+        metrics.maxHr = MetricEstimates.maxHeartRate(birthYear: 1990, currentYear: 2026) // 184
 
         // Step 2: user manually edits maxHr to 178
         metrics.maxHr = 178

@@ -99,6 +99,14 @@ struct User: Codable, Identifiable, Equatable {
 
     // MARK: - Onboarding Status
 
+    /// Injuries or weak spots from conversational onboarding.
+    /// Null means the question has not been answered. The word "none" means the athlete reported none.
+    var limiters: String? = nil
+
+    /// How VMA, CSS, FTP, and max HR were obtained.
+    /// Values: entered, estimated_from_race, estimated_from_experience, estimated_from_age.
+    var metricsSource: MetricsSource? = nil
+
     /// Indicates whether the user has completed the onboarding flow
     var onboardingCompleted: Bool
 
@@ -147,7 +155,7 @@ extension User {
              vma, cssSecondsPer100m, ftp, experienceYears, currentWeeklyHours,
              swimDays, bikeDays, runDays, monDuration, tueDuration, wedDuration,
              thuDuration, friDuration, satDuration, sunDuration, maxHr, birthYear,
-             onboardingCompleted, stravaAthleteId, createdAt, updatedAt
+             limiters, metricsSource, onboardingCompleted, stravaAthleteId, createdAt, updatedAt
     }
 
     /// Custom decoder so legacy `race_objective` raw values in the DB (e.g. "Sprint", "Ironman")
@@ -180,11 +188,22 @@ extension User {
         self.sunDuration = try c.decodeIfPresent(Int.self, forKey: .sunDuration)
         self.maxHr = try c.decodeIfPresent(Int.self, forKey: .maxHr)
         self.birthYear = try c.decodeIfPresent(Int.self, forKey: .birthYear)
+        self.limiters = try c.decodeIfPresent(String.self, forKey: .limiters)
+        self.metricsSource = try? c.decodeIfPresent(MetricsSource.self, forKey: .metricsSource)
         self.onboardingCompleted = try c.decode(Bool.self, forKey: .onboardingCompleted)
         self.stravaAthleteId = try c.decodeIfPresent(Int64.self, forKey: .stravaAthleteId)
         self.createdAt = try c.decode(Date.self, forKey: .createdAt)
         self.updatedAt = try c.decode(Date.self, forKey: .updatedAt)
     }
+}
+
+/// Provenance of the metrics a plan uses for pace and power.
+/// Keys encode to `vma`, `css`, `ftp`, and `max_hr` through the shared snake_case encoder.
+struct MetricsSource: Codable, Equatable {
+    var vma: String? = nil
+    var css: String? = nil
+    var ftp: String? = nil
+    var maxHr: String? = nil
 }
 
 // MARK: - User Update Payload

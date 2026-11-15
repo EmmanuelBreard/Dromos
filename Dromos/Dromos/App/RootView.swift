@@ -11,10 +11,13 @@ import SwiftUI
 ///
 /// Navigation Flow:
 /// 1. Not authenticated → AuthView (login/signup)
-/// 2. Authenticated but onboarding incomplete → OnboardingFlowView
+/// 2. Authenticated but onboarding incomplete → coach chat (OnboardingFlowView)
 /// 3. Authenticated and onboarding complete → MainTabView
 struct RootView: View {
     @StateObject private var authService = AuthService()
+    /// Set when the coach chat finishes, so the waiting screen starts generation
+    /// instead of waiting for another tap.
+    @State private var autoStartPlan = false
 
     var body: some View {
         Group {
@@ -32,11 +35,11 @@ struct RootView: View {
                 // Not signed in → show auth screens (login/signup)
                 AuthView(authService: authService)
             } else if !authService.onboardingCompleted {
-                // Signed in but onboarding incomplete → show onboarding flow
-                OnboardingFlowView(authService: authService)
+                // Signed in but onboarding incomplete → coach chat
+                OnboardingFlowView(authService: authService, autoStartPlan: $autoStartPlan)
             } else if !authService.hasPlan {
                 // Signed in and onboarded but no active plan → show plan generation
-                PlanGenerationView(authService: authService)
+                PlanGenerationView(authService: authService, autoStart: autoStartPlan)
             } else {
                 // Signed in, onboarded, and has plan → show main app
                 MainTabView(authService: authService)
