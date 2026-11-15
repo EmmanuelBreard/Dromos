@@ -10,7 +10,7 @@ import Foundation
 import Supabase
 
 /// Service for generating training plans via Edge Function.
-/// Handles the long-running plan generation process (~140s) with progress tracking.
+/// The request returns immediately; this service polls until the plan is ready.
 @MainActor
 final class PlanService: ObservableObject {
 
@@ -52,8 +52,8 @@ final class PlanService: ObservableObject {
         defer { isGenerating = false }
 
         do {
-            // Invoke the Edge Function — returns immediately (202) while generation runs in background.
-            // The function creates the plan row with status='generating' before responding.
+            // Invoke the Edge Function. It creates the plan row and returns immediately
+            // while generation continues. Polling below waits until it finishes.
             try await client.functions.invoke("generate-plan")
 
             // Poll the DB until the plan reaches status='active' or 'failed'.
@@ -435,17 +435,23 @@ final class PlanService: ObservableObject {
 
     // MARK: - Private Methods
 
-    /// Polls the DB every 3 seconds until the latest plan for the user reaches status='active' or 'failed'.
-    /// Throws if the plan fails or if polling times out after 3 minutes.
+    /// Polls the DB every 3 seconds until the latest plan reaches 'active' or 'failed'.
+    /// A full plan can take a few minutes (the edge function keeps running after the
+    /// request returns). 8 minutes covers that, including a slow model, without
+    /// reporting a timeout while generation is still in progress.
     private func pollForPlanCompletion(userId: UUID) async throws {
-        struct PlanStatusResult: Codable { let status: String }
+        struct PlanStatusResult: Codable {
+            let status: String
+            let errorMessage: String?
+        }
 
-        for _ in 0..<60 {
+        // 160 × 3s = 8 minutes.
+        for _ in 0..<160 {
             try await Task.sleep(nanoseconds: 3_000_000_000)
 
             let results: [PlanStatusResult] = try await client
                 .from("training_plans")
-                .select("status")
+                .select("status, error_message")
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .limit(1)
@@ -458,7 +464,10 @@ final class PlanService: ObservableObject {
             case "active":
                 return
             case "failed":
-                let msg = "Plan generation failed. Please try again."
+                let detail = plan.errorMessage?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let msg = (detail?.isEmpty == false)
+                    ? detail!
+                    : "Plan generation failed. Please try again."
                 self.errorMessage = msg
                 throw PlanGenerationError.serverError(msg)
             default:
