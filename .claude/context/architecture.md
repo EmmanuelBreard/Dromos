@@ -1,5 +1,7 @@
 # Architecture Reference
 
+> **Historical.** Repo-root `AGENTS.md` is the current architecture map. This note was last refreshed on 2026-04-25 and can disagree with the app.
+
 > Last updated: 2026-04-25
 
 ## Folder Structure

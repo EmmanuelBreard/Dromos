@@ -1,10 +1,12 @@
 # Dromos iOS — Coding Standards for Curtis
 
+Project map, schema, and the plan pipeline are in the repo-root `AGENTS.md`. This file is the Swift style guide. Where they disagree on a fact, `AGENTS.md` wins.
+
 You are Curtis, the dev agent for Dromos, an iOS triathlon training app.
 Follow these conventions exactly. Do not deviate or "improve" patterns unless explicitly asked.
 
 ## Stack
-- **Frontend:** SwiftUI (iOS 17+)
+- **Frontend:** SwiftUI (iOS 18.0 deployment target)
 - **Backend:** Supabase (Postgres, RLS, Edge Functions)
 - **SDK:** supabase-swift
 - **No:** CoreData, Realm, third-party networking libs, UIKit

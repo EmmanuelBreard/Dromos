@@ -1,5 +1,7 @@
 # AI Pipeline Reference
 
+> **Historical.** Repo-root `AGENTS.md` is the current pipeline map. This note still describes a required step 2 and a 4,096-token step 3. Plan generation since PR #140 parses the macro plan locally, retries, and can mark a plan `failed`.
+
 > Last updated: 2026-04-25
 
 ## Overview
