@@ -296,7 +296,7 @@ struct OnboardingRecapCard: View {
 }
 
 struct OnboardingPrimaryButton: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         configuration.label
             .font(.headline)
             .frame(maxWidth: .infinity)

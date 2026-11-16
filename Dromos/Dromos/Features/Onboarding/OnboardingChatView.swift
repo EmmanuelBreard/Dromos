@@ -149,8 +149,8 @@ struct OnboardingChatView: View {
     private func editorCard(for step: OnboardingStep) -> some View {
         switch session.state.mode {
         case .pickTime:
-            OnboardingTimeCard(defaultMinutes: session.state.answers.raceObjective == .olympic ? 150 : 360) {
-                Task { await session.confirmMinutes($0) }
+            OnboardingTimeCard(defaultMinutes: session.state.answers.raceObjective == .olympic ? 150 : 360) { minutes in
+                Task { await session.confirmMinutes(minutes) }
             }
         case .enterVma:
             OnboardingValueCard(
@@ -159,23 +159,23 @@ struct OnboardingChatView: View {
                 range: 10...25,
                 step: 0.1,
                 format: { "\(OnboardingCopy.formatVma($0)) km/h" }
-            ) { Task { await session.confirmVma($0) } }
+            ) { value in Task { await session.confirmVma(value) } }
         case .enterRunTime(let distance):
             OnboardingClockEntryCard(
                 title: distance.title,
                 initialSeconds: distance == .fiveK ? 25 * 60 : 50 * 60,
                 minuteRange: distance == .fiveK ? 13...80 : 27...150
-            ) { Task { await session.confirmRunTime(distance, seconds: $0) } }
+            ) { seconds in Task { await session.confirmRunTime(distance, seconds: seconds) } }
         case .enterCss, .enterTypicalPace:
-            OnboardingClockEntryCard(title: "Per 100m", initialSeconds: 120, minuteRange: 1...4) {
-                Task { await session.confirmCss($0) }
+            OnboardingClockEntryCard(title: "Per 100m", initialSeconds: 120, minuteRange: 1...4) { seconds in
+                Task { await session.confirmCss(seconds) }
             }
         case .enterSwimTime(let distance):
             OnboardingClockEntryCard(
                 title: distance.title,
                 initialSeconds: distance == .fourHundred ? 8 * 60 : 30 * 60,
                 minuteRange: distance == .fourHundred ? 4...18 : 15...60
-            ) { Task { await session.confirmSwimTime(distance, seconds: $0) } }
+            ) { seconds in Task { await session.confirmSwimTime(distance, seconds: seconds) } }
         case .enterFtp:
             OnboardingValueCard(
                 title: "FTP",
@@ -183,7 +183,7 @@ struct OnboardingChatView: View {
                 range: 50...500,
                 step: 5,
                 format: { "\(Int($0)) W" }
-            ) { Task { await session.confirmFtp(Int($0)) } }
+            ) { value in Task { await session.confirmFtp(Int(value)) } }
         case .enterTwenty:
             OnboardingValueCard(
                 title: "20-minute power",
@@ -191,7 +191,7 @@ struct OnboardingChatView: View {
                 range: 50...525,
                 step: 5,
                 format: { "\(Int($0)) W" }
-            ) { Task { await session.confirmTwenty(Int($0)) } }
+            ) { value in Task { await session.confirmTwenty(Int(value)) } }
         case .enterMaxHr:
             OnboardingValueCard(
                 title: "Max heart rate",
@@ -199,9 +199,9 @@ struct OnboardingChatView: View {
                 range: 100...220,
                 step: 1,
                 format: { "\(Int($0)) bpm" }
-            ) { Task { await session.confirmMaxHr(Int($0)) } }
+            ) { value in Task { await session.confirmMaxHr(Int(value)) } }
         case .enterBirthYear:
-            OnboardingBirthYearCard { Task { await session.confirmBirthYear($0) } }
+            OnboardingBirthYearCard { year in Task { await session.confirmBirthYear(year) } }
         case .ask, .pickRunDistance, .pickSwimDistance, .confirmSuggestion, .confirmLimitersNote:
             askCard(for: step)
         }
@@ -211,12 +211,12 @@ struct OnboardingChatView: View {
     private func askCard(for step: OnboardingStep) -> some View {
         switch step {
         case .raceDate where session.state.mode == .ask:
-            OnboardingDateCard(minimum: PlanHorizon.earliestLocalDay(now: Date(), calendar: .current)) {
-                Task { await session.confirmDate($0) }
+            OnboardingDateCard(minimum: PlanHorizon.earliestLocalDay(now: Date(), calendar: .current)) { date in
+                Task { await session.confirmDate(date) }
             }
         case .weeklyHours where session.state.mode == .ask:
-            OnboardingHoursCard(initial: session.state.answers.currentWeeklyHours ?? 4) {
-                Task { await session.confirmHours($0) }
+            OnboardingHoursCard(initial: session.state.answers.currentWeeklyHours ?? 4) { hours in
+                Task { await session.confirmHours(hours) }
             }
         case .swimDays, .bikeDays, .runDays:
             if let sport = OnboardingSport.from(step: step) {
