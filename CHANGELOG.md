@@ -6,7 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Conversational onboarding** — New athletes set up with the coach in a chat instead of the six-screen form. Quick replies sit above a text field. The coach reacts to the important answers and parses anything typed. Availability is three day cards plus a time-per-day card. VMA, CSS, and FTP are never left empty: a recent time is converted, and "no idea" uses a conservative estimate from experience and weekly hours. Injuries and weak spots are saved and passed into plan generation. Closing the app resumes at the next unanswered step. If the coach service is down, the buttons still finish onboarding.
+
 ### Database Migrations
+- **20261115_onboarding_limiters_and_metrics_source.sql** — Adds `users.limiters` (text, nullable) and `users.metrics_source` (jsonb). `generate-plan` already reads `limiters`; the column was missing, so the prompt always saw "none".
 - **017_plan_snapshots.sql** — Adds `plan_snapshots` table (snapshot JSONB, reason, RLS SELECT-own) for safe pre-replace plan archival. Adds `import_plan_atomic` SECURITY DEFINER function with `search_path = public` lockdown and execution restricted to `service_role` (no anon / authenticated). Function handles the atomic snapshot → CASCADE delete → insert flow for plan imports (DRO-299).
 - **018_revoke_import_plan_atomic_from_public.sql** — Defense-in-depth: explicit `REVOKE EXECUTE` from PUBLIC/anon/authenticated on `import_plan_atomic`. Also pins `race_date::date::timestamptz` cast (UTC midnight, timezone-stable) (DRO-299).
 

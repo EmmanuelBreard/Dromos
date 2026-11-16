@@ -13,6 +13,8 @@ import Combine
 /// Provides a CTA to generate their plan, shows progress during generation (~140s), and handles errors.
 struct PlanGenerationView: View {
     @ObservedObject var authService: AuthService
+    /// True when conversational onboarding just finished and generation should start.
+    var autoStart: Bool = false
     @StateObject private var planService = PlanService()
     @StateObject private var profileService = ProfileService()
     @StateObject private var stravaService = StravaService()
@@ -23,6 +25,7 @@ struct PlanGenerationView: View {
     @State private var generationCompleted: Bool = false
     @State private var timerCancellable: AnyCancellable?
     @State private var shimmerPhase: CGFloat = 0
+    @State private var didAutoStart = false
 
     /// Logger for plan generation operations
     private let logger = Logger(subsystem: "com.getdromos.app", category: "PlanGeneration")
@@ -77,6 +80,11 @@ struct PlanGenerationView: View {
             }
             .onDisappear {
                 stopProgressTimer()
+            }
+            .onAppear {
+                guard autoStart, !didAutoStart, !planService.isGenerating else { return }
+                didAutoStart = true
+                generatePlan()
             }
         }
     }

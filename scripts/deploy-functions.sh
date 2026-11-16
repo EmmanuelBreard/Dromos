@@ -22,6 +22,7 @@ ALL_FUNCTIONS=(
   "chat-adjust"
   "session-feedback"
   "import-plan"
+  "onboarding-coach"
 )
 
 deploy_function() {
